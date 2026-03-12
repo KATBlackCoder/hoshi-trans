@@ -43,7 +43,7 @@ function App() {
           onChange={(e) => setName(e.currentTarget.value)}
           placeholder="Enter a name..."
         />
-        <Button>Greet</Button>
+        <Button variant="destructive">Greet</Button>
       </form>
       <p>{greetMsg}</p>
     </main>
