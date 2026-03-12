@@ -1,0 +1,110 @@
+[package]
+name = "hoshi-trans"
+version = "0.1.0"
+description = "RPG game translation tool — JP to EN/FR via Ollama"
+authors = ["BlackKat"]
+edition = "2021"
+
+[lib]
+name = "hoshi_trans_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# ── Tauri core ────────────────────────────────────────────────────────────────
+tauri = { version = "2", features = [] }
+
+# P1 — File picker natif pour sélectionner le dossier du jeu
+tauri-plugin-dialog = "2"
+
+# P1 — Lecture/écriture des fichiers de jeu (data/, output/, hoshi-trans.json)
+tauri-plugin-fs = "2"
+
+# P1 — Empêche l'ouverture de plusieurs instances simultanées
+# CRITIQUE: un batch Ollama en cours + 2ème instance = conflit de fichiers
+tauri-plugin-single-instance = "2"
+
+# P1 — Ouvrir le dossier output/ dans l'explorateur natif + Ko-fi dans le browser
+tauri-plugin-opener = "2"
+
+# P1 — Settings légers (modèle Ollama, langue cible, prompt système)
+# Plus simple que SQLite pour de la config clé-valeur
+tauri-plugin-store = "2"
+
+# P1 — Logs structurés (visible dans devtools + fichier log en prod)
+tauri-plugin-log = "2"
+
+# P2 — Appel des sidecars WolfTL.exe / UberWolf.exe (Wolf RPG)
+tauri-plugin-shell = "2"
+
+# P2 — Gestion du process courant (exit codes, restart propre)
+tauri-plugin-process = "2"
+
+# nice-to-have — Notif système "Batch terminé" quand app en arrière-plan
+tauri-plugin-notification = "2"
+
+# nice-to-have — Mémoriser taille/position de fenêtre entre sessions
+tauri-plugin-window-state = "2"
+
+# ── SQLite — toute la DB passe par ici (Rust uniquement) ─────────────────────
+# SQLx remplace tauri-plugin-sql : async natif, requêtes vérifiées à la compile,
+# transactions propres, pas d'overhead IPC pour chaque requête.
+# React ne touche JAMAIS SQLite — il appelle des Tauri commands Rust.
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "macros"] }
+
+# ── Ollama — moteur de traduction ─────────────────────────────────────────────
+# API Rust native — health check, list models, generate, streaming
+# Pas d'appel reqwest/fetch manuel
+ollama-rs = "0.3.3"
+
+# ── Async runtime ─────────────────────────────────────────────────────────────
+tokio = { version = "1", features = ["full"] }
+
+# ── Sérialisation ─────────────────────────────────────────────────────────────
+# RPG Maker MV/MZ (JSON) + hoshi-trans.json (project file)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ── Gestion d'erreurs ─────────────────────────────────────────────────────────
+# anyhow: erreurs ergonomiques dans les Tauri commands
+anyhow = "1"
+# thiserror: erreurs typées par moteur (RpgMakerError, WolfRpgError, BakinError)
+thiserror = "1"
+
+# ── Filesystem utilities ──────────────────────────────────────────────────────
+# walkdir: scan récursif de data/ pour trouver tous les Map*.json
+walkdir = "2"
+
+# ── Encodage texte ────────────────────────────────────────────────────────────
+# CRITIQUE pour Wolf RPG: les vieux jeux encodent en Shift-JIS (CP932), pas UTF-8
+encoding_rs = "0.8"
+
+# ── Logging interne Rust ──────────────────────────────────────────────────────
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# ── UUID pour les IDs de TranslationEntry et projets ─────────────────────────
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# ── Async trait — requis pour le trait GameEngine async ──────────────────────
+# Les méthodes extract/inject sont async (contexte tokio Tauri v2)
+async-trait = "0.1"
+
+# ── Regex — utilisé dans common/placeholders.rs pour vérifier les placeholders ──
+regex = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
