@@ -1,12 +1,14 @@
 import { useOllamaStatus } from '@/hooks/useOllamaStatus'
 import { useAppStore } from '@/stores/appStore'
 import { OnboardingPage } from '@/features/onboarding'
+import { FileImportButton } from '@/features/file-import'
 
 function MainLayout() {
   return (
     <div className="flex h-screen">
-      <aside className="w-56 border-r p-4">
+      <aside className="w-56 border-r p-4 flex flex-col gap-4">
         <p className="font-semibold">hoshi-trans</p>
+        <FileImportButton />
       </aside>
       <main className="flex-1 p-6">
         <p className="text-muted-foreground">Select a game to get started.</p>
