@@ -14,6 +14,14 @@ mod tests {
         env!("CARGO_MANIFEST_DIR"),
         "/../engine_test/Ah,Ghost-1.10"
     );
+    const MV_DIR2: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../engine_test/Cursed_Blessing_v2"
+    );
+    const MZ_DIR2: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../engine_test/osana_isekai_v1.06"
+    );
 
     #[tokio::test]
     async fn test_extract_mz_runs_without_error() {
@@ -85,6 +93,54 @@ mod tests {
             }
         }
         assert!(bad.is_empty(), "{} non-Japanese entries leaked through skip filter", bad.len());
+    }
+
+    #[tokio::test]
+    async fn test_extract_cursed_blessing_mv() {
+        let path = std::path::Path::new(MV_DIR2);
+        if !path.exists() {
+            return;
+        }
+        assert!(super::super::detect(path), "MV detection failed for Cursed_Blessing_v2");
+        let entries = extract(path, "test-proj").await.unwrap();
+        println!("Cursed_Blessing_v2 (MV) entries: {}", entries.len());
+        assert!(!entries.is_empty(), "MV extractor returned 0 entries for Cursed_Blessing_v2");
+        assert!(entries.iter().all(|e| !e.source_text.is_empty()));
+        assert!(entries.iter().all(|e| e.status == "pending"));
+        let bad: Vec<_> = entries
+            .iter()
+            .filter(|e| !crate::engines::common::skip::contains_japanese(&e.source_text))
+            .collect();
+        if !bad.is_empty() {
+            for e in bad.iter().take(5) {
+                println!("Non-JP leaked: {:?}", e.source_text);
+            }
+        }
+        assert!(bad.is_empty(), "{} non-Japanese entries leaked", bad.len());
+    }
+
+    #[tokio::test]
+    async fn test_extract_osana_isekai_mz() {
+        let path = std::path::Path::new(MZ_DIR2);
+        if !path.exists() {
+            return;
+        }
+        assert!(super::super::detect(path), "MZ detection failed for osana_isekai_v1.06");
+        let entries = extract(path, "test-proj").await.unwrap();
+        println!("osana_isekai_v1.06 (MZ) entries: {}", entries.len());
+        assert!(!entries.is_empty(), "MZ extractor returned 0 entries for osana_isekai_v1.06");
+        assert!(entries.iter().all(|e| !e.source_text.is_empty()));
+        assert!(entries.iter().all(|e| e.status == "pending"));
+        let bad: Vec<_> = entries
+            .iter()
+            .filter(|e| !crate::engines::common::skip::contains_japanese(&e.source_text))
+            .collect();
+        if !bad.is_empty() {
+            for e in bad.iter().take(5) {
+                println!("Non-JP leaked: {:?}", e.source_text);
+            }
+        }
+        assert!(bad.is_empty(), "{} non-Japanese entries leaked", bad.len());
     }
 }
 

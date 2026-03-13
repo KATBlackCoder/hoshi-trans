@@ -20,8 +20,11 @@
 | `\P[n]` | `{{PARTY[n]}}` |
 
 ## Tested on
-- [x] RPG Maker MV game — `Ah,Ghost-1.10` → 37 Japanese entries extracted
-- [x] RPG Maker MZ game — `Adventurer_Corruption` → English game, 0 JP entries (skip filter correct, MZ structure readable)
+- [x] RPG Maker MV — `Ah,Ghost-1.10` → 37 JP entries
+- [x] RPG Maker MV — `Cursed_Blessing_v2` → 9 163 JP entries
+- [x] RPG Maker MZ — `osana_isekai_v1.06` → 20 795 JP entries
+- [x] RPG Maker MZ — `Adventurer_Corruption` → 0 entries (English game, skip filter correct)
 
 ## Known issues
-- `Adventurer_Corruption` uses `\pop[n]` custom control codes (not standard RPG Maker) — not encoded as placeholders since they're in English text that gets skipped anyway.
+- `Adventurer_Corruption` uses `\pop[n]` custom control codes — not a standard RPG Maker code, not handled as placeholder (English game anyway).
+- Large games (10k+ entries) take ~2 min to extract in debug build; release build will be significantly faster.
