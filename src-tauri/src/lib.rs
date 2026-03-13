@@ -1,5 +1,6 @@
 mod commands;
 mod db;
+mod engines;
 mod models;
 
 use sqlx::SqlitePool;
