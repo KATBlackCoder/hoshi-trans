@@ -8,7 +8,16 @@ export function useOpenProject() {
     mutationFn: async (): Promise<ProjectFile | null> => {
       const dir = await open({ directory: true, multiple: false })
       if (!dir) return null
-      return invoke<ProjectFile>('open_project', { gameDir: dir })
+
+      const project = await invoke<ProjectFile>('open_project', { gameDir: dir })
+
+      // Auto-extract after opening (INSERT OR IGNORE — safe to re-run)
+      await invoke<number>('extract_strings', {
+        projectId: project.project_id,
+        gameDir: dir,
+      })
+
+      return project
     },
   })
 }
