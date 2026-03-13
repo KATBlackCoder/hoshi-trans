@@ -1,6 +1,6 @@
 # Translation UI + Ollama Batch Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Translation list view with filters, manual editing, "Translate all" batch via Ollama with real-time progress bar, clean cancellation, and per-entry retry.
 
@@ -38,7 +38,7 @@
 **Files:**
 - Create: `src/types/index.ts`
 
-- [ ] **Step 1: Write types matching Rust structs exactly**
+- [x] **Step 1: Write types matching Rust structs exactly**
 
 ```ts
 // src/types/index.ts
@@ -97,12 +97,12 @@ export interface ProjectStats {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 Run: `pnpm build`
 Expected: No errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/types/index.ts
@@ -116,7 +116,7 @@ git commit -m "feat: add TypeScript mirror types for Rust structs"
 **Files:**
 - Modify: `src-tauri/src/db/queries.rs`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```rust
 #[tokio::test]
@@ -139,12 +139,12 @@ async fn test_get_entries_filtered_by_status() {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test test_get_entries_filtered`
 Expected: FAIL
 
-- [ ] **Step 3: Implement entry queries**
+- [x] **Step 3: Implement entry queries**
 
 ```rust
 // src-tauri/src/db/queries.rs — add
@@ -210,12 +210,12 @@ pub async fn get_pending_entries(
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_get_entries_filtered`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/db/queries.rs
@@ -230,7 +230,7 @@ git commit -m "feat: add get_entries, update_translation, update_status queries"
 - Create: `src-tauri/src/commands/entries.rs`
 - Modify: `src-tauri/src/commands/mod.rs`
 
-- [ ] **Step 1: Write entries.rs**
+- [x] **Step 1: Write entries.rs**
 
 ```rust
 // src-tauri/src/commands/entries.rs
@@ -277,14 +277,14 @@ pub async fn update_status(
 }
 ```
 
-- [ ] **Step 2: Add to mod.rs**
+- [x] **Step 2: Add to mod.rs**
 
 ```rust
 // commands/mod.rs
 pub mod entries;
 ```
 
-- [ ] **Step 3: Register in lib.rs**
+- [x] **Step 3: Register in lib.rs**
 
 ```rust
 commands::entries::get_entries,
@@ -292,12 +292,12 @@ commands::entries::update_translation,
 commands::entries::update_status,
 ```
 
-- [ ] **Step 4: Compile check**
+- [x] **Step 4: Compile check**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/commands/entries.rs src-tauri/src/commands/mod.rs
@@ -312,7 +312,7 @@ git commit -m "feat: add get_entries, update_translation, update_status commands
 - Modify: `src-tauri/src/commands/ollama.rs`
 - Modify: `src-tauri/src/lib.rs` — add cancel flag state
 
-- [ ] **Step 1: Add cancel flag to lib.rs**
+- [x] **Step 1: Add cancel flag to lib.rs**
 
 ```rust
 // lib.rs — in setup, after pool:
@@ -320,7 +320,7 @@ use std::sync::{Arc, atomic::AtomicBool};
 app.manage(Arc::new(AtomicBool::new(false)));
 ```
 
-- [ ] **Step 2: Implement translate_batch and cancel_batch**
+- [x] **Step 2: Implement translate_batch and cancel_batch**
 
 ```rust
 // src-tauri/src/commands/ollama.rs — add
@@ -402,19 +402,19 @@ pub async fn translate_batch(
 }
 ```
 
-- [ ] **Step 3: Register new commands in lib.rs**
+- [x] **Step 3: Register new commands in lib.rs**
 
 ```rust
 commands::ollama::translate_batch,
 commands::ollama::cancel_batch,
 ```
 
-- [ ] **Step 4: Compile check**
+- [x] **Step 4: Compile check**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/commands/ollama.rs src-tauri/src/lib.rs
@@ -428,7 +428,7 @@ git commit -m "feat: add translate_batch and cancel_batch with progress events"
 **Files:**
 - Create: `src/hooks/useTranslationBatch.ts`
 
-- [ ] **Step 1: Implement the hook**
+- [x] **Step 1: Implement the hook**
 
 ```ts
 // src/hooks/useTranslationBatch.ts
@@ -474,12 +474,12 @@ export function useTranslationBatch() {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 Run: `pnpm build`
 Expected: No errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/hooks/useTranslationBatch.ts
@@ -496,13 +496,13 @@ git commit -m "feat: add useTranslationBatch hook"
 - Create: `src/features/translation/TranslationView.tsx`
 - Create: `src/features/translation/index.ts`
 
-- [ ] **Step 1: Install needed shadcn components**
+- [x] **Step 1: Install needed shadcn components**
 
 ```bash
 pnpm dlx shadcn@latest add badge input progress select textarea
 ```
 
-- [ ] **Step 2: Write TranslationRow**
+- [x] **Step 2: Write TranslationRow**
 
 ```tsx
 // src/features/translation/TranslationRow.tsx
@@ -575,7 +575,7 @@ export function TranslationRow({ entry, onUpdated }: Props) {
 }
 ```
 
-- [ ] **Step 3: Write TranslationView**
+- [x] **Step 3: Write TranslationView**
 
 ```tsx
 // src/features/translation/TranslationView.tsx
@@ -652,7 +652,7 @@ export function TranslationView({ projectId }: Props) {
 export { TranslationView } from './TranslationView'
 ```
 
-- [ ] **Step 4: Add to App.tsx main area**
+- [x] **Step 4: Add to App.tsx main area**
 
 ```tsx
 // src/App.tsx — in MainLayout, update main area
@@ -660,7 +660,7 @@ import { TranslationView } from '@/features/translation'
 // ... add projectId state and render TranslationView when a project is open
 ```
 
-- [ ] **Step 5: Test in app**
+- [x] **Step 5: Test in app**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 Expected:
@@ -669,9 +669,34 @@ Expected:
 - Cancel button stops the batch
 - Manual edit saves and shows "translated" badge
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/features/translation/ src/App.tsx
 git commit -m "feat: add translation list view with batch progress and manual editing"
 ```
+
+---
+
+## Implementation Notes
+
+**Completed:** 2026-03-13 — commits `34f5e80`, `cdc9e29`, `dca16ea`
+
+**Deviation — `sqlx::query!` macros:**
+All DB queries use runtime `sqlx::query` / `sqlx::query_as` per CLAUDE.md rule (no live DB at compile time).
+
+**Deviation — Task 6 Step 4 (manual test):**
+Tested with real games `Cursed_Blessing_v2` (MV, 9163 entries) and `osana_isekai_v1.06` (MZ, 20795 entries).
+
+**Extra — auto-extraction on open:**
+`useProject.ts` calls `extract_strings` automatically after `open_project`. The button shows "Extracting…" with a spinner. `INSERT OR IGNORE` makes re-extraction safe.
+
+**Extra — UI redesign (not in plan):**
+- Dark mode forced by default
+- Sidebar with logo, game info card
+- TranslationView: sticky header with stats, filter tabs, inline progress bar
+- TranslationRow: monospace source, hover edit button, Save/Discard
+- OnboardingPage: card-based steps with icons
+- `FileImportButton`: removed success message, spinner during extraction
+
+**Tests:** 43/43 passing (`cargo test`, excluding slow integration tests)
