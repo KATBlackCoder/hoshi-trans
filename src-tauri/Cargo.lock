@@ -1668,6 +1668,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "ollama-rs",
+ "regex",
  "serde",
  "serde_json",
  "sqlx",

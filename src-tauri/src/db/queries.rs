@@ -54,6 +54,30 @@ pub async fn get_project_by_game_dir(
     Ok(row)
 }
 
+pub async fn insert_entries_batch(
+    pool: &SqlitePool,
+    entries: &[crate::models::TranslationEntry],
+) -> anyhow::Result<()> {
+    let mut tx = pool.begin().await?;
+    for entry in entries {
+        sqlx::query(
+            "INSERT OR IGNORE INTO entries
+             (id, project_id, source_text, status, context, file_path, order_index)
+             VALUES (?, ?, ?, 'pending', ?, ?, ?)",
+        )
+        .bind(&entry.id)
+        .bind(&entry.project_id)
+        .bind(&entry.source_text)
+        .bind(&entry.context)
+        .bind(&entry.file_path)
+        .bind(entry.order_index)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,5 +103,35 @@ mod tests {
         let projects = get_projects(&pool).await.unwrap();
         assert_eq!(projects.len(), 1);
         assert_eq!(projects[0].0, "proj-1");
+    }
+
+    #[tokio::test]
+    async fn test_insert_entries_batch() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+
+        create_project(&pool, "proj-1", "/game", "rpgmaker_mv_mz", "Test", "en", None)
+            .await
+            .unwrap();
+
+        let entries = vec![crate::models::TranslationEntry {
+            id: "e1".into(),
+            project_id: "proj-1".into(),
+            source_text: "こんにちは".into(),
+            translation: None,
+            status: "pending".into(),
+            context: None,
+            file_path: "data/Map001.json".into(),
+            order_index: 0,
+        }];
+
+        insert_entries_batch(&pool, &entries).await.unwrap();
+
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM entries WHERE project_id = 'proj-1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(count.0, 1);
     }
 }

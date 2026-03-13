@@ -32,6 +32,7 @@ tauri-plugin-fs = "2"
 walkdir = "2.5.0"
 thiserror = "2.0.18"
 async-trait = "0.1.89"
+regex = "1.12.3"
 
 [features]
 default = ["custom-protocol"]

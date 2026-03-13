@@ -1,3 +1,7 @@
+pub mod extractor;
+pub mod placeholders;
+pub mod skip;
+
 /// RPG Maker MZ uses `data/`, MV uses `www/data/`
 pub fn detect(game_dir: &std::path::Path) -> bool {
     game_dir.join("data/System.json").exists()

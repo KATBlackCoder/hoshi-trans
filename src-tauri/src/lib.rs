@@ -24,6 +24,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::ollama::check_ollama,
             commands::ollama::list_models,
+            commands::project::create_project,
+            commands::project::open_project,
+            commands::project::get_projects,
+            commands::extract::extract_strings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
