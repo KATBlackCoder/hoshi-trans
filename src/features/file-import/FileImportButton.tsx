@@ -3,7 +3,11 @@ import { Button } from '@/components/ui/button'
 import { FolderOpen } from 'lucide-react'
 import { useState } from 'react'
 
-export function FileImportButton() {
+interface Props {
+  onProjectOpened?: (project: import('@/types').ProjectFile) => void
+}
+
+export function FileImportButton({ onProjectOpened }: Props) {
   const { mutateAsync, isPending } = useOpenProject()
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
@@ -13,6 +17,7 @@ export function FileImportButton() {
       const project = await mutateAsync()
       if (project) {
         setMessage({ type: 'success', text: `Opened: ${project.game_title}` })
+        onProjectOpened?.(project)
       }
     } catch (e) {
       setMessage({ type: 'error', text: String(e) })

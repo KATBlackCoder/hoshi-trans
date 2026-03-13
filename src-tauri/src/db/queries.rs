@@ -78,6 +78,65 @@ pub async fn insert_entries_batch(
     Ok(())
 }
 
+pub async fn get_entries(
+    pool: &SqlitePool,
+    project_id: &str,
+    status_filter: Option<&str>,
+    file_filter: Option<&str>,
+) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
+    let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
+        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index
+         FROM entries
+         WHERE project_id = ?
+         AND (? IS NULL OR status = ?)
+         AND (? IS NULL OR file_path = ?)
+         ORDER BY file_path, order_index",
+    )
+    .bind(project_id)
+    .bind(status_filter)
+    .bind(status_filter)
+    .bind(file_filter)
+    .bind(file_filter)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
+pub async fn update_translation(
+    pool: &SqlitePool,
+    entry_id: &str,
+    translation: &str,
+    status: &str,
+) -> anyhow::Result<()> {
+    sqlx::query("UPDATE entries SET translation = ?, status = ? WHERE id = ?")
+        .bind(translation)
+        .bind(status)
+        .bind(entry_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn update_status(
+    pool: &SqlitePool,
+    entry_id: &str,
+    status: &str,
+) -> anyhow::Result<()> {
+    sqlx::query("UPDATE entries SET status = ? WHERE id = ?")
+        .bind(status)
+        .bind(entry_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn get_pending_entries(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
+    get_entries(pool, project_id, Some("pending"), None).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,5 +192,26 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_entries_filtered_by_status() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None).await.unwrap();
+
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES ('e1','p1','こんにちは','pending','f',0)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES ('e2','p1','ありがとう','translated','f',1)"
+        ).execute(&pool).await.unwrap();
+
+        let pending = get_entries(&pool, "p1", Some("pending"), None).await.unwrap();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].source_text, "こんにちは");
+
+        let all = get_entries(&pool, "p1", None, None).await.unwrap();
+        assert_eq!(all.len(), 2);
     }
 }

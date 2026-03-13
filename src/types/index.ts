@@ -38,8 +38,15 @@ export interface TranslationEntry {
   project_id: string
   source_text: string
   translation: string | null
-  status: string
+  status: TranslationStatus
   context: string | null
   file_path: string
   order_index: number
+}
+
+// Payload of the "translation:progress" Tauri event
+export interface TranslationProgress {
+  done: number
+  total: number
+  entry_id: string
 }
