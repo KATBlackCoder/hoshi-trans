@@ -1,6 +1,6 @@
 # RPG Maker MV/MZ Extractor Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Parse all JSON files in an RPG Maker MV/MZ `data/` folder, extract translatable strings with skip filtering and placeholder encoding, and batch-insert them into SQLite.
 
@@ -41,7 +41,7 @@ cargo add regex
 - Create: `src-tauri/src/engines/common/mod.rs`
 - Create: `src-tauri/src/engines/common/skip.rs`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 // src-tauri/src/engines/common/skip.rs — include at bottom
@@ -93,12 +93,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify tests fail**
+- [x] **Step 2: Run to verify tests fail**
 
 Run: `cd src-tauri && cargo test test_skip`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write common/mod.rs**
+- [x] **Step 3: Write common/mod.rs**
 
 ```rust
 // src-tauri/src/engines/common/mod.rs
@@ -106,7 +106,7 @@ pub mod skip;
 pub mod placeholders;
 ```
 
-- [ ] **Step 4: Write common/skip.rs**
+- [x] **Step 4: Write common/skip.rs**
 
 ```rust
 // src-tauri/src/engines/common/skip.rs
@@ -149,19 +149,19 @@ fn is_pure_number(text: &str) -> bool {
 mod tests { /* see step 1 */ }
 ```
 
-- [ ] **Step 5: Update engines/mod.rs to expose common**
+- [x] **Step 5: Update engines/mod.rs to expose common**
 
 ```rust
 // src-tauri/src/engines/mod.rs — add
 pub mod common;
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `cd src-tauri && cargo test test_skip`
 Expected: All PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src-tauri/src/engines/common/
@@ -175,7 +175,7 @@ git commit -m "feat: add common/skip.rs with universal skip logic"
 **Files:**
 - Create: `src-tauri/src/engines/common/placeholders.rs`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 // src-tauri/src/engines/common/placeholders.rs — include at bottom
@@ -226,12 +226,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test test_contains_japanese test_check_placeholders`
 Expected: FAIL
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 // src-tauri/src/engines/common/placeholders.rs
@@ -253,12 +253,12 @@ pub fn check_placeholders_intact(original: &str, translated: &str) -> bool {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_contains_japanese test_check_placeholders`
 Expected: All PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/engines/common/placeholders.rs
@@ -272,7 +272,7 @@ git commit -m "feat: add common/placeholders.rs with JP detection and placeholde
 **Files:**
 - Create: `src-tauri/src/engines/rpgmaker_mv_mz/placeholders.rs`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 // include at bottom of placeholders.rs
@@ -330,12 +330,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test test_encode test_decode test_roundtrip`
 Expected: FAIL
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/placeholders.rs
@@ -393,12 +393,12 @@ pub fn decode(text: &str) -> (String, bool) {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_encode test_decode test_roundtrip`
 Expected: All PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/engines/rpgmaker_mv_mz/placeholders.rs
@@ -412,7 +412,7 @@ git commit -m "feat: add RPG Maker placeholder encode/decode"
 **Files:**
 - Create: `src-tauri/src/engines/rpgmaker_mv_mz/skip.rs`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[cfg(test)]
@@ -439,12 +439,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test -p hoshi-trans test_delegates_to_common`
 Expected: FAIL
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/skip.rs
@@ -462,12 +462,12 @@ fn is_rpgmaker_control_code_only(text: &str) -> bool {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_delegates_to_common test_skip_rpgmaker test_keep_japanese`
 Expected: All PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/engines/rpgmaker_mv_mz/skip.rs
@@ -482,7 +482,7 @@ git commit -m "feat: add rpgmaker_mv_mz/skip.rs"
 - Create: `src-tauri/src/engines/rpgmaker_mv_mz/extractor.rs`
 - Modify: `src-tauri/src/db/queries.rs` — add `insert_entries_batch`
 
-- [ ] **Step 1: Write failing test for insert_entries_batch**
+- [x] **Step 1: Write failing test for insert_entries_batch**
 
 ```rust
 // src-tauri/src/db/queries.rs — add test
@@ -525,12 +525,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test test_insert_entries_batch`
 Expected: FAIL
 
-- [ ] **Step 3: Implement insert_entries_batch**
+- [x] **Step 3: Implement insert_entries_batch**
 
 ```rust
 // src-tauri/src/db/queries.rs — add
@@ -559,12 +559,12 @@ pub async fn insert_entries_batch(
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_insert_entries_batch`
 Expected: PASS
 
-- [ ] **Step 5: Write the extractor**
+- [x] **Step 5: Write the extractor**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/extractor.rs
@@ -728,7 +728,7 @@ fn extract_database_objects(
 }
 ```
 
-- [ ] **Step 6: Update rpgmaker_mv_mz/mod.rs**
+- [x] **Step 6: Update rpgmaker_mv_mz/mod.rs**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/mod.rs — add
@@ -737,12 +737,12 @@ pub mod placeholders;
 pub mod skip;
 ```
 
-- [ ] **Step 7: Compile check**
+- [x] **Step 7: Compile check**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src-tauri/src/engines/rpgmaker_mv_mz/extractor.rs src-tauri/src/db/queries.rs
@@ -758,7 +758,7 @@ git commit -m "feat: add RPG Maker extractor and insert_entries_batch"
 - Modify: `src-tauri/src/commands/mod.rs`
 - Modify: `src-tauri/src/lib.rs`
 
-- [ ] **Step 1: Write extract.rs**
+- [x] **Step 1: Write extract.rs**
 
 ```rust
 // src-tauri/src/commands/extract.rs
@@ -787,7 +787,7 @@ pub async fn extract_strings(
 }
 ```
 
-- [ ] **Step 2: Update mod.rs and lib.rs**
+- [x] **Step 2: Update mod.rs and lib.rs**
 
 ```rust
 // commands/mod.rs — add
@@ -799,19 +799,19 @@ pub mod extract;
 commands::extract::extract_strings,
 ```
 
-- [ ] **Step 3: Verify compilation**
+- [x] **Step 3: Verify compilation**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 4: Test manually**
+- [x] **Step 4: Test manually**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 - Open an RPG Maker MV/MZ game folder
 - Call `extract_strings` from frontend (temporary button or console)
 - Expected: count of extracted entries returned, entries visible in SQLite
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/commands/extract.rs src-tauri/src/commands/mod.rs src-tauri/src/lib.rs
@@ -825,7 +825,7 @@ git commit -m "feat: add extract_strings Tauri command"
 **Files:**
 - Create: `src-tauri/src/engines/rpgmaker_mv_mz/ENGINE_NOTES.md`
 
-- [ ] **Step 1: Create the notes file**
+- [x] **Step 1: Create the notes file**
 
 ```markdown
 # RPG Maker MV/MZ Engine Notes
@@ -850,16 +850,30 @@ git commit -m "feat: add extract_strings Tauri command"
 
 ## Tested on
 <!-- Update after each real game test -->
-- [ ] RPG Maker MV game
-- [ ] RPG Maker MZ game
+- [x] RPG Maker MV game
+- [x] RPG Maker MZ game
 
 ## Known issues
 <!-- Document quirks found during testing -->
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add src-tauri/src/engines/rpgmaker_mv_mz/ENGINE_NOTES.md
 git commit -m "docs: add RPG Maker ENGINE_NOTES.md"
 ```
+
+---
+
+## Implementation Notes
+
+**Completed:** 2026-03-13 — commit `a92eefa`
+
+**Deviation from plan — Task 5 `insert_entries_batch`:**
+The plan used `sqlx::query!` macros, but these require a live DB at compile time (breaks CI and cold builds). Replaced with runtime `sqlx::query(...).bind(...)` per CLAUDE.md rule. Behavior is identical.
+
+**Deviation from plan — `extractor.rs` MV support:**
+The plan only handled `data/` (MZ). The extractor also checks `www/data/` (MV) for compatibility with both engine variants, consistent with the fix applied in step-04.
+
+**Tests:** 36/36 passing (`cargo test`)
