@@ -51,6 +51,12 @@ REACT → all UI, Zustand state, Tauri command invocations, file picker, notific
 
 Frontend stack: React 19, TypeScript strict, Tailwind CSS + shadcn/ui, Zustand, TanStack Query.
 
+> **Note:** The global CSS entry point is `src/App.css` (not `index.css`). Import it in `main.tsx`.
+
+### App boot flow
+
+`main.tsx` wraps `<App>` in `<QueryClientProvider>`. `App` calls `useOllamaStatus()` (TanStack Query, polls every 5s via `check_ollama` Tauri command) and reads `ollamaOnline` from Zustand. If false → `<OnboardingPage>`; if true → `<MainLayout>` (sidebar + content area).
+
 ### Backend (`src-tauri/src/`)
 
 - `commands/` — Tauri commands exposed to frontend: `project.rs`, `entries.rs`, `extract.rs`, `inject.rs`, `ollama.rs`

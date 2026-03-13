@@ -1,6 +1,6 @@
 # Layout Principal + Onboarding Ollama Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add main app layout (sidebar + content area) and an onboarding screen shown when Ollama is unreachable on localhost:11434.
 
@@ -40,7 +40,7 @@ pnpm add zustand @tanstack/react-query
 
 **Files:** `src-tauri/Cargo.toml`, `package.json`
 
-- [ ] **Step 1: Add Rust crates**
+- [x] **Step 1: Add Rust crates**
 
 ```bash
 cd src-tauri
@@ -48,23 +48,23 @@ cargo add tokio --features full
 cargo add ollama-rs@0.3.3
 ```
 
-- [ ] **Step 2: Verify Rust compiles**
+- [x] **Step 2: Verify Rust compiles**
 
 Run: `cd src-tauri && cargo check`
 Expected: Compiles without errors
 
-- [ ] **Step 3: Add frontend packages**
+- [x] **Step 3: Add frontend packages**
 
 ```bash
 pnpm add zustand @tanstack/react-query
 ```
 
-- [ ] **Step 4: Verify frontend builds**
+- [x] **Step 4: Verify frontend builds**
 
 Run: `pnpm build`
 Expected: No TypeScript errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/Cargo.toml src-tauri/Cargo.lock package.json pnpm-lock.yaml
@@ -80,7 +80,7 @@ git commit -m "chore: add tokio, ollama-rs, zustand, react-query"
 - Create: `src-tauri/src/commands/ollama.rs`
 - Modify: `src-tauri/src/lib.rs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 // src-tauri/src/commands/ollama.rs — add at bottom
@@ -98,19 +98,19 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails (function doesn't exist yet)**
+- [x] **Step 2: Run to verify it fails (function doesn't exist yet)**
 
 Run: `cd src-tauri && cargo test test_check_ollama_returns_bool`
 Expected: FAIL — function not found
 
-- [ ] **Step 3: Implement commands/mod.rs**
+- [x] **Step 3: Implement commands/mod.rs**
 
 ```rust
 // src-tauri/src/commands/mod.rs
 pub mod ollama;
 ```
 
-- [ ] **Step 4: Implement commands/ollama.rs**
+- [x] **Step 4: Implement commands/ollama.rs**
 
 ```rust
 // src-tauri/src/commands/ollama.rs
@@ -141,7 +141,7 @@ pub async fn list_models() -> Result<Vec<String>, String> {
 }
 ```
 
-- [ ] **Step 5: Register in lib.rs**
+- [x] **Step 5: Register in lib.rs**
 
 ```rust
 // src-tauri/src/lib.rs — add mod and update invoke_handler
@@ -159,17 +159,17 @@ pub fn run() {
 }
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `cd src-tauri && cargo test test_check_ollama_returns_bool`
 Expected: PASS
 
-- [ ] **Step 7: Verify Rust compiles**
+- [x] **Step 7: Verify Rust compiles**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src-tauri/src/commands/ src-tauri/src/lib.rs
@@ -183,7 +183,7 @@ git commit -m "feat: add check_ollama and list_models Tauri commands"
 **Files:**
 - Create: `src/stores/appStore.ts`
 
-- [ ] **Step 1: Write the store**
+- [x] **Step 1: Write the store**
 
 ```ts
 // src/stores/appStore.ts
@@ -203,12 +203,12 @@ export const useAppStore = create<AppStore>((set) => ({
 }))
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 Run: `pnpm build`
 Expected: No errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/stores/appStore.ts
@@ -222,7 +222,7 @@ git commit -m "feat: add Zustand app store"
 **Files:**
 - Create: `src/hooks/useOllamaStatus.ts`
 
-- [ ] **Step 1: Write the hook**
+- [x] **Step 1: Write the hook**
 
 ```ts
 // src/hooks/useOllamaStatus.ts
@@ -257,12 +257,12 @@ export function useOllamaStatus() {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 Run: `pnpm build`
 Expected: No errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/hooks/useOllamaStatus.ts
@@ -277,7 +277,7 @@ git commit -m "feat: add useOllamaStatus hook with 5s polling"
 - Create: `src/features/onboarding/OnboardingPage.tsx`
 - Create: `src/features/onboarding/index.ts`
 
-- [ ] **Step 1: Write the onboarding page**
+- [x] **Step 1: Write the onboarding page**
 
 ```tsx
 // src/features/onboarding/OnboardingPage.tsx
@@ -315,12 +315,12 @@ export function OnboardingPage() {
 export { OnboardingPage } from './OnboardingPage'
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 Run: `pnpm build`
 Expected: No errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/features/onboarding/
@@ -335,7 +335,7 @@ git commit -m "feat: add OnboardingPage component"
 - Modify: `src/App.tsx`
 - Modify: `src/main.tsx` — wrap in QueryClientProvider
 
-- [ ] **Step 1: Wrap app in QueryClientProvider**
+- [x] **Step 1: Wrap app in QueryClientProvider**
 
 ```tsx
 // src/main.tsx
@@ -356,7 +356,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 ```
 
-- [ ] **Step 2: Update App.tsx**
+- [x] **Step 2: Update App.tsx**
 
 ```tsx
 // src/App.tsx
@@ -385,7 +385,7 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 3: Test in dev**
+- [x] **Step 3: Test in dev**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 Expected:
@@ -393,7 +393,7 @@ Expected:
 - If Ollama running → MainLayout shown with sidebar
 - Starting Ollama while app is open → auto-switches to MainLayout within 5s
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/App.tsx src/main.tsx
