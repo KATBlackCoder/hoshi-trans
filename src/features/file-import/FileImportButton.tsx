@@ -1,14 +1,28 @@
 import { useOpenProject } from '@/hooks/useProject'
 import { Button } from '@/components/ui/button'
 import { FolderOpen } from 'lucide-react'
+import { useState } from 'react'
 
 export function FileImportButton() {
-  const { mutate, isPending, error } = useOpenProject()
+  const { mutateAsync, isPending } = useOpenProject()
+  const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
+
+  async function handleClick() {
+    setMessage(null)
+    try {
+      const project = await mutateAsync()
+      if (project) {
+        setMessage({ type: 'success', text: `Opened: ${project.game_title}` })
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: String(e) })
+    }
+  }
 
   return (
     <div>
       <Button
-        onClick={() => mutate()}
+        onClick={handleClick}
         disabled={isPending}
         variant="outline"
         className="w-full"
@@ -16,8 +30,10 @@ export function FileImportButton() {
         <FolderOpen className="mr-2 h-4 w-4" />
         {isPending ? 'Opening…' : 'Open a game'}
       </Button>
-      {error && (
-        <p className="mt-2 text-xs text-destructive">{error.message}</p>
+      {message && (
+        <p className={`mt-2 text-xs ${message.type === 'error' ? 'text-destructive' : 'text-green-600'}`}>
+          {message.text}
+        </p>
       )}
     </div>
   )
