@@ -105,8 +105,22 @@ Key tables: `projects` (one row per game+language), `entries` (all translatable 
 
 `src/types/index.ts` must mirror Rust structs exactly. Rust enums with `#[serde(rename_all = "snake_case")]` serialize as string literals (e.g. `'pending'`, `'translated'`). Enums with data serialize as `{ error: string }` / `{ warning: string }`.
 
+## Adding packages
+
+```bash
+# Tauri official plugins (handles Cargo.toml + package.json + lib.rs registration)
+pnpm tauri add <plugin>   # e.g. pnpm tauri add dialog
+
+# Pure Rust crates (from src-tauri/)
+cargo add <crate>
+
+# Pure frontend packages
+pnpm add <package>
+```
+
 ## Docs
 
 - `docs/CONTEXT.md` — full architecture reference, DB schema, struct definitions, engine details
 - `docs/ENGINE_NOTES.md` and per-engine `ENGINE_NOTES.md` — update after testing on real games
 - `docs/PRD.md` — product requirements
+- `docs/superpowers/plans/` — implementation plans (writing-plans format) with TDD steps, exact code, and commit checkpoints

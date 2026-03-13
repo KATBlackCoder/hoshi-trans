@@ -2,6 +2,7 @@ import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button"
+import AlertTest from "./components/alert-test";
 
 import "./App.css";
 
@@ -16,8 +17,10 @@ function App() {
 
   return (
     <main className="container">
+      <AlertTest />
       <h1>Welcome to Tauri + React</h1>
 
+      <p>{greetMsg}</p>
       <div className="row">
         <a href="https://vite.dev" target="_blank">
           <img src="/vite.svg" className="logo vite" alt="Vite logo" />
@@ -45,7 +48,6 @@ function App() {
         />
         <Button variant="destructive">Greet</Button>
       </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
