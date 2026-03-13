@@ -1,6 +1,6 @@
 # SQLite Database Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Initialize SQLite connection pool with migrations at app startup and share it via `tauri::State`.
 
@@ -42,7 +42,7 @@ DATABASE_URL=sqlite:./dev.db
 
 **Files:** `src-tauri/Cargo.toml`, `src-tauri/.env`
 
-- [ ] **Step 1: Add crates**
+- [x] **Step 1: Add crates**
 
 ```bash
 cd src-tauri
@@ -50,19 +50,19 @@ cargo add sqlx --features sqlite,runtime-tokio,macros
 cargo add uuid --features v4,serde
 ```
 
-- [ ] **Step 2: Create .env for sqlx compile-time checks**
+- [x] **Step 2: Create .env for sqlx compile-time checks**
 
 ```bash
 # src-tauri/.env
 DATABASE_URL=sqlite:./dev.db
 ```
 
-- [ ] **Step 3: Verify compilation**
+- [x] **Step 3: Verify compilation**
 
 Run: `cd src-tauri && cargo check`
 Expected: Compiles (sqlx macros will use DATABASE_URL from .env)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/.env
@@ -76,7 +76,7 @@ git commit -m "chore: add sqlx and uuid crates"
 **Files:**
 - Create: `src-tauri/migrations/001_init.sql`
 
-- [ ] **Step 1: Write the migration**
+- [x] **Step 1: Write the migration**
 
 ```sql
 -- src-tauri/migrations/001_init.sql
@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_entries_project_status ON entries(project_id, sta
 CREATE INDEX IF NOT EXISTS idx_entries_order ON entries(project_id, file_path, order_index);
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add src-tauri/migrations/
@@ -126,7 +126,7 @@ git commit -m "chore: add 001_init.sql migration"
 - Create: `src-tauri/src/db/mod.rs`
 - Create: `src-tauri/src/db/queries.rs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 // src-tauri/src/db/mod.rs — add at bottom
@@ -155,12 +155,12 @@ mod tests {
 
 > Note: add `tempfile` to dev dependencies: `cargo add --dev tempfile`
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd src-tauri && cargo test test_init_pool_creates_tables`
 Expected: FAIL — `init_pool` not found
 
-- [ ] **Step 3: Implement db/mod.rs**
+- [x] **Step 3: Implement db/mod.rs**
 
 ```rust
 // src-tauri/src/db/mod.rs
@@ -184,18 +184,18 @@ pub async fn init_pool(app_data_dir: &str) -> anyhow::Result<SqlitePool> {
 // Populated in later steps
 ```
 
-- [ ] **Step 4: Add tempfile dev dependency**
+- [x] **Step 4: Add tempfile dev dependency**
 
 ```bash
 cd src-tauri && cargo add --dev tempfile
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd src-tauri && cargo test test_init_pool_creates_tables`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src-tauri/src/db/
@@ -211,7 +211,7 @@ git commit -m "feat: add init_pool with sqlx migrations"
 - Create: `src-tauri/src/models/translation.rs`
 - Create: `src-tauri/src/models/project.rs`
 
-- [ ] **Step 1: Write models/translation.rs**
+- [x] **Step 1: Write models/translation.rs**
 
 ```rust
 // src-tauri/src/models/translation.rs
@@ -253,7 +253,7 @@ impl TranslationStatus {
 }
 ```
 
-- [ ] **Step 2: Write models/project.rs**
+- [x] **Step 2: Write models/project.rs**
 
 ```rust
 // src-tauri/src/models/project.rs
@@ -301,7 +301,7 @@ impl std::fmt::Display for EngineType {
 }
 ```
 
-- [ ] **Step 3: Write models/mod.rs**
+- [x] **Step 3: Write models/mod.rs**
 
 ```rust
 // src-tauri/src/models/mod.rs
@@ -312,7 +312,7 @@ pub use translation::{TranslationEntry, TranslationStatus};
 pub use project::{ProjectFile, ProjectStats, EngineType};
 ```
 
-- [ ] **Step 4: Write the failing test**
+- [x] **Step 4: Write the failing test**
 
 ```rust
 // src-tauri/src/models/translation.rs — add at bottom
@@ -342,7 +342,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 5: Add models mod to lib.rs**
+- [x] **Step 5: Add models mod to lib.rs**
 
 ```rust
 // src-tauri/src/lib.rs — add
@@ -350,12 +350,12 @@ mod models;
 mod db;
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `cd src-tauri && cargo test test_status_serializes`
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src-tauri/src/models/
@@ -369,7 +369,7 @@ git commit -m "feat: add TranslationEntry, TranslationStatus, ProjectFile models
 **Files:**
 - Modify: `src-tauri/src/lib.rs`
 
-- [ ] **Step 1: Update lib.rs to initialize pool on startup**
+- [x] **Step 1: Update lib.rs to initialize pool on startup**
 
 ```rust
 // src-tauri/src/lib.rs
@@ -403,17 +403,17 @@ pub fn run() {
 }
 ```
 
-- [ ] **Step 2: Verify Rust compiles**
+- [x] **Step 2: Verify Rust compiles**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 3: Test in app**
+- [x] **Step 3: Test in app**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 Expected: App launches, no panics, DB file created in app_data_dir
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src-tauri/src/lib.rs

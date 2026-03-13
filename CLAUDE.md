@@ -101,6 +101,9 @@ Created automatically in the game folder on first extraction. Contains metadata 
 
 SQLite via `sqlx`, stored in `app_data_dir/hoshi-trans.db`. Migrations in `src-tauri/migrations/`. Pool initialized in `db/mod.rs` and shared via `tauri::State<SqlitePool>`.
 
+> **Note:** `use tauri::Manager;` is required in `lib.rs` to call `.path()` and `.manage()` on `&mut tauri::App` in the `setup()` closure.
+> **Note:** `src-tauri/.env` with `DATABASE_URL=sqlite:./dev.db` is required for sqlx compile-time macro checks.
+
 Key tables: `projects` (one row per game+language), `entries` (all translatable strings with `order_index`, `status`, `file_path`).
 
 ### Cancel flag for batch translation
