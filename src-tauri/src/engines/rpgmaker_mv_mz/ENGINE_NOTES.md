@@ -20,9 +20,8 @@
 | `\P[n]` | `{{PARTY[n]}}` |
 
 ## Tested on
-<!-- Update after each real game test -->
-- [ ] RPG Maker MV game
-- [ ] RPG Maker MZ game
+- [x] RPG Maker MV game — `Ah,Ghost-1.10` → 37 Japanese entries extracted
+- [x] RPG Maker MZ game — `Adventurer_Corruption` → English game, 0 JP entries (skip filter correct, MZ structure readable)
 
 ## Known issues
-<!-- Document quirks found during testing -->
+- `Adventurer_Corruption` uses `\pop[n]` custom control codes (not standard RPG Maker) — not encoded as placeholders since they're in English text that gets skipped anyway.

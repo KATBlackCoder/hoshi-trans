@@ -2,6 +2,92 @@ use crate::engines::rpgmaker_mv_mz::{skip, placeholders};
 use crate::models::TranslationEntry;
 use uuid::Uuid;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MZ_DIR: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../engine_test/Adventurer_Corruption"
+    );
+    const MV_DIR: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../engine_test/Ah,Ghost-1.10"
+    );
+
+    #[tokio::test]
+    async fn test_extract_mz_runs_without_error() {
+        // Adventurer_Corruption is an English MZ game — skip filter correctly
+        // discards all entries (no Japanese text). Test verifies the extractor
+        // reads the MZ data/ structure without panicking or erroring.
+        let path = std::path::Path::new(MZ_DIR);
+        if !path.exists() {
+            return;
+        }
+        assert!(super::super::detect(path), "MZ detection failed");
+        let result = extract(path, "test-proj").await;
+        assert!(result.is_ok(), "extractor error: {:?}", result.err());
+        let entries = result.unwrap();
+        println!("MZ (English game) entries after skip filter: {}", entries.len());
+        // All returned entries must be valid if any
+        assert!(entries.iter().all(|e| !e.source_text.is_empty()));
+        assert!(entries.iter().all(|e| e.status == "pending"));
+        assert!(entries.iter().all(|e| e.order_index >= 0));
+    }
+
+    #[tokio::test]
+    async fn test_extract_mv_returns_entries() {
+        let path = std::path::Path::new(MV_DIR);
+        if !path.exists() {
+            return;
+        }
+        let entries = extract(path, "test-proj").await.unwrap();
+        assert!(!entries.is_empty(), "MV extractor returned 0 entries");
+        println!("MV entries: {}", entries.len());
+        assert!(entries.iter().all(|e| !e.source_text.is_empty()));
+        assert!(entries.iter().all(|e| e.status == "pending"));
+    }
+
+    #[tokio::test]
+    async fn test_extract_no_non_japanese_text() {
+        let path = std::path::Path::new(MZ_DIR);
+        if !path.exists() {
+            return;
+        }
+        let entries = extract(path, "test-proj").await.unwrap();
+        // No entry should contain purely ASCII source text (skip filter working)
+        let bad: Vec<_> = entries
+            .iter()
+            .filter(|e| !crate::engines::common::skip::contains_japanese(&e.source_text))
+            .collect();
+        if !bad.is_empty() {
+            for e in &bad {
+                println!("Non-JP leaked: {:?}", e.source_text);
+            }
+        }
+        assert!(bad.is_empty(), "{} non-Japanese entries leaked through skip filter", bad.len());
+    }
+
+    #[tokio::test]
+    async fn test_extract_mv_no_non_japanese_text() {
+        let path = std::path::Path::new(MV_DIR);
+        if !path.exists() {
+            return;
+        }
+        let entries = extract(path, "test-proj").await.unwrap();
+        let bad: Vec<_> = entries
+            .iter()
+            .filter(|e| !crate::engines::common::skip::contains_japanese(&e.source_text))
+            .collect();
+        if !bad.is_empty() {
+            for e in &bad {
+                println!("Non-JP leaked: {:?}", e.source_text);
+            }
+        }
+        assert!(bad.is_empty(), "{} non-Japanese entries leaked through skip filter", bad.len());
+    }
+}
+
 /// Extract all translatable strings from RPG Maker MV/MZ data/ folder
 pub async fn extract(
     game_dir: &std::path::Path,
