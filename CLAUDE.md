@@ -103,6 +103,7 @@ SQLite via `sqlx`, stored in `app_data_dir/hoshi-trans.db`. Migrations in `src-t
 
 > **Note:** `use tauri::Manager;` is required in `lib.rs` to call `.path()` and `.manage()` on `&mut tauri::App` in the `setup()` closure.
 > **Note:** `src-tauri/.env` with `DATABASE_URL=sqlite:./dev.db` is required for sqlx compile-time macro checks.
+> **Note:** Use `sqlx::query` / `sqlx::query_as` (runtime) instead of `sqlx::query!` macros — the macros require a live DB at compile time which breaks CI and cold builds.
 
 Key tables: `projects` (one row per game+language), `entries` (all translatable strings with `order_index`, `status`, `file_path`).
 

@@ -1,6 +1,6 @@
 # File Import — Project Creation Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** "Open a game" button opens a native folder picker, auto-detects the game engine, creates a project in SQLite, and writes `hoshi-trans.json` into the game folder.
 
@@ -49,7 +49,7 @@ cargo add async-trait
 
 ## Task 1: Install Packages
 
-- [ ] **Step 1: Add Tauri plugins**
+- [x] **Step 1: Add Tauri plugins**
 
 ```bash
 pnpm tauri add dialog
@@ -57,7 +57,7 @@ pnpm tauri add fs
 pnpm tauri add single-instance
 ```
 
-- [ ] **Step 2: Add Rust crates**
+- [x] **Step 2: Add Rust crates**
 
 ```bash
 cd src-tauri
@@ -66,14 +66,14 @@ cargo add thiserror
 cargo add async-trait
 ```
 
-- [ ] **Step 3: Verify capabilities added**
+- [x] **Step 3: Verify capabilities added**
 
 ```bash
 grep -E "dialog|fs:default" src-tauri/capabilities/default.json
 ```
 Expected: Both permissions present
 
-- [ ] **Step 4: Update lib.rs for single-instance**
+- [x] **Step 4: Update lib.rs for single-instance**
 
 ```rust
 // In lib.rs setup chain, add before .invoke_handler:
@@ -82,12 +82,12 @@ Expected: Both permissions present
 }))
 ```
 
-- [ ] **Step 5: Verify compilation**
+- [x] **Step 5: Verify compilation**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src-tauri/ package.json pnpm-lock.yaml
@@ -102,7 +102,7 @@ git commit -m "chore: add dialog, fs, single-instance plugins + walkdir, thiserr
 - Create: `src-tauri/src/engines/mod.rs`
 - Create: `src-tauri/src/engines/rpgmaker_mv_mz/mod.rs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/mod.rs — add at bottom
@@ -127,12 +127,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd src-tauri && cargo test test_detect_returns`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write engines/mod.rs**
+- [x] **Step 3: Write engines/mod.rs**
 
 ```rust
 // src-tauri/src/engines/mod.rs
@@ -153,7 +153,7 @@ pub trait GameEngine {
 }
 ```
 
-- [ ] **Step 4: Write rpgmaker_mv_mz/mod.rs**
+- [x] **Step 4: Write rpgmaker_mv_mz/mod.rs**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/mod.rs
@@ -207,26 +207,26 @@ mod tests {
 }
 ```
 
-- [ ] **Step 5: Create engines/common/mod.rs placeholder**
+- [x] **Step 5: Create engines/common/mod.rs placeholder**
 
 ```rust
 // src-tauri/src/engines/common/mod.rs
 // Populated in STEP-05
 ```
 
-- [ ] **Step 6: Add engines mod to lib.rs**
+- [x] **Step 6: Add engines mod to lib.rs**
 
 ```rust
 // src-tauri/src/lib.rs — add
 mod engines;
 ```
 
-- [ ] **Step 7: Run tests**
+- [x] **Step 7: Run tests**
 
 Run: `cd src-tauri && cargo test test_detect`
 Expected: PASS
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src-tauri/src/engines/
@@ -240,7 +240,7 @@ git commit -m "feat: add GameEngine trait and RPG Maker MV/MZ detect()"
 **Files:**
 - Modify: `src-tauri/src/db/queries.rs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 // src-tauri/src/db/queries.rs — add at bottom
@@ -273,12 +273,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd src-tauri && cargo test test_create_and_get_project`
 Expected: FAIL
 
-- [ ] **Step 3: Implement queries**
+- [x] **Step 3: Implement queries**
 
 ```rust
 // src-tauri/src/db/queries.rs
@@ -327,12 +327,12 @@ pub async fn get_project_by_game_dir(pool: &SqlitePool, game_dir: &str) -> anyho
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_create_and_get_project`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/db/queries.rs
@@ -348,7 +348,7 @@ git commit -m "feat: add create_project and get_projects DB queries"
 - Modify: `src-tauri/src/commands/mod.rs`
 - Modify: `src-tauri/src/lib.rs`
 
-- [ ] **Step 1: Write project.rs commands**
+- [x] **Step 1: Write project.rs commands**
 
 ```rust
 // src-tauri/src/commands/project.rs
@@ -494,7 +494,7 @@ pub async fn get_projects(
 }
 ```
 
-- [ ] **Step 2: Update commands/mod.rs**
+- [x] **Step 2: Update commands/mod.rs**
 
 ```rust
 // src-tauri/src/commands/mod.rs
@@ -502,7 +502,7 @@ pub mod ollama;
 pub mod project;
 ```
 
-- [ ] **Step 3: Register in lib.rs**
+- [x] **Step 3: Register in lib.rs**
 
 ```rust
 // lib.rs — update invoke_handler
@@ -515,12 +515,12 @@ pub mod project;
 ])
 ```
 
-- [ ] **Step 4: Verify Rust compiles**
+- [x] **Step 4: Verify Rust compiles**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/commands/
@@ -536,7 +536,7 @@ git commit -m "feat: add create_project, open_project, get_projects commands"
 - Create: `src/features/file-import/index.ts`
 - Modify: `src/hooks/useProject.ts`
 
-- [ ] **Step 1: Write useProject hook**
+- [x] **Step 1: Write useProject hook**
 
 ```ts
 // src/hooks/useProject.ts
@@ -556,7 +556,7 @@ export function useOpenProject() {
 }
 ```
 
-- [ ] **Step 2: Write FileImportButton**
+- [x] **Step 2: Write FileImportButton**
 
 ```tsx
 // src/features/file-import/FileImportButton.tsx
@@ -591,7 +591,7 @@ export function FileImportButton() {
 export { FileImportButton } from './FileImportButton'
 ```
 
-- [ ] **Step 3: Add to App.tsx sidebar**
+- [x] **Step 3: Add to App.tsx sidebar**
 
 ```tsx
 // src/App.tsx — in MainLayout sidebar
@@ -612,7 +612,7 @@ function MainLayout() {
 }
 ```
 
-- [ ] **Step 4: Test in app**
+- [x] **Step 4: Test in app**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 Expected:
@@ -620,7 +620,7 @@ Expected:
 - Select an RPG Maker MV/MZ game folder → `hoshi-trans.json` created in game folder
 - Select unsupported folder → error message shown below button
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/features/file-import/ src/hooks/useProject.ts src/App.tsx
