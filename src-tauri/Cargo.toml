@@ -27,6 +27,11 @@ tokio = { version = "1.50.0", features = ["full"] }
 ollama-rs = "0.3.3"
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "macros"] }
 uuid = { version = "1.22.0", features = ["v4", "serde"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+walkdir = "2.5.0"
+thiserror = "2.0.18"
+async-trait = "0.1.89"
 
 [features]
 default = ["custom-protocol"]
@@ -44,3 +49,6 @@ strip = true
 
 [dev-dependencies]
 tempfile = "3.27.0"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"

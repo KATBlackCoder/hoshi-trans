@@ -1,6 +1,6 @@
 pub mod queries;
 
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
 pub async fn init_pool(app_data_dir: &str) -> anyhow::Result<SqlitePool> {
     let db_path = format!("{}/hoshi-trans.db", app_data_dir);
