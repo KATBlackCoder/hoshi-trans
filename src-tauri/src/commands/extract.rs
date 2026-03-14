@@ -1,6 +1,6 @@
-use sqlx::SqlitePool;
-use crate::engines::rpgmaker_mv_mz::extractor;
 use crate::db::queries;
+use crate::engines::rpgmaker_mv_mz::extractor;
+use sqlx::SqlitePool;
 
 #[tauri::command]
 pub async fn extract_strings(

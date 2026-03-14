@@ -14,7 +14,10 @@ pub async fn inject(
     // Group entries by file_path (stored as "data/<filename>")
     let mut by_file: HashMap<&str, Vec<&TranslationEntry>> = HashMap::new();
     for entry in entries {
-        by_file.entry(entry.file_path.as_str()).or_default().push(entry);
+        by_file
+            .entry(entry.file_path.as_str())
+            .or_default()
+            .push(entry);
     }
 
     // Sort each file's entries by order_index
@@ -52,7 +55,11 @@ pub async fn inject(
         if let Some(file_entries) = by_file.get(file_rel.as_str()) {
             let translations: Vec<(&str, &str)> = file_entries
                 .iter()
-                .filter_map(|e| e.translation.as_deref().map(|t| (e.source_text.as_str(), t)))
+                .filter_map(|e| {
+                    e.translation
+                        .as_deref()
+                        .map(|t| (e.source_text.as_str(), t))
+                })
                 .collect();
 
             if filename.starts_with("Map") && filename != "MapInfos.json" {
@@ -98,7 +105,14 @@ pub fn inject_database_translations(json: &mut serde_json::Value, translations: 
     let mut trans_iter = translations.iter();
     if let Some(items) = json.as_array_mut() {
         for item in items.iter_mut().filter(|i| !i.is_null()) {
-            for field in &["name", "description", "message1", "message2", "message3", "message4"] {
+            for field in &[
+                "name",
+                "description",
+                "message1",
+                "message2",
+                "message3",
+                "message4",
+            ] {
                 if item[field].as_str().is_some() {
                     if let Some(t) = trans_iter.next() {
                         let (decoded, _) = placeholders::decode(t.1);
@@ -130,8 +144,14 @@ mod tests {
         let translations = vec![("こんにちは", "Hello"), ("さようなら", "Goodbye")];
         inject_map_translations(&mut json, &translations);
 
-        assert_eq!(json["events"][0]["pages"][0]["list"][0]["parameters"][0], "Hello");
-        assert_eq!(json["events"][0]["pages"][0]["list"][1]["parameters"][0], "Goodbye");
+        assert_eq!(
+            json["events"][0]["pages"][0]["list"][0]["parameters"][0],
+            "Hello"
+        );
+        assert_eq!(
+            json["events"][0]["pages"][0]["list"][1]["parameters"][0],
+            "Goodbye"
+        );
     }
 
     #[test]

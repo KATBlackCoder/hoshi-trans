@@ -1,5 +1,5 @@
-use sqlx::SqlitePool;
 use crate::db::queries;
+use sqlx::SqlitePool;
 
 #[tauri::command]
 pub async fn get_entries(

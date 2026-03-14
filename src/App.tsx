@@ -4,6 +4,7 @@ import { OnboardingPage } from '@/features/onboarding'
 import { FileImportButton } from '@/features/file-import'
 import { ExportButton } from '@/features/file-export'
 import { TranslationView } from '@/features/translation'
+import { SettingsPage } from '@/features/settings'
 import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
@@ -16,15 +17,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { Languages, Star, Trash2 } from 'lucide-react'
+import { Languages, Settings, Star, Trash2 } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
-function Sidebar({ activeProject, onProjectOpened, onProjectDeleted }: {
+function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSettingsToggle }: {
   activeProject: ProjectFile | null
   onProjectOpened: (p: ProjectFile) => void
   onProjectDeleted: () => void
+  view: 'main' | 'settings'
+  onSettingsToggle: () => void
 }) {
   async function handleDelete() {
     await invoke('delete_project', {
@@ -97,6 +100,16 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted }: {
           </div>
         )}
       </div>
+
+      {/* Settings button — bottom of sidebar */}
+      <Separator className="bg-sidebar-border" />
+      <button
+        onClick={onSettingsToggle}
+        className={`flex items-center gap-2 px-4 py-3 text-xs transition-colors ${view === 'settings' ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+      >
+        <Settings className="w-3.5 h-3.5" />
+        Settings
+      </button>
     </aside>
   )
 }
@@ -119,18 +132,23 @@ function EmptyState() {
 
 function MainLayout() {
   const [activeProject, setActiveProject] = useState<ProjectFile | null>(null)
+  const [view, setView] = useState<'main' | 'settings'>('main')
 
   return (
     <div className="flex h-screen bg-background">
       <Sidebar
         activeProject={activeProject}
-        onProjectOpened={setActiveProject}
+        onProjectOpened={(p) => { setActiveProject(p); setView('main') }}
         onProjectDeleted={() => setActiveProject(null)}
+        view={view}
+        onSettingsToggle={() => setView(v => v === 'settings' ? 'main' : 'settings')}
       />
       <main className="flex-1 overflow-hidden">
-        {activeProject
-          ? <TranslationView projectId={activeProject.project_id} gameTitle={activeProject.game_title} />
-          : <EmptyState />}
+        {view === 'settings'
+          ? <SettingsPage />
+          : activeProject
+            ? <TranslationView projectId={activeProject.project_id} gameTitle={activeProject.game_title} />
+            : <EmptyState />}
       </main>
     </div>
   )
@@ -139,6 +157,8 @@ function MainLayout() {
 export default function App() {
   useOllamaStatus()
   const ollamaOnline = useAppStore((s) => s.ollamaOnline)
+  const loadSettings = useAppStore((s) => s.loadSettings)
+  useEffect(() => { loadSettings() }, [loadSettings])
 
   return ollamaOnline ? <MainLayout /> : <OnboardingPage />
 }

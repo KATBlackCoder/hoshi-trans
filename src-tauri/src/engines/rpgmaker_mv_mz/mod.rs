@@ -5,8 +5,7 @@ pub mod skip;
 
 /// RPG Maker MZ uses `data/`, MV uses `www/data/`
 pub fn detect(game_dir: &std::path::Path) -> bool {
-    game_dir.join("data/System.json").exists()
-        || game_dir.join("www/data/System.json").exists()
+    game_dir.join("data/System.json").exists() || game_dir.join("www/data/System.json").exists()
 }
 
 fn system_json_path(game_dir: &std::path::Path) -> Option<std::path::PathBuf> {
@@ -22,14 +21,11 @@ fn system_json_path(game_dir: &std::path::Path) -> Option<std::path::PathBuf> {
 }
 
 pub fn get_game_title(game_dir: &std::path::Path) -> anyhow::Result<String> {
-    let path = system_json_path(game_dir)
-        .ok_or_else(|| anyhow::anyhow!("System.json not found"))?;
+    let path =
+        system_json_path(game_dir).ok_or_else(|| anyhow::anyhow!("System.json not found"))?;
     let content = std::fs::read_to_string(path)?;
     let json: serde_json::Value = serde_json::from_str(&content)?;
-    Ok(json["gameTitle"]
-        .as_str()
-        .unwrap_or("Unknown")
-        .to_string())
+    Ok(json["gameTitle"].as_str().unwrap_or("Unknown").to_string())
 }
 
 #[cfg(test)]

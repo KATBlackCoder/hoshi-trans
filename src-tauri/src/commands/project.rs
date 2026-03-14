@@ -1,8 +1,8 @@
-use sqlx::SqlitePool;
-use uuid::Uuid;
 use crate::db::queries;
 use crate::engines::rpgmaker_mv_mz;
-use crate::models::{ProjectFile, ProjectStats, EngineType};
+use crate::models::{EngineType, ProjectFile, ProjectStats};
+use sqlx::SqlitePool;
+use uuid::Uuid;
 
 fn build_project_file(
     project_id: &str,
@@ -30,7 +30,11 @@ fn build_project_file(
     }
 }
 
-fn write_project_file(project: &ProjectFile, game_dir: &str, app_data_dir: &str) -> anyhow::Result<Option<String>> {
+fn write_project_file(
+    project: &ProjectFile,
+    game_dir: &str,
+    app_data_dir: &str,
+) -> anyhow::Result<Option<String>> {
     let json = serde_json::to_string_pretty(project)?;
     let local_path = std::path::Path::new(game_dir).join("hoshi-trans.json");
     match std::fs::write(&local_path, &json) {
@@ -63,18 +67,23 @@ pub async fn create_project(
     let game_path = std::path::Path::new(&game_dir);
 
     let (engine_type, engine_str, game_title) = if rpgmaker_mv_mz::detect(game_path) {
-        let title = rpgmaker_mv_mz::get_game_title(game_path)
-            .unwrap_or_else(|_| "Unknown".into());
+        let title = rpgmaker_mv_mz::get_game_title(game_path).unwrap_or_else(|_| "Unknown".into());
         (EngineType::RpgmakerMvMz, "rpgmaker_mv_mz", title)
     } else {
         return Err("Unsupported game engine — no recognized game files found".into());
     };
 
     let project_id = Uuid::new_v4().to_string();
-    let project = build_project_file(&project_id, &game_dir, engine_type, &game_title, &target_lang);
+    let project = build_project_file(
+        &project_id,
+        &game_dir,
+        engine_type,
+        &game_title,
+        &target_lang,
+    );
 
-    let json_path = write_project_file(&project, &game_dir, &app_data_dir)
-        .map_err(|e| e.to_string())?;
+    let json_path =
+        write_project_file(&project, &game_dir, &app_data_dir).map_err(|e| e.to_string())?;
 
     queries::create_project(
         &pool,
@@ -133,16 +142,18 @@ pub async fn get_projects(
         .map_err(|e| e.to_string())?;
     let result = rows
         .into_iter()
-        .map(|(id, game_dir, engine, game_title, target_lang, json_path)| {
-            serde_json::json!({
-                "id": id,
-                "game_dir": game_dir,
-                "engine": engine,
-                "game_title": game_title,
-                "target_lang": target_lang,
-                "json_path": json_path,
-            })
-        })
+        .map(
+            |(id, game_dir, engine, game_title, target_lang, json_path)| {
+                serde_json::json!({
+                    "id": id,
+                    "game_dir": game_dir,
+                    "engine": engine,
+                    "game_title": game_title,
+                    "target_lang": target_lang,
+                    "json_path": json_path,
+                })
+            },
+        )
         .collect();
     Ok(result)
 }

@@ -117,11 +117,7 @@ pub async fn update_translation(
     Ok(())
 }
 
-pub async fn update_status(
-    pool: &SqlitePool,
-    entry_id: &str,
-    status: &str,
-) -> anyhow::Result<()> {
+pub async fn update_status(pool: &SqlitePool, entry_id: &str, status: &str) -> anyhow::Result<()> {
     sqlx::query("UPDATE entries SET status = ? WHERE id = ?")
         .bind(status)
         .bind(entry_id)
@@ -195,9 +191,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
 
-        create_project(&pool, "proj-1", "/game", "rpgmaker_mv_mz", "Test", "en", None)
-            .await
-            .unwrap();
+        create_project(
+            &pool,
+            "proj-1",
+            "/game",
+            "rpgmaker_mv_mz",
+            "Test",
+            "en",
+            None,
+        )
+        .await
+        .unwrap();
 
         let entries = vec![crate::models::TranslationEntry {
             id: "e1".into(),
@@ -224,7 +228,9 @@ mod tests {
     async fn test_get_entries_filtered_by_status() {
         let dir = tempfile::tempdir().unwrap();
         let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
-        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None)
+            .await
+            .unwrap();
 
         sqlx::query(
             "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES ('e1','p1','こんにちは','pending','f',0)"
@@ -233,7 +239,9 @@ mod tests {
             "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES ('e2','p1','ありがとう','translated','f',1)"
         ).execute(&pool).await.unwrap();
 
-        let pending = get_entries(&pool, "p1", Some("pending"), None).await.unwrap();
+        let pending = get_entries(&pool, "p1", Some("pending"), None)
+            .await
+            .unwrap();
         assert_eq!(pending.len(), 1);
         assert_eq!(pending[0].source_text, "こんにちは");
 

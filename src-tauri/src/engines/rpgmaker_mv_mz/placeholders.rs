@@ -183,7 +183,10 @@ mod tests {
     #[test]
     fn test_encode_percent_param() {
         assert_eq!(encode("%1が倒れた！"), "{{PC[1]}}が倒れた！");
-        assert_eq!(encode("%1は%2を手に入れた！"), "{{PC[1]}}は{{PC[2]}}を手に入れた！");
+        assert_eq!(
+            encode("%1は%2を手に入れた！"),
+            "{{PC[1]}}は{{PC[2]}}を手に入れた！"
+        );
     }
 
     #[test]

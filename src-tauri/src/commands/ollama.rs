@@ -1,9 +1,12 @@
-use ollama_rs::{Ollama, generation::completion::request::GenerationRequest};
-use sqlx::SqlitePool;
-use std::sync::{Arc, atomic::{AtomicBool, AtomicU32, Ordering}};
-use tauri::Emitter;
 use crate::db::queries;
 use crate::engines::rpgmaker_mv_mz::placeholders;
+use ollama_rs::{generation::completion::request::GenerationRequest, Ollama};
+use sqlx::SqlitePool;
+use std::sync::{
+    atomic::{AtomicBool, AtomicU32, Ordering},
+    Arc,
+};
+use tauri::Emitter;
 
 /// Internal function — testable without Tauri state
 pub async fn check_ollama_inner() -> Result<bool, String> {
@@ -37,9 +40,7 @@ pub struct TranslationProgress {
 }
 
 #[tauri::command]
-pub async fn cancel_batch(
-    cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
-) -> Result<(), String> {
+pub async fn cancel_batch(cancel_flag: tauri::State<'_, Arc<AtomicBool>>) -> Result<(), String> {
     cancel_flag.store(true, Ordering::Relaxed);
     Ok(())
 }
@@ -70,7 +71,10 @@ pub async fn translate_batch(
 
     // Apply batch limit (0 = translate all)
     let entries = if limit > 0 {
-        all_entries.into_iter().take(limit as usize).collect::<Vec<_>>()
+        all_entries
+            .into_iter()
+            .take(limit as usize)
+            .collect::<Vec<_>>()
     } else {
         all_entries
     };
@@ -112,7 +116,10 @@ pub async fn translate_batch(
             }
 
             let encoded = placeholders::encode(&entry.source_text);
-            let prompt = format!("{}\n\nTranslate to {}:\n{}", system_prompt, target_lang, encoded);
+            let prompt = format!(
+                "{}\n\nTranslate to {}:\n{}",
+                system_prompt, target_lang, encoded
+            );
             let ollama = Ollama::default();
             let request = GenerationRequest::new(model.clone(), prompt);
 
@@ -120,7 +127,11 @@ pub async fn translate_batch(
                 Ok(response) => {
                     let translated = response.response.trim().to_string();
                     let (decoded, intact) = placeholders::decode(&translated);
-                    let status = if intact { "translated" } else { "warning:missing_placeholder" };
+                    let status = if intact {
+                        "translated"
+                    } else {
+                        "warning:missing_placeholder"
+                    };
                     let _ = queries::update_translation(&pool, &entry.id, &decoded, status).await;
                 }
                 Err(e) => {
@@ -129,11 +140,14 @@ pub async fn translate_batch(
             }
 
             let done = done_count.fetch_add(1, Ordering::Relaxed) + 1;
-            let _ = window.emit("translation:progress", TranslationProgress {
-                done,
-                total,
-                entry_id: entry.id.clone(),
-            });
+            let _ = window.emit(
+                "translation:progress",
+                TranslationProgress {
+                    done,
+                    total,
+                    entry_id: entry.id.clone(),
+                },
+            );
         });
     }
 
@@ -170,7 +184,12 @@ mod tests {
                 let current = active.fetch_add(1, Ordering::SeqCst) + 1;
                 let mut seen = max_seen.load(Ordering::SeqCst);
                 while current > seen {
-                    match max_seen.compare_exchange(seen, current, Ordering::SeqCst, Ordering::SeqCst) {
+                    match max_seen.compare_exchange(
+                        seen,
+                        current,
+                        Ordering::SeqCst,
+                        Ordering::SeqCst,
+                    ) {
                         Ok(_) => break,
                         Err(x) => seen = x,
                     }
@@ -182,6 +201,9 @@ mod tests {
         }
 
         while join_set.join_next().await.is_some() {}
-        assert!(max_seen.load(Ordering::SeqCst) <= 2, "concurrency exceeded semaphore limit");
+        assert!(
+            max_seen.load(Ordering::SeqCst) <= 2,
+            "concurrency exceeded semaphore limit"
+        );
     }
 }

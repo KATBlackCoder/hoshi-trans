@@ -1,4 +1,4 @@
-use crate::engines::rpgmaker_mv_mz::{skip, placeholders};
+use crate::engines::rpgmaker_mv_mz::{placeholders, skip};
 use crate::models::TranslationEntry;
 use uuid::Uuid;
 
@@ -10,10 +10,7 @@ mod tests {
         env!("CARGO_MANIFEST_DIR"),
         "/../engine_test/Adventurer_Corruption"
     );
-    const MV_DIR: &str = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../engine_test/Ah,Ghost-1.10"
-    );
+    const MV_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine_test/Ah,Ghost-1.10");
     const MV_DIR2: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../engine_test/Cursed_Blessing_v2"
@@ -36,7 +33,10 @@ mod tests {
         let result = extract(path, "test-proj").await;
         assert!(result.is_ok(), "extractor error: {:?}", result.err());
         let entries = result.unwrap();
-        println!("MZ (English game) entries after skip filter: {}", entries.len());
+        println!(
+            "MZ (English game) entries after skip filter: {}",
+            entries.len()
+        );
         // All returned entries must be valid if any
         assert!(entries.iter().all(|e| !e.source_text.is_empty()));
         assert!(entries.iter().all(|e| e.status == "pending"));
@@ -73,7 +73,11 @@ mod tests {
                 println!("Non-JP leaked: {:?}", e.source_text);
             }
         }
-        assert!(bad.is_empty(), "{} non-Japanese entries leaked through skip filter", bad.len());
+        assert!(
+            bad.is_empty(),
+            "{} non-Japanese entries leaked through skip filter",
+            bad.len()
+        );
     }
 
     #[tokio::test]
@@ -92,7 +96,11 @@ mod tests {
                 println!("Non-JP leaked: {:?}", e.source_text);
             }
         }
-        assert!(bad.is_empty(), "{} non-Japanese entries leaked through skip filter", bad.len());
+        assert!(
+            bad.is_empty(),
+            "{} non-Japanese entries leaked through skip filter",
+            bad.len()
+        );
     }
 
     #[tokio::test]
@@ -101,10 +109,16 @@ mod tests {
         if !path.exists() {
             return;
         }
-        assert!(super::super::detect(path), "MV detection failed for Cursed_Blessing_v2");
+        assert!(
+            super::super::detect(path),
+            "MV detection failed for Cursed_Blessing_v2"
+        );
         let entries = extract(path, "test-proj").await.unwrap();
         println!("Cursed_Blessing_v2 (MV) entries: {}", entries.len());
-        assert!(!entries.is_empty(), "MV extractor returned 0 entries for Cursed_Blessing_v2");
+        assert!(
+            !entries.is_empty(),
+            "MV extractor returned 0 entries for Cursed_Blessing_v2"
+        );
         assert!(entries.iter().all(|e| !e.source_text.is_empty()));
         assert!(entries.iter().all(|e| e.status == "pending"));
         let bad: Vec<_> = entries
@@ -125,10 +139,16 @@ mod tests {
         if !path.exists() {
             return;
         }
-        assert!(super::super::detect(path), "MZ detection failed for osana_isekai_v1.06");
+        assert!(
+            super::super::detect(path),
+            "MZ detection failed for osana_isekai_v1.06"
+        );
         let entries = extract(path, "test-proj").await.unwrap();
         println!("osana_isekai_v1.06 (MZ) entries: {}", entries.len());
-        assert!(!entries.is_empty(), "MZ extractor returned 0 entries for osana_isekai_v1.06");
+        assert!(
+            !entries.is_empty(),
+            "MZ extractor returned 0 entries for osana_isekai_v1.06"
+        );
         assert!(entries.iter().all(|e| !e.source_text.is_empty()));
         assert!(entries.iter().all(|e| e.status == "pending"));
         let bad: Vec<_> = entries
@@ -181,8 +201,13 @@ pub async fn extract(
             extract_common_events(&json, project_id, &file_rel, &mut entries);
         } else if matches!(
             filename.as_str(),
-            "Actors.json" | "Items.json" | "Weapons.json" | "Armors.json"
-            | "Skills.json" | "Enemies.json" | "States.json"
+            "Actors.json"
+                | "Items.json"
+                | "Weapons.json"
+                | "Armors.json"
+                | "Skills.json"
+                | "Enemies.json"
+                | "States.json"
         ) {
             extract_database_objects(&json, project_id, &file_rel, &mut entries);
         }
@@ -232,7 +257,14 @@ fn extract_map_events(
                             match code {
                                 401 | 405 => {
                                     if let Some(text) = cmd["parameters"][0].as_str() {
-                                        add_entry(entries, project_id, text, Some(format!("code:{}", code)), file_path, order);
+                                        add_entry(
+                                            entries,
+                                            project_id,
+                                            text,
+                                            Some(format!("code:{}", code)),
+                                            file_path,
+                                            order,
+                                        );
                                         order += 1;
                                     }
                                 }
@@ -240,7 +272,14 @@ fn extract_map_events(
                                     if let Some(choices) = cmd["parameters"][0].as_array() {
                                         for choice in choices {
                                             if let Some(text) = choice.as_str() {
-                                                add_entry(entries, project_id, text, Some("choice".into()), file_path, order);
+                                                add_entry(
+                                                    entries,
+                                                    project_id,
+                                                    text,
+                                                    Some("choice".into()),
+                                                    file_path,
+                                                    order,
+                                                );
                                                 order += 1;
                                             }
                                         }
@@ -248,7 +287,14 @@ fn extract_map_events(
                                 }
                                 101 => {
                                     if let Some(text) = cmd["parameters"][4].as_str() {
-                                        add_entry(entries, project_id, text, Some("speaker".into()), file_path, order);
+                                        add_entry(
+                                            entries,
+                                            project_id,
+                                            text,
+                                            Some("speaker".into()),
+                                            file_path,
+                                            order,
+                                        );
                                         order += 1;
                                     }
                                 }
@@ -276,7 +322,14 @@ fn extract_common_events(
                     let code = cmd["code"].as_i64().unwrap_or(0);
                     if matches!(code, 401 | 405 | 102) {
                         if let Some(text) = cmd["parameters"][0].as_str() {
-                            add_entry(entries, project_id, text, Some(format!("code:{}", code)), file_path, order);
+                            add_entry(
+                                entries,
+                                project_id,
+                                text,
+                                Some(format!("code:{}", code)),
+                                file_path,
+                                order,
+                            );
                             order += 1;
                         }
                     }
@@ -295,9 +348,23 @@ fn extract_database_objects(
     let mut order: i64 = 0;
     if let Some(items) = json.as_array() {
         for item in items.iter().filter(|i| !i.is_null()) {
-            for field in &["name", "description", "message1", "message2", "message3", "message4"] {
+            for field in &[
+                "name",
+                "description",
+                "message1",
+                "message2",
+                "message3",
+                "message4",
+            ] {
                 if let Some(text) = item[field].as_str() {
-                    add_entry(entries, project_id, text, Some((*field).to_string()), file_path, order);
+                    add_entry(
+                        entries,
+                        project_id,
+                        text,
+                        Some((*field).to_string()),
+                        file_path,
+                        order,
+                    );
                     order += 1;
                 }
             }

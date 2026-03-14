@@ -1,6 +1,6 @@
-use sqlx::SqlitePool;
 use crate::db::queries;
 use crate::engines::rpgmaker_mv_mz::injector;
+use sqlx::SqlitePool;
 
 #[tauri::command]
 pub async fn inject_translations(
