@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { TranslationRow } from './TranslationRow'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
 import { useAppStore } from '@/stores/appStore'
-import { Sparkles, X, Loader2 } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ArrowUpDown } from 'lucide-react'
 import type { TranslationEntry } from '@/types'
 
 const STATUS_FILTERS = [
@@ -18,6 +19,30 @@ const STATUS_FILTERS = [
   { label: 'Error', value: 'error' },
 ]
 
+type SortKey = 'order' | 'file' | 'status'
+
+const SORT_OPTIONS: { label: string; value: SortKey }[] = [
+  { label: 'Order', value: 'order' },
+  { label: 'File', value: 'file' },
+  { label: 'Status', value: 'status' },
+]
+
+function sortEntries(entries: TranslationEntry[], key: SortKey): TranslationEntry[] {
+  return [...entries].sort((a, b) => {
+    switch (key) {
+      case 'file':
+        return a.file_path.localeCompare(b.file_path) || a.order_index - b.order_index
+      case 'status': {
+        const statusStr = (e: TranslationEntry) =>
+          typeof e.status === 'string' ? e.status : JSON.stringify(e.status)
+        return statusStr(a).localeCompare(statusStr(b))
+      }
+      default:
+        return a.order_index - b.order_index
+    }
+  })
+}
+
 interface Props {
   projectId: string
   gameTitle?: string
@@ -25,6 +50,8 @@ interface Props {
 
 export function TranslationView({ projectId, gameTitle }: Props) {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('order')
   const { availableModels } = useAppStore()
   const { progress, running, start, cancel } = useTranslationBatch()
 
@@ -44,6 +71,18 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const pendingCount = entries.filter(e => e.status === 'pending').length
   const translatedCount = entries.filter(e => e.status === 'translated').length
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const base = q
+      ? entries.filter(
+          e =>
+            e.source_text.toLowerCase().includes(q) ||
+            (e.translation ?? '').toLowerCase().includes(q),
+        )
+      : entries
+    return sortEntries(base, sortKey)
+  }, [entries, search, sortKey])
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -62,6 +101,12 @@ export function TranslationView({ projectId, gameTitle }: Props) {
               <>
                 <span>·</span>
                 <span>{pendingCount} pending</span>
+              </>
+            )}
+            {search && (
+              <>
+                <span>·</span>
+                <span className="text-primary">{filtered.length} results</span>
               </>
             )}
           </div>
@@ -95,34 +140,80 @@ export function TranslationView({ projectId, gameTitle }: Props) {
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 px-6 py-2 border-b border-border">
-        {STATUS_FILTERS.map(f => (
-          <button
-            key={f.label}
-            onClick={() => setStatusFilter(f.value)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-              statusFilter === f.value
-                ? 'bg-secondary text-secondary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Search + filter toolbar */}
+      <div className="flex items-center gap-2 px-6 py-2 border-b border-border">
+        {/* Status filter tabs */}
+        <div className="flex items-center gap-1">
+          {STATUS_FILTERS.map(f => (
+            <button
+              key={f.label}
+              onClick={() => setStatusFilter(f.value)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                statusFilter === f.value
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Sort */}
+        <div className="flex items-center gap-1">
+          <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+          {SORT_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => setSortKey(o.value)}
+              className={`px-2 py-1 rounded text-xs transition-colors ${
+                sortKey === o.value
+                  ? 'bg-secondary text-secondary-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative w-48">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="h-7 pl-6 text-xs"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
         {!model && (
-          <Badge variant="outline" className="ml-auto text-xs text-yellow-500 border-yellow-500/30">
-            No Ollama model available
+          <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/30">
+            No Ollama model
           </Badge>
         )}
       </div>
 
       {/* Entry list */}
       <div className="flex-1 overflow-y-auto">
-        {entries.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-2 text-center">
-            <p className="text-sm font-medium">No entries</p>
-            <p className="text-xs text-muted-foreground">Run extraction to populate this list</p>
+            <p className="text-sm font-medium">{search ? 'No results' : 'No entries'}</p>
+            <p className="text-xs text-muted-foreground">
+              {search ? `Nothing matched "${search}"` : 'Run extraction to populate this list'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -131,7 +222,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
               <span>Original (JP)</span>
               <span>Translation</span>
             </div>
-            {entries.map((e) => (
+            {filtered.map((e) => (
               <TranslationRow key={e.id} entry={e} onUpdated={refetch} />
             ))}
           </div>
