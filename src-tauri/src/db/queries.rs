@@ -130,6 +130,15 @@ pub async fn update_status(
     Ok(())
 }
 
+pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> anyhow::Result<()> {
+    // ON DELETE CASCADE handles entries automatically
+    sqlx::query("DELETE FROM projects WHERE id = ?")
+        .bind(project_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 pub async fn get_translated_entries_ordered(
     pool: &SqlitePool,
     project_id: &str,

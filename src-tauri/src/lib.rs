@@ -31,6 +31,7 @@ pub fn run() {
             commands::project::create_project,
             commands::project::open_project,
             commands::project::get_projects,
+            commands::project::delete_project,
             commands::extract::extract_strings,
             commands::entries::get_entries,
             commands::entries::update_translation,

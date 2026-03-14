@@ -108,6 +108,23 @@ pub async fn open_project(
 }
 
 #[tauri::command]
+pub async fn delete_project(
+    pool: tauri::State<'_, SqlitePool>,
+    project_id: String,
+    game_dir: String,
+) -> Result<(), String> {
+    queries::delete_project(&pool, &project_id)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Best-effort: remove hoshi-trans.json from game dir if it exists
+    let json_path = std::path::Path::new(&game_dir).join("hoshi-trans.json");
+    let _ = std::fs::remove_file(json_path);
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_projects(
     pool: tauri::State<'_, SqlitePool>,
 ) -> Result<Vec<serde_json::Value>, String> {

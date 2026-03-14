@@ -6,13 +6,25 @@ import { ExportButton } from '@/features/file-export'
 import { TranslationView } from '@/features/translation'
 import { Separator } from '@/components/ui/separator'
 import { useState } from 'react'
-import { Languages, Star } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/core'
+import { Languages, Star, Trash2 } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
-function Sidebar({ activeProject, onProjectOpened }: {
+function Sidebar({ activeProject, onProjectOpened, onProjectDeleted }: {
   activeProject: ProjectFile | null
   onProjectOpened: (p: ProjectFile) => void
+  onProjectDeleted: () => void
 }) {
+  async function handleDelete() {
+    if (!activeProject) return
+    if (!confirm(`Delete project "${activeProject.game_title}"? This will remove all translations from the database.`)) return
+    await invoke('delete_project', {
+      projectId: activeProject.project_id,
+      gameDir: activeProject.game_dir,
+    })
+    onProjectDeleted()
+  }
+
   return (
     <aside className="w-60 shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
@@ -33,9 +45,16 @@ function Sidebar({ activeProject, onProjectOpened }: {
             <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
                 <Languages className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <p className="text-xs font-medium text-sidebar-foreground truncate">
+                <p className="text-xs font-medium text-sidebar-foreground truncate flex-1">
                   {activeProject.game_title}
                 </p>
+                <button
+                  onClick={handleDelete}
+                  title="Delete project"
+                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
               <p className="text-xs text-muted-foreground pl-5">
                 {activeProject.engine.replace('_', ' ')}
@@ -74,7 +93,11 @@ function MainLayout() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeProject={activeProject} onProjectOpened={setActiveProject} />
+      <Sidebar
+        activeProject={activeProject}
+        onProjectOpened={setActiveProject}
+        onProjectDeleted={() => setActiveProject(null)}
+      />
       <main className="flex-1 overflow-hidden">
         {activeProject
           ? <TranslationView projectId={activeProject.project_id} gameTitle={activeProject.game_title} />
