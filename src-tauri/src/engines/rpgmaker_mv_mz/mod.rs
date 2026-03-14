@@ -1,4 +1,5 @@
 pub mod extractor;
+pub mod injector;
 pub mod placeholders;
 pub mod skip;
 

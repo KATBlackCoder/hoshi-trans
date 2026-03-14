@@ -130,6 +130,23 @@ pub async fn update_status(
     Ok(())
 }
 
+pub async fn get_translated_entries_ordered(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
+    let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
+        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index
+         FROM entries
+         WHERE project_id = ?
+         AND status IN ('translated', 'reviewed', 'warning')
+         ORDER BY file_path, order_index",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
 pub async fn get_pending_entries(
     pool: &SqlitePool,
     project_id: &str,

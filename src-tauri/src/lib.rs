@@ -35,6 +35,7 @@ pub fn run() {
             commands::entries::get_entries,
             commands::entries::update_translation,
             commands::entries::update_status,
+            commands::inject::inject_translations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

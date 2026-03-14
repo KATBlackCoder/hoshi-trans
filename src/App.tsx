@@ -2,6 +2,7 @@ import { useOllamaStatus } from '@/hooks/useOllamaStatus'
 import { useAppStore } from '@/stores/appStore'
 import { OnboardingPage } from '@/features/onboarding'
 import { FileImportButton } from '@/features/file-import'
+import { ExportButton } from '@/features/file-export'
 import { TranslationView } from '@/features/translation'
 import { Separator } from '@/components/ui/separator'
 import { useState } from 'react'
@@ -28,16 +29,23 @@ function Sidebar({ activeProject, onProjectOpened }: {
         <FileImportButton onProjectOpened={onProjectOpened} />
 
         {activeProject && (
-          <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-              <Languages className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <p className="text-xs font-medium text-sidebar-foreground truncate">
-                {activeProject.game_title}
+          <div className="flex flex-col gap-2">
+            <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <Languages className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <p className="text-xs font-medium text-sidebar-foreground truncate">
+                  {activeProject.game_title}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground pl-5">
+                {activeProject.engine.replace('_', ' ')}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground pl-5">
-              {activeProject.engine.replace('_', ' ')}
-            </p>
+            <ExportButton
+              projectId={activeProject.project_id}
+              gameDir={activeProject.game_dir}
+              outputDir={activeProject.output_dir}
+            />
           </div>
         )}
       </div>
