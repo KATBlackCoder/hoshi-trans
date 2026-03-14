@@ -146,7 +146,7 @@ mod tests {
             }]
         });
 
-        let translations = vec![("dummy", "Hello {{ACTOR_NAME[1]}}!")];
+        let translations = vec![("dummy", "Hello {{PH:N[1]}}!")];
         inject_map_translations(&mut json, &translations);
 
         assert_eq!(
