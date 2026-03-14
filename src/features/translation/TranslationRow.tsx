@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { TableCell, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,9 +26,10 @@ function StatusBadge({ status }: { status: TranslationStatus }) {
 interface Props {
   entry: TranslationEntry
   onUpdated: () => void
+  style?: React.CSSProperties
 }
 
-export function TranslationRow({ entry, onUpdated }: Props) {
+export function TranslationRow({ entry, onUpdated, style }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.translation ?? '')
 
@@ -43,59 +45,61 @@ export function TranslationRow({ entry, onUpdated }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 px-6 py-3 text-sm hover:bg-muted/20 group">
+    <TableRow style={style} className="group absolute top-0 left-0 w-full flex hover:bg-muted/20 border-b border-border">
       {/* Source */}
-      <div className="flex flex-col gap-1">
-        <p className="font-mono text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">
+      <TableCell className="w-1/2 align-top py-3 px-6">
+        <p className="font-mono text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap wrap-break-word">
           {entry.source_text}
         </p>
         {entry.context && (
           <span className="text-xs text-muted-foreground/60">{entry.context}</span>
         )}
-      </div>
+      </TableCell>
 
       {/* Translation */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5">
-          <StatusBadge status={entry.status} />
-          {!editing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-              onClick={() => setEditing(true)}
-            >
-              <Pencil className="w-3 h-3" />
-            </Button>
+      <TableCell className="w-1/2 align-top py-3 px-6">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <StatusBadge status={entry.status} />
+            {!editing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+
+          {editing ? (
+            <div className="flex flex-col gap-1.5">
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={3}
+                className="text-xs font-mono resize-none"
+                autoFocus
+              />
+              <div className="flex gap-1 justify-end">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={discard}>
+                  <X className="w-3 h-3 mr-1" />
+                  Discard
+                </Button>
+                <Button size="sm" className="h-6 px-2 text-xs" onClick={save}>
+                  <Check className="w-3 h-3 mr-1" />
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/70">
+              {entry.translation ?? <span className="text-muted-foreground/40 italic">not translated</span>}
+            </p>
           )}
         </div>
-
-        {editing ? (
-          <div className="flex flex-col gap-1.5">
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={3}
-              className="text-xs font-mono resize-none"
-              autoFocus
-            />
-            <div className="flex gap-1 justify-end">
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={discard}>
-                <X className="w-3 h-3 mr-1" />
-                Discard
-              </Button>
-              <Button size="sm" className="h-6 px-2 text-xs" onClick={save}>
-                <Check className="w-3 h-3 mr-1" />
-                Save
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground/70">
-            {entry.translation ?? <span className="text-muted-foreground/40 italic">not translated</span>}
-          </p>
-        )}
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
   )
 }

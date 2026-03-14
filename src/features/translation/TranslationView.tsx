@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { invoke } from '@tauri-apps/api/core'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TranslationRow } from './TranslationRow'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
 import { useAppStore } from '@/stores/appStore'
@@ -64,6 +66,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const [limit, setLimit] = useState(0)
   const { availableModels } = useAppStore()
   const { progress, running, start, cancel } = useTranslationBatch()
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const { data: entries = [], refetch } = useQuery({
     queryKey: ['entries', projectId, statusFilter],
@@ -77,7 +80,6 @@ export function TranslationView({ projectId, gameTitle }: Props) {
 
   const model = availableModels[0] ?? ''
   const progressPct = progress ? Math.round((progress.done / progress.total) * 100) : 0
-
   const pendingCount = entries.filter(e => e.status === 'pending').length
   const translatedCount = entries.filter(e => e.status === 'translated').length
 
@@ -93,6 +95,13 @@ export function TranslationView({ projectId, gameTitle }: Props) {
     return sortEntries(base, sortKey)
   }, [entries, search, sortKey])
 
+  const virtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 80,
+    overscan: 8,
+  })
+
   function handleStart() {
     start(
       projectId,
@@ -107,29 +116,14 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-4">
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-4 shrink-0">
         <div className="flex flex-col gap-0.5">
           <h2 className="font-semibold text-sm">{gameTitle ?? 'Translation'}</h2>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{entries.length} entries</span>
-            {translatedCount > 0 && (
-              <>
-                <span>·</span>
-                <span className="text-green-500">{translatedCount} translated</span>
-              </>
-            )}
-            {pendingCount > 0 && (
-              <>
-                <span>·</span>
-                <span>{pendingCount} pending</span>
-              </>
-            )}
-            {search && (
-              <>
-                <span>·</span>
-                <span className="text-primary">{filtered.length} results</span>
-              </>
-            )}
+            {translatedCount > 0 && <><span>·</span><span className="text-green-500">{translatedCount} translated</span></>}
+            {pendingCount > 0 && <><span>·</span><span>{pendingCount} pending</span></>}
+            {search && <><span>·</span><span className="text-primary">{filtered.length} results</span></>}
           </div>
         </div>
 
@@ -142,13 +136,12 @@ export function TranslationView({ projectId, gameTitle }: Props) {
                 {progress?.done}/{progress?.total}
               </span>
               <Button variant="ghost" size="sm" onClick={cancel} className="h-7 px-2 text-xs">
-                <X className="w-3 h-3 mr-1" />
-                Cancel
+                <X className="w-3 h-3 mr-1" />Cancel
               </Button>
             </div>
           )}
 
-          {/* Concurrency selector */}
+          {/* Concurrency */}
           <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">
             {CONCURRENCY_OPTIONS.map(n => (
               <button
@@ -161,13 +154,11 @@ export function TranslationView({ projectId, gameTitle }: Props) {
                     ? 'bg-secondary text-secondary-foreground font-semibold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                 }`}
-              >
-                {n}×
-              </button>
+              >{n}×</button>
             ))}
           </div>
 
-          {/* Limit selector */}
+          {/* Limit */}
           <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">
             {LIMIT_OPTIONS.map(o => (
               <button
@@ -180,28 +171,19 @@ export function TranslationView({ projectId, gameTitle }: Props) {
                     ? 'bg-secondary text-secondary-foreground font-semibold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                 }`}
-              >
-                {o.label}
-              </button>
+              >{o.label}</button>
             ))}
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleStart}
-            disabled={running || !model}
-            className="h-8 gap-1.5"
-          >
-            {running
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <Sparkles className="w-3.5 h-3.5" />}
+          <Button size="sm" onClick={handleStart} disabled={running || !model} className="h-8 gap-1.5">
+            {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             {running ? 'Translating…' : 'Translate'}
           </Button>
         </div>
       </div>
 
-      {/* Search + filter toolbar */}
-      <div className="flex items-center gap-2 px-6 py-2 border-b border-border">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 px-6 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-1">
           {STATUS_FILTERS.map(f => (
             <button
@@ -212,9 +194,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
                   ? 'bg-secondary text-secondary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
-            >
-              {f.label}
-            </button>
+            >{f.label}</button>
           ))}
         </div>
 
@@ -231,9 +211,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
                   ? 'bg-secondary text-secondary-foreground font-semibold'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
-            >
-              {o.label}
-            </button>
+            >{o.label}</button>
           ))}
         </div>
 
@@ -246,10 +224,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
             className="h-7 pl-6 text-xs"
           />
           {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="w-3 h-3" />
             </button>
           )}
@@ -262,34 +237,53 @@ export function TranslationView({ projectId, gameTitle }: Props) {
         )}
       </div>
 
-      {/* Entry list */}
-      <div className="flex-1 overflow-y-auto">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-2 text-center">
-            <p className="text-sm font-medium">{search ? 'No results' : 'No entries'}</p>
-            <p className="text-xs text-muted-foreground">
-              {search ? `Nothing matched "${search}"` : 'Run extraction to populate this list'}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            <div className="grid grid-cols-2 gap-4 px-6 py-2 text-xs font-medium text-muted-foreground bg-muted/30 sticky top-0">
-              <span>Original (JP)</span>
-              <span>Translation</span>
-            </div>
-            {filtered.map((e) => (
-              <TranslationRow key={e.id} entry={e} onUpdated={refetch} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Virtualized table */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 gap-2 text-center">
+          <p className="text-sm font-medium">{search ? 'No results' : 'No entries'}</p>
+          <p className="text-xs text-muted-foreground">
+            {search ? `Nothing matched "${search}"` : 'Run extraction to populate this list'}
+          </p>
+        </div>
+      ) : (
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          <Table style={{ display: 'grid' }}>
+            <TableHeader style={{ display: 'grid', position: 'sticky', top: 0, zIndex: 10 }} className="bg-muted/50 backdrop-blur-sm">
+              <TableRow style={{ display: 'flex' }} className="border-b border-border hover:bg-transparent">
+                <TableHead style={{ width: '50%' }} className="px-6 py-2 text-xs font-medium">Original (JP)</TableHead>
+                <TableHead style={{ width: '50%' }} className="px-6 py-2 text-xs font-medium">Translation</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody
+              style={{
+                display: 'grid',
+                height: `${virtualizer.getTotalSize()}px`,
+                position: 'relative',
+              }}
+            >
+              {virtualizer.getVirtualItems().map(virtualRow => {
+                const entry = filtered[virtualRow.index]
+                return (
+                  <TranslationRow
+                    key={entry.id}
+                    entry={entry}
+                    onUpdated={refetch}
+                    style={{
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  />
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {running && (
-        <div className="h-0.5 bg-border">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
-          />
+        <div className="h-0.5 bg-border shrink-0">
+          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progressPct}%` }} />
         </div>
       )}
     </div>
