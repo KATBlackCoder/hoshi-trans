@@ -45,6 +45,21 @@ pub async fn cancel_batch(cancel_flag: tauri::State<'_, Arc<AtomicBool>>) -> Res
     Ok(())
 }
 
+fn format_glossary_block(terms: &[(String, String)]) -> String {
+    if terms.is_empty() {
+        return String::new();
+    }
+    let lines: Vec<String> = terms
+        .iter()
+        .take(20)
+        .map(|(src, tgt)| format!("- {} → {}", src, tgt))
+        .collect();
+    format!(
+        "Glossary (always use these translations):\n{}\n\n",
+        lines.join("\n")
+    )
+}
+
 /// Translate pending entries with configurable concurrency and batch limit.
 ///
 /// - `concurrency`: number of simultaneous Ollama requests (1–16, default 4)
@@ -52,6 +67,7 @@ pub async fn cancel_batch(cancel_flag: tauri::State<'_, Arc<AtomicBool>>) -> Res
 #[tauri::command]
 pub async fn translate_batch(
     window: tauri::Window,
+    app: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
     cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
     project_id: String,
@@ -65,6 +81,21 @@ pub async fn translate_batch(
     use tokio::sync::Semaphore;
 
     cancel_flag.store(false, Ordering::Relaxed);
+
+    // Fetch glossary and prepend to system_prompt
+    let glossary_terms = queries::get_glossary(pool.inner(), &project_id)
+        .await
+        .unwrap_or_default();
+    let term_pairs: Vec<(String, String)> = glossary_terms
+        .into_iter()
+        .map(|t| (t.source_term, t.target_term))
+        .collect();
+    let glossary_block = format_glossary_block(&term_pairs);
+    let system_prompt = if glossary_block.is_empty() {
+        system_prompt
+    } else {
+        format!("{}{}", glossary_block, system_prompt)
+    };
 
     let all_entries = queries::get_pending_entries(pool.inner(), &project_id)
         .await
@@ -157,12 +188,47 @@ pub async fn translate_batch(
     // Wait for all in-flight tasks to finish
     while join_set.join_next().await.is_some() {}
 
+    // Send system notification
+    use tauri_plugin_notification::NotificationExt;
+    let done = done_count.load(Ordering::Relaxed);
+    let cancelled = cancel_flag.load(Ordering::Relaxed);
+    let message = if cancelled {
+        format!("Batch cancelled after {} entries.", done)
+    } else {
+        format!("Batch complete: {} entries translated.", done)
+    };
+    let _ = app
+        .notification()
+        .builder()
+        .title("hoshi-trans")
+        .body(&message)
+        .show();
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_format_glossary_block_empty() {
+        let terms: Vec<(String, String)> = vec![];
+        let block = format_glossary_block(&terms);
+        assert_eq!(block, "");
+    }
+
+    #[test]
+    fn test_format_glossary_block_with_terms() {
+        let terms = vec![
+            ("羽鳥".to_string(), "Hatori".to_string()),
+            ("六花".to_string(), "Rikka".to_string()),
+        ];
+        let block = format_glossary_block(&terms);
+        assert!(block.contains("Glossary"));
+        assert!(block.contains("羽鳥 → Hatori"));
+        assert!(block.contains("六花 → Rikka"));
+    }
 
     #[tokio::test]
     async fn test_check_ollama_returns_bool() {

@@ -10,6 +10,8 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(tauri_plugin_log::log::LevelFilter::Info)
@@ -30,6 +32,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::debug_export::export_debug_json,
             commands::ollama::check_ollama,
             commands::ollama::list_models,
             commands::ollama::translate_batch,
@@ -43,6 +46,9 @@ pub fn run() {
             commands::entries::update_translation,
             commands::entries::update_status,
             commands::inject::inject_translations,
+            commands::glossary::get_glossary,
+            commands::glossary::upsert_glossary_term,
+            commands::glossary::delete_glossary_term,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
