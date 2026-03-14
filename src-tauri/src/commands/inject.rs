@@ -9,7 +9,7 @@ pub async fn inject_translations(
     game_dir: String,
     output_dir: String,
 ) -> Result<u32, String> {
-    let entries = queries::get_translated_entries_ordered(&pool, &project_id)
+    let entries = queries::get_translated_entries_ordered(pool.inner(), &project_id)
         .await
         .map_err(|e| e.to_string())?;
 

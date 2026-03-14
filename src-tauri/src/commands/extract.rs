@@ -15,7 +15,7 @@ pub async fn extract_strings(
 
     let count = entries.len() as u32;
 
-    queries::insert_entries_batch(&pool, &entries)
+    queries::insert_entries_batch(pool.inner(), &entries)
         .await
         .map_err(|e| e.to_string())?;
 

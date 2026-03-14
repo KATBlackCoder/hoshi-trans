@@ -66,7 +66,7 @@ pub async fn translate_batch(
 
     cancel_flag.store(false, Ordering::Relaxed);
 
-    let all_entries = queries::get_pending_entries(&pool, &project_id)
+    let all_entries = queries::get_pending_entries(pool.inner(), &project_id)
         .await
         .map_err(|e| e.to_string())?;
 

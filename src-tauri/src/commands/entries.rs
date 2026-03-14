@@ -9,7 +9,7 @@ pub async fn get_entries(
     file_filter: Option<String>,
 ) -> Result<Vec<crate::models::TranslationEntry>, String> {
     queries::get_entries(
-        &pool,
+        pool.inner(),
         &project_id,
         status_filter.as_deref(),
         file_filter.as_deref(),
@@ -24,7 +24,7 @@ pub async fn update_translation(
     entry_id: String,
     translation: String,
 ) -> Result<(), String> {
-    queries::update_translation(&pool, &entry_id, &translation, "translated")
+    queries::update_translation(pool.inner(), &entry_id, &translation, "translated")
         .await
         .map_err(|e| e.to_string())
 }
@@ -35,7 +35,7 @@ pub async fn update_status(
     entry_id: String,
     status: String,
 ) -> Result<(), String> {
-    queries::update_status(&pool, &entry_id, &status)
+    queries::update_status(pool.inner(), &entry_id, &status)
         .await
         .map_err(|e| e.to_string())
 }

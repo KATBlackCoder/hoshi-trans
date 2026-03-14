@@ -86,7 +86,7 @@ pub async fn create_project(
         write_project_file(&project, &game_dir, &app_data_dir).map_err(|e| e.to_string())?;
 
     queries::create_project(
-        &pool,
+        pool.inner(),
         &project_id,
         &game_dir,
         &engine_str,
@@ -122,7 +122,7 @@ pub async fn delete_project(
     project_id: String,
     game_dir: String,
 ) -> Result<(), String> {
-    queries::delete_project(&pool, &project_id)
+    queries::delete_project(pool.inner(), &project_id)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -137,7 +137,7 @@ pub async fn delete_project(
 pub async fn get_projects(
     pool: tauri::State<'_, SqlitePool>,
 ) -> Result<Vec<serde_json::Value>, String> {
-    let rows = queries::get_projects(&pool)
+    let rows = queries::get_projects(pool.inner())
         .await
         .map_err(|e| e.to_string())?;
     let result = rows
