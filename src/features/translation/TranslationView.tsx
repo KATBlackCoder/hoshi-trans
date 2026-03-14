@@ -10,6 +10,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { TranslationRow } from './TranslationRow'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
 import { useAppStore } from '@/stores/appStore'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import type { TranslationEntry } from '@/types'
 
@@ -69,6 +70,8 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const [concurrency, setConcurrency] = useState(4)
   const [limit, setLimit] = useState(0)
   const { availableModels } = useAppStore()
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const model = selectedModel || availableModels[0] || ''
   const { progress, running, start, cancel } = useTranslationBatch()
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -82,7 +85,6 @@ export function TranslationView({ projectId, gameTitle }: Props) {
       }),
   })
 
-  const model = availableModels[0] ?? ''
   const progressPct = progress ? Math.round((progress.done / progress.total) * 100) : 0
   const pendingCount = entries.filter(e => e.status === 'pending').length
   const translatedCount = entries.filter(e => e.status === 'translated').length
@@ -154,6 +156,18 @@ export function TranslationView({ projectId, gameTitle }: Props) {
               </Button>
             </div>
           )}
+
+          {/* Model selector */}
+          <Select value={model} onValueChange={(v) => setSelectedModel(v ?? '')} disabled={running}>
+            <SelectTrigger className="h-8 w-36 text-xs">
+              <SelectValue placeholder="No model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map(m => (
+                <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Concurrency */}
           <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">

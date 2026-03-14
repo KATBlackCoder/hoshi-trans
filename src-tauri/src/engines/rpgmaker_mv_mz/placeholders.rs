@@ -8,6 +8,14 @@ static RE_ENCODE: LazyLock<regex::Regex> =
 static RE_DECODE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\{\{PH:([A-Za-z]+)\[(\d+)\]\}\}").unwrap());
 
+// Percent-parameter codes: %1, %2, ... (dynamic value substitution in RPG Maker)
+// Encodes to {{PC[n]}} — distinct prefix avoids collision with PH: tokens
+static RE_ENCODE_PC: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"%(\d+)").unwrap());
+
+static RE_DECODE_PC: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\{\{PC\[(\d+)\]\}\}").unwrap());
+
 // Detect leftover unrecognized placeholders after decode
 static RE_LEFTOVER_PH: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\{\{[^}]+\}\}").unwrap());
@@ -18,6 +26,7 @@ static RE_LEFTOVER_PH: LazyLock<regex::Regex> =
 /// Case is preserved exactly: \N[1] → {{PH:N[1]}} → \N[1], \n[1] → {{PH:n[1]}} → \n[1]
 pub fn encode(text: &str) -> String {
     let mut s = RE_ENCODE.replace_all(text, "{{PH:$1[$2]}}").into_owned();
+    s = RE_ENCODE_PC.replace_all(&s, "{{PC[$1]}}").into_owned();
 
     // No-parameter codes — plain string replace (no regex needed)
     s = s.replace(r"\{", "{{FONT_UP}}");
@@ -36,6 +45,7 @@ pub fn encode(text: &str) -> String {
 /// Returns (decoded_text, all_placeholders_intact).
 pub fn decode(text: &str) -> (String, bool) {
     let mut s = RE_DECODE.replace_all(text, r"\$1[$2]").into_owned();
+    s = RE_DECODE_PC.replace_all(&s, "%$1").into_owned();
 
     s = s.replace("{{FONT_UP}}", r"\{");
     s = s.replace("{{FONT_DOWN}}", r"\}");
@@ -165,6 +175,27 @@ mod tests {
     #[test]
     fn test_roundtrip_font_and_wait() {
         let original = r"\{大きい文字\}\.待って";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_encode_percent_param() {
+        assert_eq!(encode("%1が倒れた！"), "{{PC[1]}}が倒れた！");
+        assert_eq!(encode("%1は%2を手に入れた！"), "{{PC[1]}}は{{PC[2]}}を手に入れた！");
+    }
+
+    #[test]
+    fn test_decode_percent_param() {
+        let (decoded, intact) = decode("{{PC[1]}} was defeated!");
+        assert_eq!(decoded, "%1 was defeated!");
+        assert!(intact);
+    }
+
+    #[test]
+    fn test_roundtrip_percent_param() {
+        let original = "%1は%2ゴールドを手に入れた！";
         let (decoded, intact) = decode(&encode(original));
         assert!(intact);
         assert_eq!(decoded, original);
