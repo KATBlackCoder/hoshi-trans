@@ -14,6 +14,7 @@ export function useTranslationBatch() {
     systemPrompt: string,
     concurrency: number = 4,
     limit: number = 0,
+    temperature: number = 0.3,
   ) => {
     setRunning(true)
     setProgress(null)
@@ -31,6 +32,7 @@ export function useTranslationBatch() {
         systemPrompt,
         concurrency,
         limit,
+        temperature,
       })
     } finally {
       unlisten()

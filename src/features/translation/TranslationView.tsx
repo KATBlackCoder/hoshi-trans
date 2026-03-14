@@ -69,7 +69,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [concurrency, setConcurrency] = useState(4)
   const [limit, setLimit] = useState(0)
-  const { availableModels } = useAppStore()
+  const { availableModels, settings } = useAppStore()
   const [selectedModel, setSelectedModel] = useState<string>('')
   const model = selectedModel || availableModels[0] || ''
   const { progress, running, start, cancel } = useTranslationBatch()
@@ -119,14 +119,9 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   }
 
   function handleStart() {
-    start(
-      projectId,
-      model,
-      'en',
-      'Translate to English. Preserve all {{PLACEHOLDER}} tokens exactly.',
-      concurrency,
-      limit,
-    )
+    const lang = settings.targetLang === 'fr' ? 'French' : 'English'
+    const prompt = settings.systemPrompt.replace('{lang}', lang)
+    start(projectId, model, settings.targetLang, prompt, concurrency, limit, settings.temperature)
   }
 
   return (

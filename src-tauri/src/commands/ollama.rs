@@ -60,6 +60,7 @@ pub async fn translate_batch(
     system_prompt: String,
     concurrency: u32,
     limit: u32,
+    temperature: f32,
 ) -> Result<(), String> {
     use tokio::sync::Semaphore;
 
@@ -107,6 +108,7 @@ pub async fn translate_batch(
         let system_prompt = system_prompt.clone();
         let target_lang = target_lang.clone();
         let done_count = done_count.clone();
+        let temperature = temperature;
 
         join_set.spawn(async move {
             let _permit = permit; // released when this task ends
@@ -121,7 +123,8 @@ pub async fn translate_batch(
                 system_prompt, target_lang, encoded
             );
             let ollama = Ollama::default();
-            let request = GenerationRequest::new(model.clone(), prompt);
+            let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
+            let request = GenerationRequest::new(model.clone(), prompt).options(options);
 
             match ollama.generate(request).await {
                 Ok(response) => {
