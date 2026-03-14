@@ -6,18 +6,18 @@ import { Button } from '@/components/ui/button'
 import { Check, Pencil, X } from 'lucide-react'
 import type { TranslationEntry, TranslationStatus } from '@/types'
 
-function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dot: string } {
+function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dotCls: string; labelCls: string } {
   if (status === 'translated')
-    return { label: 'ok', strip: 'status-strip-translated', dot: 'bg-emerald-500' }
+    return { label: 'translated', strip: 'status-strip-translated', dotCls: 'bg-emerald-500', labelCls: 'text-emerald-400' }
   if (status === 'reviewed')
-    return { label: 'reviewed', strip: 'status-strip-reviewed', dot: 'bg-blue-500' }
+    return { label: 'reviewed', strip: 'status-strip-reviewed', dotCls: 'bg-blue-400', labelCls: 'text-blue-400' }
   if (status === 'skipped')
-    return { label: 'skip', strip: 'status-strip-skipped', dot: 'bg-muted-foreground/30' }
+    return { label: 'skipped', strip: 'status-strip-skipped', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50' }
   if (typeof status === 'object' && 'error' in status)
-    return { label: 'error', strip: 'status-strip-error', dot: 'bg-red-500' }
+    return { label: 'error', strip: 'status-strip-error', dotCls: 'bg-red-500', labelCls: 'text-red-400' }
   if (typeof status === 'object' && 'warning' in status)
-    return { label: 'warn', strip: 'status-strip-warning', dot: 'bg-amber-400' }
-  return { label: 'pending', strip: 'status-strip-pending', dot: 'bg-muted-foreground/20' }
+    return { label: 'warning', strip: 'status-strip-warning', dotCls: 'bg-amber-400', labelCls: 'text-amber-400' }
+  return { label: 'pending', strip: 'status-strip-pending', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50' }
 }
 
 interface Props {
@@ -31,7 +31,7 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
   const [draft, setDraft] = useState(entry.translation ?? '')
 
   const filename = entry.file_path.split('/').pop() ?? entry.file_path
-  const { label, strip, dot } = getStatusMeta(entry.status)
+  const { label, strip, dotCls, labelCls } = getStatusMeta(entry.status)
 
   async function save() {
     await invoke('update_translation', { entryId: entry.id, translation: draft })
@@ -47,26 +47,26 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
   return (
     <TableRow
       style={style}
-      className={`group absolute top-0 left-0 w-full flex hover:bg-muted/10 border-b border-border/60 ${strip}`}
+      className={`group absolute top-0 left-0 w-full flex hover:bg-white/3 border-b border-white/7 ${strip}`}
     >
       {/* Source — JP text */}
-      <TableCell className="w-1/2 align-top py-2.5 px-4">
-        <p className="font-mono text-[11.5px] leading-relaxed text-foreground/75 whitespace-pre-wrap wrap-break-word">
+      <TableCell className="w-1/2 align-top py-3 px-4">
+        <p className="font-mono text-xs leading-relaxed text-foreground/85 whitespace-pre-wrap wrap-break-word">
           {entry.source_text}
         </p>
-        <span className="text-[9.5px] text-muted-foreground/35 font-mono mt-1 block tracking-wide">
-          {filename} <span className="opacity-60">#{entry.order_index}</span>
+        <span className="text-[10px] text-muted-foreground/40 font-mono mt-1 block">
+          {filename} <span className="opacity-50">#{entry.order_index}</span>
         </span>
       </TableCell>
 
       {/* Translation */}
-      <TableCell className="w-1/2 align-top py-2.5 px-4 border-l border-border/40">
-        <div className="flex flex-col gap-1.5">
+      <TableCell className="w-1/2 align-top py-3 px-4 border-l border-white/6">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
             {/* Status dot + label */}
-            <div className="flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-              <span className="text-[9.5px] font-mono text-muted-foreground/50 uppercase tracking-widest">{label}</span>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}`} />
+              <span className={`text-[10px] font-mono font-medium uppercase tracking-wider ${labelCls}`}>{label}</span>
             </div>
             {!editing && (
               <Button
@@ -99,8 +99,8 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
               </div>
             </div>
           ) : (
-            <p className="text-[11.5px] leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/65 font-mono">
-              {entry.translation ?? <span className="text-muted-foreground/25 italic font-sans text-xs">not translated</span>}
+            <p className="text-xs leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/70 font-mono">
+              {entry.translation ?? <span className="text-muted-foreground/40 italic font-sans">not translated</span>}
             </p>
           )}
         </div>
