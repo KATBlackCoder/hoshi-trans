@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { Languages, Settings, Star, Trash2 } from 'lucide-react'
+import { Languages, Settings, Trash2 } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
 function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSettingsToggle }: {
@@ -39,35 +39,38 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
   }
 
   return (
-    <aside className="w-60 shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border">
+    <aside className="w-56 shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-4">
-        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10">
-          <Star className="w-4 h-4 text-primary" />
+      <div className="flex items-center gap-2.5 px-4 py-3.5">
+        <div className="flex items-center justify-center w-6 h-6 rounded bg-primary/15 shrink-0">
+          <span className="text-primary text-[11px] font-bold leading-none select-none">星</span>
         </div>
-        <span className="font-semibold tracking-tight text-sidebar-foreground">hoshi-trans</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">hoshi</span>
+          <span className="text-sm font-light text-muted-foreground tracking-tight">trans</span>
+        </div>
       </div>
 
       <Separator className="bg-sidebar-border" />
 
-      <div className="flex flex-col gap-3 p-4 flex-1">
+      <div className="flex flex-col gap-2.5 p-3 flex-1 overflow-y-auto">
         <FileImportButton onProjectOpened={onProjectOpened} />
 
         {activeProject && (
           <div className="flex flex-col gap-2">
-            <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <Languages className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <p className="text-xs font-medium text-sidebar-foreground truncate flex-1">
+            {/* Active project card */}
+            <div className="rounded border border-sidebar-border bg-sidebar-accent/30 overflow-hidden">
+              <div className="flex items-start gap-2 p-2.5 pb-1.5">
+                <Languages className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                <p className="text-xs font-medium text-sidebar-foreground leading-tight flex-1 min-w-0 wrap-break-word">
                   {activeProject.game_title}
                 </p>
-
                 <AlertDialog>
                   <AlertDialogTrigger
                     title="Delete project"
-                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                    className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 mt-0.5"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -89,10 +92,11 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-              <p className="text-xs text-muted-foreground pl-5">
-                {activeProject.engine.replace('_', ' ')}
+              <p className="text-[10px] text-muted-foreground/60 font-mono px-2.5 pb-2">
+                {activeProject.engine.replace(/_/g, ' ')}
               </p>
             </div>
+
             <ExportButton
               projectId={activeProject.project_id}
               gameDir={activeProject.game_dir}
@@ -102,8 +106,13 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
               projectId={activeProject.project_id}
               outputDir={activeProject.output_dir}
             />
-            <Separator className="bg-sidebar-border" />
-            <GlossaryPanel projectId={activeProject.project_id} />
+
+            <div className="pt-1">
+              <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest px-0.5 mb-1.5">
+                Glossary
+              </p>
+              <GlossaryPanel projectId={activeProject.project_id} />
+            </div>
           </div>
         )}
       </div>
@@ -112,7 +121,11 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
       <Separator className="bg-sidebar-border" />
       <button
         onClick={onSettingsToggle}
-        className={`flex items-center gap-2 px-4 py-3 text-xs transition-colors ${view === 'settings' ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+        className={`flex items-center gap-2 px-3.5 py-2.5 text-xs transition-colors ${
+          view === 'settings'
+            ? 'text-primary font-medium bg-primary/8'
+            : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50'
+        }`}
       >
         <Settings className="w-3.5 h-3.5" />
         Settings
@@ -123,15 +136,25 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
-      <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-        <Languages className="w-8 h-8 text-muted-foreground" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <p className="font-medium">No game selected</p>
-        <p className="text-sm text-muted-foreground">
-          Open a game folder to start translating
-        </p>
+    <div className="flex flex-col items-center justify-center h-full gap-5 text-center px-8 relative overflow-hidden">
+      {/* Decorative kanji watermark */}
+      <span
+        className="absolute text-[200px] font-bold leading-none select-none pointer-events-none"
+        style={{ color: 'oklch(1 0 0 / 3%)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        aria-hidden
+      >
+        翻
+      </span>
+      <div className="relative z-10 flex flex-col items-center gap-5">
+        <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center border border-border">
+          <Languages className="w-5 h-5 text-muted-foreground/50" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-muted-foreground">No game selected</p>
+          <p className="text-xs text-muted-foreground/50">
+            Open a game folder to start translating
+          </p>
+        </div>
       </div>
     </div>
   )

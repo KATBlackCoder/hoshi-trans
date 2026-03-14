@@ -47,27 +47,23 @@ export function GlossaryPanel({ projectId }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider">
-        Glossary
-      </h3>
-
+    <div className="flex flex-col gap-2">
       {terms.length > 0 && (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
           {terms.map((term) => (
-            <div key={term.id} className="flex items-center gap-1.5 group">
-              <span className="text-xs font-mono flex-1 truncate text-foreground/80">
+            <div key={term.id} className="flex items-center gap-1 group py-0.5 px-0.5 rounded hover:bg-sidebar-accent/40 transition-colors">
+              <span className="text-[10.5px] font-mono flex-1 truncate text-foreground/70">
                 {term.source_term}
               </span>
-              <span className="text-xs text-muted-foreground">→</span>
-              <span className="text-xs font-mono flex-1 truncate text-foreground/80">
+              <span className="text-[9px] text-muted-foreground/30 shrink-0">→</span>
+              <span className="text-[10.5px] font-mono flex-1 truncate text-foreground/70">
                 {term.target_term}
               </span>
               <button
                 onClick={() => deleteTerm.mutate(term.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/30 hover:text-destructive shrink-0 ml-0.5"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-2.5 h-2.5" />
               </button>
             </div>
           ))}
@@ -75,38 +71,38 @@ export function GlossaryPanel({ projectId }: Props) {
       )}
 
       {terms.length === 0 && (
-        <p className="text-xs text-muted-foreground/60 italic">No terms yet.</p>
+        <p className="text-[10.5px] text-muted-foreground/30 italic px-0.5">No terms yet.</p>
       )}
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Input
           value={source}
           onChange={(e) => setSource(e.target.value)}
-          placeholder="JP source"
-          className="h-7 text-xs font-mono"
+          placeholder="JP term"
+          className="h-6 text-[10.5px] font-mono px-2 bg-transparent"
         />
         <Input
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           placeholder="Translation"
-          className="h-7 text-xs font-mono"
+          className="h-6 text-[10.5px] font-mono px-2 bg-transparent"
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
         />
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           onClick={handleAdd}
           disabled={!source.trim() || !target.trim() || upsert.isPending}
-          className="h-7 gap-1.5 text-xs w-full"
+          className="h-6 gap-1 text-[10.5px] w-full text-muted-foreground/50 hover:text-foreground border border-border/40 border-dashed"
         >
-          <Plus className="w-3 h-3" />
-          Add term
+          <Plus className="w-2.5 h-2.5" />
+          Add
         </Button>
       </div>
 
       {terms.length >= 20 && (
-        <p className="text-xs text-yellow-500">
-          Max 20 terms — oldest terms beyond limit are ignored during translation.
+        <p className="text-[10px] text-amber-400/60 font-mono">
+          Max 20 terms reached.
         </p>
       )}
     </div>
