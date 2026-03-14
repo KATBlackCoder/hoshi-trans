@@ -33,6 +33,9 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.translation ?? '')
 
+  // Show only the filename, not the full path (e.g. "Map001.json" from "data/Map001.json")
+  const filename = entry.file_path.split('/').pop() ?? entry.file_path
+
   async function save() {
     await invoke('update_translation', { entryId: entry.id, translation: draft })
     setEditing(false)
@@ -51,9 +54,9 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
         <p className="font-mono text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap wrap-break-word">
           {entry.source_text}
         </p>
-        {entry.context && (
-          <span className="text-xs text-muted-foreground/60">{entry.context}</span>
-        )}
+        <span className="text-[10px] text-muted-foreground/50 font-mono mt-1 block">
+          {filename} #{entry.order_index}
+        </span>
       </TableCell>
 
       {/* Translation */}
@@ -84,12 +87,10 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
               />
               <div className="flex gap-1 justify-end">
                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={discard}>
-                  <X className="w-3 h-3 mr-1" />
-                  Discard
+                  <X className="w-3 h-3 mr-1" />Discard
                 </Button>
                 <Button size="sm" className="h-6 px-2 text-xs" onClick={save}>
-                  <Check className="w-3 h-3 mr-1" />
-                  Save
+                  <Check className="w-3 h-3 mr-1" />Save
                 </Button>
               </div>
             </div>

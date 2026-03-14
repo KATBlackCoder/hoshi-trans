@@ -10,7 +10,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { TranslationRow } from './TranslationRow'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
 import { useAppStore } from '@/stores/appStore'
-import { Sparkles, X, Loader2, Search, ArrowUpDown } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import type { TranslationEntry } from '@/types'
 
 const STATUS_FILTERS = [
@@ -22,12 +22,7 @@ const STATUS_FILTERS = [
 ]
 
 type SortKey = 'order' | 'file' | 'status'
-
-const SORT_OPTIONS: { label: string; value: SortKey }[] = [
-  { label: 'Order', value: 'order' },
-  { label: 'File', value: 'file' },
-  { label: 'Status', value: 'status' },
-]
+type SortDir = 'asc' | 'desc'
 
 const CONCURRENCY_OPTIONS = [1, 2, 4, 8]
 const LIMIT_OPTIONS = [
@@ -37,20 +32,28 @@ const LIMIT_OPTIONS = [
   { label: 'All', value: 0 },
 ]
 
-function sortEntries(entries: TranslationEntry[], key: SortKey): TranslationEntry[] {
+function sortEntries(entries: TranslationEntry[], key: SortKey, dir: SortDir): TranslationEntry[] {
+  const mul = dir === 'asc' ? 1 : -1
   return [...entries].sort((a, b) => {
     switch (key) {
       case 'file':
-        return a.file_path.localeCompare(b.file_path) || a.order_index - b.order_index
+        return mul * (a.file_path.localeCompare(b.file_path) || a.order_index - b.order_index)
       case 'status': {
         const statusStr = (e: TranslationEntry) =>
           typeof e.status === 'string' ? e.status : JSON.stringify(e.status)
-        return statusStr(a).localeCompare(statusStr(b))
+        return mul * statusStr(a).localeCompare(statusStr(b))
       }
       default:
-        return a.order_index - b.order_index
+        return mul * (a.order_index - b.order_index)
     }
   })
+}
+
+function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (col !== sortKey) return <ChevronsUpDown className="w-3 h-3 ml-1 text-muted-foreground/40" />
+  return sortDir === 'asc'
+    ? <ChevronUp className="w-3 h-3 ml-1 text-primary" />
+    : <ChevronDown className="w-3 h-3 ml-1 text-primary" />
 }
 
 interface Props {
@@ -62,6 +65,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('order')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [concurrency, setConcurrency] = useState(4)
   const [limit, setLimit] = useState(0)
   const { availableModels } = useAppStore()
@@ -89,11 +93,12 @@ export function TranslationView({ projectId, gameTitle }: Props) {
       ? entries.filter(
           e =>
             e.source_text.toLowerCase().includes(q) ||
-            (e.translation ?? '').toLowerCase().includes(q),
+            (e.translation ?? '').toLowerCase().includes(q) ||
+            e.file_path.toLowerCase().includes(q),
         )
       : entries
-    return sortEntries(base, sortKey)
-  }, [entries, search, sortKey])
+    return sortEntries(base, sortKey, sortDir)
+  }, [entries, search, sortKey, sortDir])
 
   const virtualizer = useVirtualizer({
     count: filtered.length,
@@ -101,6 +106,15 @@ export function TranslationView({ projectId, gameTitle }: Props) {
     estimateSize: () => 80,
     overscan: 8,
   })
+
+  function handleSort(col: SortKey) {
+    if (col === sortKey) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(col)
+      setSortDir('asc')
+    }
+  }
 
   function handleStart() {
     start(
@@ -144,16 +158,9 @@ export function TranslationView({ projectId, gameTitle }: Props) {
           {/* Concurrency */}
           <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">
             {CONCURRENCY_OPTIONS.map(n => (
-              <button
-                key={n}
-                onClick={() => setConcurrency(n)}
-                disabled={running}
+              <button key={n} onClick={() => setConcurrency(n)} disabled={running}
                 title={`${n} parallel requests`}
-                className={`w-7 h-6 rounded text-xs font-mono transition-colors ${
-                  concurrency === n
-                    ? 'bg-secondary text-secondary-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                }`}
+                className={`w-7 h-6 rounded text-xs font-mono transition-colors ${concurrency === n ? 'bg-secondary text-secondary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}
               >{n}×</button>
             ))}
           </div>
@@ -161,16 +168,9 @@ export function TranslationView({ projectId, gameTitle }: Props) {
           {/* Limit */}
           <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">
             {LIMIT_OPTIONS.map(o => (
-              <button
-                key={o.value}
-                onClick={() => setLimit(o.value)}
-                disabled={running}
+              <button key={o.value} onClick={() => setLimit(o.value)} disabled={running}
                 title={o.value === 0 ? 'Translate all pending' : `Translate next ${o.value}`}
-                className={`px-1.5 h-6 rounded text-xs transition-colors ${
-                  limit === o.value
-                    ? 'bg-secondary text-secondary-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                }`}
+                className={`px-1.5 h-6 rounded text-xs transition-colors ${limit === o.value ? 'bg-secondary text-secondary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}
               >{o.label}</button>
             ))}
           </div>
@@ -186,43 +186,17 @@ export function TranslationView({ projectId, gameTitle }: Props) {
       <div className="flex items-center gap-2 px-6 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-1">
           {STATUS_FILTERS.map(f => (
-            <button
-              key={f.label}
-              onClick={() => setStatusFilter(f.value)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === f.value
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              }`}
+            <button key={f.label} onClick={() => setStatusFilter(f.value)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${statusFilter === f.value ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}
             >{f.label}</button>
           ))}
         </div>
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-1">
-          <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
-          {SORT_OPTIONS.map(o => (
-            <button
-              key={o.value}
-              onClick={() => setSortKey(o.value)}
-              className={`px-2 py-1 rounded text-xs transition-colors ${
-                sortKey === o.value
-                  ? 'bg-secondary text-secondary-foreground font-semibold'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              }`}
-            >{o.label}</button>
-          ))}
-        </div>
-
         <div className="relative w-48">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="h-7 pl-6 text-xs"
-          />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="h-7 pl-6 text-xs" />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="w-3 h-3" />
@@ -231,9 +205,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
         </div>
 
         {!model && (
-          <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/30">
-            No Ollama model
-          </Badge>
+          <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/30">No Ollama model</Badge>
         )}
       </div>
 
@@ -250,18 +222,34 @@ export function TranslationView({ projectId, gameTitle }: Props) {
           <Table style={{ display: 'grid' }}>
             <TableHeader style={{ display: 'grid', position: 'sticky', top: 0, zIndex: 10 }} className="bg-muted/50 backdrop-blur-sm">
               <TableRow style={{ display: 'flex' }} className="border-b border-border hover:bg-transparent">
-                <TableHead style={{ width: '50%' }} className="px-6 py-2 text-xs font-medium">Original (JP)</TableHead>
-                <TableHead style={{ width: '50%' }} className="px-6 py-2 text-xs font-medium">Translation</TableHead>
+                {/* Original column — sorts by file or order */}
+                <TableHead style={{ width: '50%' }} className="px-6 py-2">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => handleSort('order')} className="flex items-center text-xs font-medium hover:text-foreground transition-colors">
+                      Original (JP)
+                      <SortIcon col="order" sortKey={sortKey} sortDir={sortDir} />
+                    </button>
+                    <button onClick={() => handleSort('file')} className={`flex items-center text-xs transition-colors ${sortKey === 'file' ? 'text-primary font-medium' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}>
+                      by file
+                      <SortIcon col="file" sortKey={sortKey} sortDir={sortDir} />
+                    </button>
+                  </div>
+                </TableHead>
+
+                {/* Translation column — sorts by status */}
+                <TableHead style={{ width: '50%' }} className="px-6 py-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium">Translation</span>
+                    <button onClick={() => handleSort('status')} className={`flex items-center text-xs transition-colors ${sortKey === 'status' ? 'text-primary font-medium' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}>
+                      by status
+                      <SortIcon col="status" sortKey={sortKey} sortDir={sortDir} />
+                    </button>
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
 
-            <TableBody
-              style={{
-                display: 'grid',
-                height: `${virtualizer.getTotalSize()}px`,
-                position: 'relative',
-              }}
-            >
+            <TableBody style={{ display: 'grid', height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
               {virtualizer.getVirtualItems().map(virtualRow => {
                 const entry = filtered[virtualRow.index]
                 return (

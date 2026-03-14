@@ -5,6 +5,17 @@ import { FileImportButton } from '@/features/file-import'
 import { ExportButton } from '@/features/file-export'
 import { TranslationView } from '@/features/translation'
 import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Languages, Star, Trash2 } from 'lucide-react'
@@ -16,11 +27,9 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted }: {
   onProjectDeleted: () => void
 }) {
   async function handleDelete() {
-    if (!activeProject) return
-    if (!confirm(`Delete project "${activeProject.game_title}"? This will remove all translations from the database.`)) return
     await invoke('delete_project', {
-      projectId: activeProject.project_id,
-      gameDir: activeProject.game_dir,
+      projectId: activeProject!.project_id,
+      gameDir: activeProject!.game_dir,
     })
     onProjectDeleted()
   }
@@ -48,13 +57,33 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted }: {
                 <p className="text-xs font-medium text-sidebar-foreground truncate flex-1">
                   {activeProject.game_title}
                 </p>
-                <button
-                  onClick={handleDelete}
-                  title="Delete project"
-                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger
+                    title="Delete project"
+                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete project?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove <strong>{activeProject.game_title}</strong> and
+                        all its translations from the database. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
               <p className="text-xs text-muted-foreground pl-5">
                 {activeProject.engine.replace('_', ' ')}
