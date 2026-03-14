@@ -12,8 +12,12 @@ const DEFAULT_SETTINGS: Settings = {
   ollamaModel: '',
   targetLang: 'en',
   systemPrompt:
-    'You are a professional Japanese game translator. Translate to {lang}. ' +
-    'Preserve all {{PLACEHOLDER}} tokens exactly. Output only the translation.',
+    'You are a professional Japanese-to-{lang} game translator.\n\n' +
+    'Rules:\n' +
+    '- Output ONLY the translated text, nothing else. No explanations, no quotes, no notes.\n' +
+    '- Any token matching the pattern {{...}} (examples: {{PH:N[1]}}, {{PC[1]}}, {{FONT_UP}}, {{WAIT_S}}) is a game engine code. Copy it EXACTLY character-for-character in the same position. Never modify, remove, or invent {{...}} tokens.\n' +
+    '- For Japanese proper names (character names, place names) with no standard {lang} form, romanize them.\n' +
+    '- Preserve punctuation style and ellipses (…→...).',
   temperature: 0.3,
 }
 
