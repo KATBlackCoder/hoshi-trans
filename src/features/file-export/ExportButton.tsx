@@ -2,12 +2,39 @@ import { invoke } from '@tauri-apps/api/core'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { useMutation } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { FolderOpen, Loader2 } from 'lucide-react'
+import { Bug, FolderOpen, Loader2 } from 'lucide-react'
 
 interface Props {
   projectId: string
   gameDir: string
   outputDir: string
+}
+
+export function DebugExportButton({ projectId, outputDir }: { projectId: string; outputDir: string }) {
+  const { mutate, isPending, isSuccess, error } = useMutation({
+    mutationFn: async () => {
+      const path = await invoke<string>('export_debug_json', { projectId, outputDir })
+      await openPath(path)
+      return path
+    },
+  })
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => mutate()}
+        disabled={isPending}
+        className="w-full justify-start gap-2 text-muted-foreground"
+      >
+        {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}
+        {isPending ? 'Exporting…' : 'Debug export (JSON)'}
+      </Button>
+      {isSuccess && <p className="text-xs text-green-500 px-1">Saved — file opened.</p>}
+      {error && <p className="text-xs text-destructive px-1">{(error as Error).message}</p>}
+    </div>
+  )
 }
 
 export function ExportButton({ projectId, gameDir, outputDir }: Props) {

@@ -2,7 +2,7 @@ import { useOllamaStatus } from '@/hooks/useOllamaStatus'
 import { useAppStore } from '@/stores/appStore'
 import { OnboardingPage } from '@/features/onboarding'
 import { FileImportButton } from '@/features/file-import'
-import { ExportButton } from '@/features/file-export'
+import { DebugExportButton, ExportButton } from '@/features/file-export'
 import { TranslationView } from '@/features/translation'
 import { SettingsPage } from '@/features/settings'
 import { Separator } from '@/components/ui/separator'
@@ -95,6 +95,10 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
             <ExportButton
               projectId={activeProject.project_id}
               gameDir={activeProject.game_dir}
+              outputDir={activeProject.output_dir}
+            />
+            <DebugExportButton
+              projectId={activeProject.project_id}
               outputDir={activeProject.output_dir}
             />
           </div>
