@@ -27,6 +27,14 @@ const SORT_OPTIONS: { label: string; value: SortKey }[] = [
   { label: 'Status', value: 'status' },
 ]
 
+const CONCURRENCY_OPTIONS = [1, 2, 4, 8]
+const LIMIT_OPTIONS = [
+  { label: '100', value: 100 },
+  { label: '500', value: 500 },
+  { label: '1000', value: 1000 },
+  { label: 'All', value: 0 },
+]
+
 function sortEntries(entries: TranslationEntry[], key: SortKey): TranslationEntry[] {
   return [...entries].sort((a, b) => {
     switch (key) {
@@ -52,6 +60,8 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('order')
+  const [concurrency, setConcurrency] = useState(4)
+  const [limit, setLimit] = useState(0)
   const { availableModels } = useAppStore()
   const { progress, running, start, cancel } = useTranslationBatch()
 
@@ -82,6 +92,17 @@ export function TranslationView({ projectId, gameTitle }: Props) {
       : entries
     return sortEntries(base, sortKey)
   }, [entries, search, sortKey])
+
+  function handleStart() {
+    start(
+      projectId,
+      model,
+      'en',
+      'Translate to English. Preserve all {{PLACEHOLDER}} tokens exactly.',
+      concurrency,
+      limit,
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -126,23 +147,61 @@ export function TranslationView({ projectId, gameTitle }: Props) {
               </Button>
             </div>
           )}
+
+          {/* Concurrency selector */}
+          <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">
+            {CONCURRENCY_OPTIONS.map(n => (
+              <button
+                key={n}
+                onClick={() => setConcurrency(n)}
+                disabled={running}
+                title={`${n} parallel requests`}
+                className={`w-7 h-6 rounded text-xs font-mono transition-colors ${
+                  concurrency === n
+                    ? 'bg-secondary text-secondary-foreground font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                }`}
+              >
+                {n}×
+              </button>
+            ))}
+          </div>
+
+          {/* Limit selector */}
+          <div className="flex items-center gap-0.5 border border-border rounded-md px-1 py-0.5">
+            {LIMIT_OPTIONS.map(o => (
+              <button
+                key={o.value}
+                onClick={() => setLimit(o.value)}
+                disabled={running}
+                title={o.value === 0 ? 'Translate all pending' : `Translate next ${o.value}`}
+                className={`px-1.5 h-6 rounded text-xs transition-colors ${
+                  limit === o.value
+                    ? 'bg-secondary text-secondary-foreground font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+
           <Button
             size="sm"
-            onClick={() => start(projectId, model, 'en', 'Translate to English. Preserve all {{PLACEHOLDER}} tokens exactly.')}
+            onClick={handleStart}
             disabled={running || !model}
             className="h-8 gap-1.5"
           >
             {running
               ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
               : <Sparkles className="w-3.5 h-3.5" />}
-            {running ? 'Translating…' : 'Translate all'}
+            {running ? 'Translating…' : 'Translate'}
           </Button>
         </div>
       </div>
 
       {/* Search + filter toolbar */}
       <div className="flex items-center gap-2 px-6 py-2 border-b border-border">
-        {/* Status filter tabs */}
         <div className="flex items-center gap-1">
           {STATUS_FILTERS.map(f => (
             <button
@@ -159,10 +218,8 @@ export function TranslationView({ projectId, gameTitle }: Props) {
           ))}
         </div>
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Sort */}
         <div className="flex items-center gap-1">
           <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
           {SORT_OPTIONS.map(o => (
@@ -171,7 +228,7 @@ export function TranslationView({ projectId, gameTitle }: Props) {
               onClick={() => setSortKey(o.value)}
               className={`px-2 py-1 rounded text-xs transition-colors ${
                 sortKey === o.value
-                  ? 'bg-secondary text-secondary-foreground font-medium'
+                  ? 'bg-secondary text-secondary-foreground font-semibold'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
             >
@@ -180,7 +237,6 @@ export function TranslationView({ projectId, gameTitle }: Props) {
           ))}
         </div>
 
-        {/* Search */}
         <div className="relative w-48">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
           <Input
@@ -217,7 +273,6 @@ export function TranslationView({ projectId, gameTitle }: Props) {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {/* Column headers */}
             <div className="grid grid-cols-2 gap-4 px-6 py-2 text-xs font-medium text-muted-foreground bg-muted/30 sticky top-0">
               <span>Original (JP)</span>
               <span>Translation</span>
@@ -229,7 +284,6 @@ export function TranslationView({ projectId, gameTitle }: Props) {
         )}
       </div>
 
-      {/* Progress bar overlay when running */}
       {running && (
         <div className="h-0.5 bg-border">
           <div

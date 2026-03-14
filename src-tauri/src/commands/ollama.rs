@@ -1,6 +1,6 @@
 use ollama_rs::{Ollama, generation::completion::request::GenerationRequest};
 use sqlx::SqlitePool;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, atomic::{AtomicBool, AtomicU32, Ordering}};
 use tauri::Emitter;
 use crate::db::queries;
 use crate::engines::rpgmaker_mv_mz::placeholders;
@@ -44,6 +44,10 @@ pub async fn cancel_batch(
     Ok(())
 }
 
+/// Translate pending entries with configurable concurrency and batch limit.
+///
+/// - `concurrency`: number of simultaneous Ollama requests (1–16, default 4)
+/// - `limit`: max entries to translate in this run (0 = all pending)
 #[tauri::command]
 pub async fn translate_batch(
     window: tauri::Window,
@@ -53,45 +57,88 @@ pub async fn translate_batch(
     model: String,
     target_lang: String,
     system_prompt: String,
+    concurrency: u32,
+    limit: u32,
 ) -> Result<(), String> {
+    use tokio::sync::Semaphore;
+
     cancel_flag.store(false, Ordering::Relaxed);
 
-    let entries = queries::get_pending_entries(&pool, &project_id)
+    let all_entries = queries::get_pending_entries(&pool, &project_id)
         .await
         .map_err(|e| e.to_string())?;
 
-    let total = entries.len() as u32;
-    let ollama = Ollama::default();
+    // Apply batch limit (0 = translate all)
+    let entries = if limit > 0 {
+        all_entries.into_iter().take(limit as usize).collect::<Vec<_>>()
+    } else {
+        all_entries
+    };
 
-    for (i, entry) in entries.iter().enumerate() {
-        if cancel_flag.load(Ordering::Relaxed) {
+    let total = entries.len() as u32;
+    let concurrency = concurrency.max(1).min(16) as usize;
+    let semaphore = Arc::new(Semaphore::new(concurrency));
+    let done_count = Arc::new(AtomicU32::new(0));
+    let cancel = cancel_flag.inner().clone();
+    let pool_inner = pool.inner().clone();
+    let mut join_set = tokio::task::JoinSet::new();
+
+    for entry in entries {
+        // Check cancel before acquiring permit — avoids spawning unnecessary tasks
+        if cancel.load(Ordering::Relaxed) {
             break;
         }
 
-        let prompt = format!(
-            "{}\n\nTranslate to {}:\n{}",
-            system_prompt, target_lang, entry.source_text
-        );
+        let permit = semaphore.clone().acquire_owned().await.unwrap();
 
-        let request = GenerationRequest::new(model.clone(), prompt);
-        match ollama.generate(request).await {
-            Ok(response) => {
-                let translated = response.response.trim().to_string();
-                let (decoded, intact) = placeholders::decode(&translated);
-                let status = if intact { "translated" } else { "warning:missing_placeholder" };
-                let _ = queries::update_translation(&pool, &entry.id, &decoded, status).await;
-            }
-            Err(e) => {
-                let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", e)).await;
-            }
+        // Check again — cancel may have been set while waiting for a permit
+        if cancel.load(Ordering::Relaxed) {
+            break;
         }
 
-        let _ = window.emit("translation:progress", TranslationProgress {
-            done: (i + 1) as u32,
-            total,
-            entry_id: entry.id.clone(),
+        let pool = pool_inner.clone();
+        let cancel = cancel.clone();
+        let window = window.clone();
+        let model = model.clone();
+        let system_prompt = system_prompt.clone();
+        let target_lang = target_lang.clone();
+        let done_count = done_count.clone();
+
+        join_set.spawn(async move {
+            let _permit = permit; // released when this task ends
+
+            if cancel.load(Ordering::Relaxed) {
+                return;
+            }
+
+            let encoded = placeholders::encode(&entry.source_text);
+            let prompt = format!("{}\n\nTranslate to {}:\n{}", system_prompt, target_lang, encoded);
+            let ollama = Ollama::default();
+            let request = GenerationRequest::new(model.clone(), prompt);
+
+            match ollama.generate(request).await {
+                Ok(response) => {
+                    let translated = response.response.trim().to_string();
+                    let (decoded, intact) = placeholders::decode(&translated);
+                    let status = if intact { "translated" } else { "warning:missing_placeholder" };
+                    let _ = queries::update_translation(&pool, &entry.id, &decoded, status).await;
+                }
+                Err(e) => {
+                    let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", e)).await;
+                }
+            }
+
+            let done = done_count.fetch_add(1, Ordering::Relaxed) + 1;
+            let _ = window.emit("translation:progress", TranslationProgress {
+                done,
+                total,
+                entry_id: entry.id.clone(),
+            });
         });
     }
+
+    // Wait for all in-flight tasks to finish
+    while join_set.join_next().await.is_some() {}
 
     Ok(())
 }
@@ -103,6 +150,38 @@ mod tests {
     #[tokio::test]
     async fn test_check_ollama_returns_bool() {
         let result = check_ollama_inner().await;
-        assert!(result.is_ok() || result.is_err()); // always true — just tests compilation
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_semaphore_limits_concurrency() {
+        use tokio::sync::Semaphore;
+
+        let semaphore = Arc::new(Semaphore::new(2));
+        let active = Arc::new(AtomicU32::new(0));
+        let max_seen = Arc::new(AtomicU32::new(0));
+        let mut join_set = tokio::task::JoinSet::new();
+
+        for _ in 0..8 {
+            let permit = semaphore.clone().acquire_owned().await.unwrap();
+            let active = active.clone();
+            let max_seen = max_seen.clone();
+            join_set.spawn(async move {
+                let current = active.fetch_add(1, Ordering::SeqCst) + 1;
+                let mut seen = max_seen.load(Ordering::SeqCst);
+                while current > seen {
+                    match max_seen.compare_exchange(seen, current, Ordering::SeqCst, Ordering::SeqCst) {
+                        Ok(_) => break,
+                        Err(x) => seen = x,
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                active.fetch_sub(1, Ordering::SeqCst);
+                drop(permit);
+            });
+        }
+
+        while join_set.join_next().await.is_some() {}
+        assert!(max_seen.load(Ordering::SeqCst) <= 2, "concurrency exceeded semaphore limit");
     }
 }

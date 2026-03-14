@@ -12,6 +12,8 @@ export function useTranslationBatch() {
     model: string,
     targetLang: string,
     systemPrompt: string,
+    concurrency: number = 4,
+    limit: number = 0,
   ) => {
     setRunning(true)
     setProgress(null)
@@ -27,6 +29,8 @@ export function useTranslationBatch() {
         model,
         targetLang,
         systemPrompt,
+        concurrency,
+        limit,
       })
     } finally {
       unlisten()

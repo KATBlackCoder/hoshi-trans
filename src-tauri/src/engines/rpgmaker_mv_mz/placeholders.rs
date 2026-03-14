@@ -1,44 +1,49 @@
+use std::sync::LazyLock;
+
+// Parametric codes — compiled once at first use, reused for all subsequent calls
+static RE_N_UP: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\N\[(\d+)\]").unwrap());
+static RE_N_LO: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\n\[(\d+)\]").unwrap());
+static RE_C_UP: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\C\[(\d+)\]").unwrap());
+static RE_C_LO: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\c\[(\d+)\]").unwrap());
+static RE_I_UP: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\I\[(\d+)\]").unwrap());
+static RE_I_LO: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\i\[(\d+)\]").unwrap());
+static RE_V_UP: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\V\[(\d+)\]").unwrap());
+static RE_V_LO: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\v\[(\d+)\]").unwrap());
+static RE_P_UP: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\P\[(\d+)\]").unwrap());
+static RE_P_LO: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\\p\[(\d+)\]").unwrap());
+
+// Decode patterns
+static RE_DEC_ACTOR_NAME: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{ACTOR_NAME\[(\d+)\]\}\}").unwrap());
+static RE_DEC_actor_name: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{actor_name\[(\d+)\]\}\}").unwrap());
+static RE_DEC_COLOR: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{COLOR\[(\d+)\]\}\}").unwrap());
+static RE_DEC_color: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{color\[(\d+)\]\}\}").unwrap());
+static RE_DEC_ICON: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{ICON\[(\d+)\]\}\}").unwrap());
+static RE_DEC_icon: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{icon\[(\d+)\]\}\}").unwrap());
+static RE_DEC_VAR: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{VAR\[(\d+)\]\}\}").unwrap());
+static RE_DEC_var: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{var\[(\d+)\]\}\}").unwrap());
+static RE_DEC_PARTY: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{PARTY\[(\d+)\]\}\}").unwrap());
+static RE_DEC_party: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{party\[(\d+)\]\}\}").unwrap());
+static RE_LEFTOVER_PH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\{\{[^}]+\}\}").unwrap());
+
 /// Encode RPG Maker control codes to {{NAME}} placeholders before sending to Ollama.
 /// Uppercase and lowercase variants encode to different placeholders to preserve case on decode.
 pub fn encode(text: &str) -> String {
     let mut s = text.to_string();
 
-    // Parametric codes — uppercase first to avoid partial matches with lowercase patterns
-    let re = regex::Regex::new(r"\\N\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{ACTOR_NAME[$1]}}").into_owned();
+    s = RE_N_UP.replace_all(&s, "{{ACTOR_NAME[$1]}}").into_owned();
+    s = RE_N_LO.replace_all(&s, "{{actor_name[$1]}}").into_owned();
+    s = RE_C_UP.replace_all(&s, "{{COLOR[$1]}}").into_owned();
+    s = RE_C_LO.replace_all(&s, "{{color[$1]}}").into_owned();
+    s = RE_I_UP.replace_all(&s, "{{ICON[$1]}}").into_owned();
+    s = RE_I_LO.replace_all(&s, "{{icon[$1]}}").into_owned();
+    s = RE_V_UP.replace_all(&s, "{{VAR[$1]}}").into_owned();
+    s = RE_V_LO.replace_all(&s, "{{var[$1]}}").into_owned();
+    s = RE_P_UP.replace_all(&s, "{{PARTY[$1]}}").into_owned();
+    s = RE_P_LO.replace_all(&s, "{{party[$1]}}").into_owned();
 
-    let re = regex::Regex::new(r"\\n\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{actor_name[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\C\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{COLOR[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\c\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{color[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\I\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{ICON[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\i\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{icon[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\V\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{VAR[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\v\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{var[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\P\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{PARTY[$1]}}").into_owned();
-
-    let re = regex::Regex::new(r"\\p\[(\d+)\]").unwrap();
-    s = re.replace_all(&s, "{{party[$1]}}").into_owned();
-
-    // Font size codes — must encode \{ and \} before wait codes to avoid collision
+    // Font size and wait/display codes (no parameters — plain string replace suffices)
     s = s.replace(r"\{", "{{FONT_UP}}");
     s = s.replace(r"\}", "{{FONT_DOWN}}");
-
-    // Wait / display control codes
     s = s.replace(r"\.", "{{WAIT_S}}");
     s = s.replace(r"\|", "{{WAIT_L}}");
     s = s.replace(r"\!", "{{WAIT_INPUT}}");
@@ -54,35 +59,16 @@ pub fn encode(text: &str) -> String {
 pub fn decode(text: &str) -> (String, bool) {
     let mut s = text.to_string();
 
-    let re = regex::Regex::new(r"\{\{ACTOR_NAME\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\N[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{actor_name\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\n[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{COLOR\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\C[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{color\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\c[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{ICON\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\I[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{icon\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\i[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{VAR\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\V[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{var\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\v[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{PARTY\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\P[$1]").into_owned();
-
-    let re = regex::Regex::new(r"\{\{party\[(\d+)\]\}\}").unwrap();
-    s = re.replace_all(&s, r"\p[$1]").into_owned();
+    s = RE_DEC_ACTOR_NAME.replace_all(&s, r"\N[$1]").into_owned();
+    s = RE_DEC_actor_name.replace_all(&s, r"\n[$1]").into_owned();
+    s = RE_DEC_COLOR.replace_all(&s, r"\C[$1]").into_owned();
+    s = RE_DEC_color.replace_all(&s, r"\c[$1]").into_owned();
+    s = RE_DEC_ICON.replace_all(&s, r"\I[$1]").into_owned();
+    s = RE_DEC_icon.replace_all(&s, r"\i[$1]").into_owned();
+    s = RE_DEC_VAR.replace_all(&s, r"\V[$1]").into_owned();
+    s = RE_DEC_var.replace_all(&s, r"\v[$1]").into_owned();
+    s = RE_DEC_PARTY.replace_all(&s, r"\P[$1]").into_owned();
+    s = RE_DEC_party.replace_all(&s, r"\p[$1]").into_owned();
 
     s = s.replace("{{FONT_UP}}", r"\{");
     s = s.replace("{{FONT_DOWN}}", r"\}");
@@ -93,7 +79,7 @@ pub fn decode(text: &str) -> (String, bool) {
     s = s.replace("{{FAST_START}}", r"\>");
     s = s.replace("{{FAST_END}}", r"\<");
 
-    let intact = !regex::Regex::new(r"\{\{[^}]+\}\}").unwrap().is_match(&s);
+    let intact = !RE_LEFTOVER_PH.is_match(&s);
     (s, intact)
 }
 
@@ -129,7 +115,6 @@ mod tests {
     #[test]
     fn test_encode_font_size() {
         assert_eq!(encode(r"\{大きい\}"), "{{FONT_UP}}大きい{{FONT_DOWN}}");
-        // Double font up: \{\{ → {{FONT_UP}}{{FONT_UP}}
         assert_eq!(encode(r"\{\{text"), "{{FONT_UP}}{{FONT_UP}}text");
     }
 

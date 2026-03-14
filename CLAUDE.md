@@ -82,7 +82,7 @@ All engine methods are `async` (required by tokio runtime). New engines must imp
 ### Key rules
 
 - Engine `skip.rs` always calls `common::skip::should_skip()` first, then adds engine-specific rules
-- Engine `placeholders.rs`: `encode()` before sending to Ollama, `decode()` after — returns `Warning` status if any placeholder is missing from translation
+- Engine `placeholders.rs`: `encode()` before sending to Ollama, `decode()` after — returns `Warning` status if any placeholder is missing from translation. All regex patterns **must use `std::sync::LazyLock`** (compiled once at first use, reused for all calls). Do NOT use local `Regex::new(...)` inside functions.
 - Injection is always non-destructive — writes to `output/`, never modifies original game files
 - `order_index` on entries is critical for injection — preserve ordering from source files
 - Ollama batch only — no calls while a game is running; show onboarding screen if Ollama is unreachable
