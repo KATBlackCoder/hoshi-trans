@@ -50,3 +50,10 @@ export interface TranslationProgress {
   total: number
   entry_id: string
 }
+
+export interface GlossaryTerm {
+  id: string
+  project_id: string
+  source_term: string
+  target_term: string
+}

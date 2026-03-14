@@ -1,6 +1,6 @@
 # Settings Page Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Settings page for Ollama model, target language, system prompt, and temperature — persisted across sessions via `tauri-plugin-store`, with structured logging via `tauri-plugin-log`.
 
@@ -40,14 +40,14 @@ cargo add tracing-subscriber --features env-filter
 
 ## Task 1: Install Packages
 
-- [ ] **Step 1: Add Tauri plugins**
+- [x] **Step 1: Add Tauri plugins**
 
 ```bash
 pnpm tauri add store
 pnpm tauri add log
 ```
 
-- [ ] **Step 2: Add Rust crates**
+- [x] **Step 2: Add Rust crates**
 
 ```bash
 cd src-tauri
@@ -55,7 +55,7 @@ cargo add tracing
 cargo add tracing-subscriber --features env-filter
 ```
 
-- [ ] **Step 3: Update lib.rs — replace generated log init with builder**
+- [x] **Step 3: Update lib.rs — replace generated log init with builder**
 
 ```rust
 // src-tauri/src/lib.rs — update the log plugin registration
@@ -66,12 +66,12 @@ cargo add tracing-subscriber --features env-filter
 )
 ```
 
-- [ ] **Step 4: Verify Rust compiles**
+- [x] **Step 4: Verify Rust compiles**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/ package.json pnpm-lock.yaml
@@ -85,7 +85,7 @@ git commit -m "chore: add tauri-plugin-store, tauri-plugin-log, tracing"
 **Files:**
 - Modify: `src/stores/appStore.ts`
 
-- [ ] **Step 1: Define settings types and defaults**
+- [x] **Step 1: Define settings types and defaults**
 
 ```ts
 // src/stores/appStore.ts — add to file
@@ -114,7 +114,7 @@ async function getStore() {
 }
 ```
 
-- [ ] **Step 2: Extend the Zustand store**
+- [x] **Step 2: Extend the Zustand store**
 
 ```ts
 // src/stores/appStore.ts — full updated file
@@ -177,7 +177,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 }))
 ```
 
-- [ ] **Step 3: Call loadSettings on app startup**
+- [x] **Step 3: Call loadSettings on app startup**
 
 ```tsx
 // src/App.tsx — in App component, add:
@@ -191,12 +191,12 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 4: Verify TypeScript**
+- [x] **Step 4: Verify TypeScript**
 
 Run: `pnpm build`
 Expected: No errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/stores/appStore.ts src/App.tsx
@@ -211,13 +211,13 @@ git commit -m "feat: add settings persistence via tauri-plugin-store"
 - Create: `src/features/settings/SettingsPage.tsx`
 - Create: `src/features/settings/index.ts`
 
-- [ ] **Step 1: Install needed shadcn components**
+- [x] **Step 1: Install needed shadcn components**
 
 ```bash
 pnpm dlx shadcn@latest add select slider label
 ```
 
-- [ ] **Step 2: Write SettingsPage**
+- [x] **Step 2: Write SettingsPage**
 
 ```tsx
 // src/features/settings/SettingsPage.tsx
@@ -316,7 +316,7 @@ export function SettingsPage() {
 export { SettingsPage } from './SettingsPage'
 ```
 
-- [ ] **Step 3: Add Settings to navigation in App.tsx**
+- [x] **Step 3: Add Settings to navigation in App.tsx**
 
 ```tsx
 // src/App.tsx — add settings navigation in sidebar
@@ -352,7 +352,7 @@ function MainLayout() {
 }
 ```
 
-- [ ] **Step 4: Test in app**
+- [x] **Step 4: Test in app**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 Expected:
@@ -363,7 +363,7 @@ Expected:
 - Temperature slider updates value
 - After closing and reopening app → settings are persisted
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/features/settings/ src/App.tsx

@@ -24,12 +24,12 @@ mod tests {
 
         // Verify tables exist
         let row: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('projects', 'entries')"
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('projects', 'entries', 'glossary')"
         )
         .fetch_one(&pool)
         .await
         .unwrap();
 
-        assert_eq!(row.0, 2);
+        assert_eq!(row.0, 3);
     }
 }

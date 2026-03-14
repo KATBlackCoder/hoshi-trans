@@ -5,6 +5,7 @@ import { FileImportButton } from '@/features/file-import'
 import { DebugExportButton, ExportButton } from '@/features/file-export'
 import { TranslationView } from '@/features/translation'
 import { SettingsPage } from '@/features/settings'
+import { GlossaryPanel } from '@/features/glossary'
 import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
@@ -101,6 +102,8 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onSet
               projectId={activeProject.project_id}
               outputDir={activeProject.output_dir}
             />
+            <Separator className="bg-sidebar-border" />
+            <GlossaryPanel projectId={activeProject.project_id} />
           </div>
         )}
       </div>

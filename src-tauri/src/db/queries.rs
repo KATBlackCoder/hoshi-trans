@@ -159,6 +159,113 @@ pub async fn get_pending_entries(
     get_entries(pool, project_id, Some("pending"), None).await
 }
 
+pub async fn get_glossary(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<Vec<crate::models::GlossaryTerm>> {
+    let rows = sqlx::query_as::<_, crate::models::GlossaryTerm>(
+        "SELECT id, project_id, source_term, target_term
+         FROM glossary
+         WHERE project_id = ?
+         ORDER BY source_term",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
+pub async fn upsert_glossary_term(
+    pool: &SqlitePool,
+    id: &str,
+    project_id: &str,
+    source_term: &str,
+    target_term: &str,
+) -> anyhow::Result<()> {
+    sqlx::query(
+        "INSERT INTO glossary (id, project_id, source_term, target_term)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(project_id, source_term) DO UPDATE SET
+           id = excluded.id,
+           target_term = excluded.target_term",
+    )
+    .bind(id)
+    .bind(project_id)
+    .bind(source_term)
+    .bind(target_term)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn delete_glossary_term(pool: &SqlitePool, id: &str) -> anyhow::Result<()> {
+    sqlx::query("DELETE FROM glossary WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod glossary_tests {
+    use super::*;
+    use crate::db::init_pool;
+
+    async fn setup() -> (sqlx::SqlitePool, String, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        sqlx::query(
+            "INSERT INTO projects (id, game_dir, engine, game_title, target_lang, created_at, updated_at)
+             VALUES ('p1', '/g', 'rpgmaker_mv_mz', 'Test', 'en', 0, 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        (pool, "p1".to_string(), dir)
+    }
+
+    #[tokio::test]
+    async fn test_upsert_and_get_glossary() {
+        let (pool, pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori")
+            .await
+            .unwrap();
+        upsert_glossary_term(&pool, "id2", &pid, "六花", "Rikka")
+            .await
+            .unwrap();
+        let terms = get_glossary(&pool, &pid).await.unwrap();
+        assert_eq!(terms.len(), 2);
+        assert!(terms
+            .iter()
+            .any(|t| t.source_term == "羽鳥" && t.target_term == "Hatori"));
+    }
+
+    #[tokio::test]
+    async fn test_upsert_overwrites_existing() {
+        let (pool, pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori")
+            .await
+            .unwrap();
+        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori2")
+            .await
+            .unwrap();
+        let terms = get_glossary(&pool, &pid).await.unwrap();
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].target_term, "Hatori2");
+    }
+
+    #[tokio::test]
+    async fn test_delete_glossary_term() {
+        let (pool, pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori")
+            .await
+            .unwrap();
+        delete_glossary_term(&pool, "id1").await.unwrap();
+        let terms = get_glossary(&pool, &pid).await.unwrap();
+        assert_eq!(terms.len(), 0);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

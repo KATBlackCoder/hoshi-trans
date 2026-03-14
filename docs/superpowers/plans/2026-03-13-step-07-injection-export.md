@@ -1,6 +1,6 @@
 # Injection / Export RPG Maker MV/MZ Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Generate translated JSON game files in `hoshi-trans-output/` (non-destructive), decode all placeholders back to RPG Maker codes before writing, and allow the user to open the output folder from the UI.
 
@@ -33,7 +33,7 @@
 **Files:**
 - Modify: `src-tauri/src/db/queries.rs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[tokio::test]
@@ -58,12 +58,12 @@ async fn test_get_entries_ordered_preserves_order() {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test test_get_entries_ordered`
 Expected: FAIL
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```rust
 // src-tauri/src/db/queries.rs — add
@@ -86,12 +86,12 @@ pub async fn get_translated_entries_ordered(
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd src-tauri && cargo test test_get_entries_ordered`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src-tauri/src/db/queries.rs
@@ -106,7 +106,7 @@ git commit -m "feat: add get_translated_entries_ordered query"
 - Create: `src-tauri/src/engines/rpgmaker_mv_mz/injector.rs`
 - Modify: `src-tauri/src/engines/rpgmaker_mv_mz/mod.rs`
 
-- [ ] **Step 1: Write failing test for a simple injection**
+- [x] **Step 1: Write failing test for a simple injection**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/injector.rs — add at bottom
@@ -140,12 +140,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Run to verify fail**
+- [x] **Step 2: Run to verify fail**
 
 Run: `cd src-tauri && cargo test test_inject_dialogue`
 Expected: FAIL
 
-- [ ] **Step 3: Implement injector.rs**
+- [x] **Step 3: Implement injector.rs**
 
 ```rust
 // src-tauri/src/engines/rpgmaker_mv_mz/injector.rs
@@ -248,19 +248,19 @@ pub fn inject_database_translations(json: &mut serde_json::Value, translations: 
 }
 ```
 
-- [ ] **Step 4: Update rpgmaker_mv_mz/mod.rs**
+- [x] **Step 4: Update rpgmaker_mv_mz/mod.rs**
 
 ```rust
 // add
 pub mod injector;
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd src-tauri && cargo test test_inject_dialogue`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src-tauri/src/engines/rpgmaker_mv_mz/injector.rs
@@ -276,7 +276,7 @@ git commit -m "feat: add RPG Maker injector with placeholder decode"
 - Modify: `src-tauri/src/commands/mod.rs`
 - Modify: `src-tauri/src/lib.rs`
 
-- [ ] **Step 1: Write inject.rs**
+- [x] **Step 1: Write inject.rs**
 
 ```rust
 // src-tauri/src/commands/inject.rs
@@ -306,7 +306,7 @@ pub async fn inject_translations(
 }
 ```
 
-- [ ] **Step 2: Update mod.rs and lib.rs**
+- [x] **Step 2: Update mod.rs and lib.rs**
 
 ```rust
 // commands/mod.rs
@@ -316,12 +316,12 @@ pub mod inject;
 commands::inject::inject_translations,
 ```
 
-- [ ] **Step 3: Compile check**
+- [x] **Step 3: Compile check**
 
 Run: `cd src-tauri && cargo check`
 Expected: No errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src-tauri/src/commands/inject.rs src-tauri/src/commands/mod.rs src-tauri/src/lib.rs
@@ -336,7 +336,7 @@ git commit -m "feat: add inject_translations Tauri command"
 - Create: `src/features/file-export/ExportButton.tsx`
 - Create: `src/features/file-export/index.ts`
 
-- [ ] **Step 1: Write ExportButton**
+- [x] **Step 1: Write ExportButton**
 
 ```tsx
 // src/features/file-export/ExportButton.tsx
@@ -384,11 +384,11 @@ export function ExportButton({ projectId, gameDir, outputDir }: Props) {
 export { ExportButton } from './ExportButton'
 ```
 
-- [ ] **Step 2: Add ExportButton to the translation view or sidebar**
+- [x] **Step 2: Add ExportButton to the translation view or sidebar**
 
 Add `<ExportButton projectId={...} gameDir={...} outputDir={...} />` in the appropriate location in `App.tsx` or `TranslationView.tsx`.
 
-- [ ] **Step 3: Test end-to-end**
+- [x] **Step 3: Test end-to-end**
 
 Run: `WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 pnpm tauri dev`
 Expected:
@@ -398,7 +398,7 @@ Expected:
 - Original game `data/` folder is untouched
 - Manually test: copy `hoshi-trans-output/data/` into game folder → game should launch with translated text
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/features/file-export/ src/App.tsx
