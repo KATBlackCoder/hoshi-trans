@@ -12,6 +12,8 @@
     "fs:default",
     "store:default",
     "log:default",
-    "notification:default"
+    "notification:default",
+    "shell:default",
+    "process:default"
   ]
 }
