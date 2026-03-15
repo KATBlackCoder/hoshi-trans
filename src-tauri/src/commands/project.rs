@@ -1,5 +1,5 @@
 use crate::db::queries;
-use crate::engines::rpgmaker_mv_mz;
+use crate::engines::{rpgmaker_mv_mz, wolf_rpg};
 use crate::models::{EngineType, ProjectFile, ProjectStats};
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -69,6 +69,8 @@ pub async fn create_project(
     let (engine_type, engine_str, game_title) = if rpgmaker_mv_mz::detect(game_path) {
         let title = rpgmaker_mv_mz::get_game_title(game_path).unwrap_or_else(|_| "Unknown".into());
         (EngineType::RpgmakerMvMz, "rpgmaker_mv_mz", title)
+    } else if wolf_rpg::detect(game_path) {
+        (EngineType::WolfRpg, "wolf_rpg", "Unknown".into())
     } else {
         return Err("Unsupported game engine — no recognized game files found".into());
     };

@@ -1,5 +1,6 @@
 pub mod common;
 pub mod rpgmaker_mv_mz;
+pub mod wolf_rpg;
 
 use crate::models::TranslationEntry;
 
