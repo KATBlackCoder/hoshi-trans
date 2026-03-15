@@ -54,6 +54,18 @@ pub async fn get_project_by_game_dir(
     Ok(row)
 }
 
+pub async fn get_project_engine_by_id(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<Option<String>> {
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT engine FROM projects WHERE id = ?")
+            .bind(project_id)
+            .fetch_optional(pool)
+            .await?;
+    Ok(row.map(|(e,)| e))
+}
+
 pub async fn insert_entries_batch(
     pool: &SqlitePool,
     entries: &[crate::models::TranslationEntry],
