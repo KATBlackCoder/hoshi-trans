@@ -6,6 +6,7 @@ import { TranslationView } from '@/features/translation'
 import { SettingsPage } from '@/features/settings'
 import { GlossaryPage } from '@/features/glossary'
 import { ProjectLibrary } from '@/features/project-library'
+import { AboutPage } from '@/features/about'
 import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
@@ -20,10 +21,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { BookOpen, ChevronLeft, Languages, Settings, Trash2 } from 'lucide-react'
+import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2 } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
-type View = 'library' | 'translation' | 'settings' | 'glossary'
+type View = 'library' | 'translation' | 'settings' | 'glossary' | 'about'
 
 function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onViewChange }: {
   activeProject: ProjectFile | null
@@ -143,6 +144,17 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onVie
         <Settings className="w-3.5 h-3.5" />
         Settings
       </button>
+      <button
+        onClick={() => onViewChange(view === 'about' ? (activeProject ? 'translation' : 'library') : 'about')}
+        className={`flex items-center gap-2 px-3.5 py-2.5 text-xs transition-colors ${
+          view === 'about'
+            ? 'text-primary font-medium bg-primary/8'
+            : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50'
+        }`}
+      >
+        <Info className="w-3.5 h-3.5" />
+        About
+      </button>
     </aside>
   )
 }
@@ -175,6 +187,8 @@ function MainLayout() {
           <SettingsPage />
         ) : view === 'glossary' ? (
           <GlossaryPage />
+        ) : view === 'about' ? (
+          <AboutPage />
         ) : view === 'translation' && activeProject ? (
           <TranslationView
             projectId={activeProject.project_id}

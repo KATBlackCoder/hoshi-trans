@@ -1,144 +1,86 @@
-## RunPod Cloud Setup
+# RunPod Setup for hoshi-trans
 
-RunPod provides cloud GPU instances that can run Ollama models. This is ideal if you don't have a powerful local GPU or want to scale your translation workload.
+Run a powerful cloud GPU to translate with `hoshi-translator` (30B MoE model) instead of your local GPU.
 
-### Prerequisites
+---
 
-- A RunPod account ([sign up here](https://www.runpod.io/))
-- Sufficient credits for GPU instances
+## Recommended GPU
 
-### Step 1: Create a RunPod Instance
+| GPU | VRAM | Storage | Cost | Notes |
+|-----|------|---------|------|-------|
+| RTX 4090 | 24 GB | 60 GB+ | ~$0.79/h | Best choice |
+| RTX 3090 | 24 GB | 60 GB+ | ~$0.29/h | Good value |
+| RTX 4080 | 16 GB | 50 GB+ | ~$0.50/h | Works, less margin |
 
-Choose a GPU instance with sufficient VRAM and storage:
+**Storage:** minimum 50 GB (model ~20 GB + Ollama + system overhead).
 
-**Recommended configurations:**
+---
 
-- **RTX 4090 (24GB VRAM)** - Required for 30B+ models
-  - Storage: 60GB+ (recommended)
-  - Cost: ~$0.79/hour
-  - Best for: Adult RPG translation, high-quality reasoning
+## Step 1 — Create a Pod
 
-- **RTX 3080/4080 (12GB VRAM)** - For 14B models only
-  - Storage: 40GB+ (single model) or 60GB+ (both models)
-  - Cost: ~$0.34/hour
+1. Go to [runpod.io](https://www.runpod.io/) and create a new pod.
+2. Choose a template: **RunPod Pytorch** or any Ubuntu/Debian base image.
+3. Under **"Expose HTTP Ports"**, add port **`11434`**.
+4. Add environment variable: `OLLAMA_HOST=0.0.0.0`
 
-**Storage Requirements:**
-- Minimum 40GB storage for single model (~20GB + system overhead)
-- 40GB storage for single model (~20GB + system overhead)
+---
 
-### Step 2: Container Start Command
+## Step 2 — Container Start Command
 
-Use one of these commands to automatically install and configure Ollama:
-
-#### Option A: Both Models (60GB storage)
+Paste this command in the **"Container Start Command"** field:
 
 ```bash
 bash -c "
-apt update && apt install -y curl lshw &&
+apt update && apt install -y curl lshw zstd &&
 curl -fsSL https://ollama.com/install.sh | sh &&
-nohup ollama serve > /root/ollama.log 2>&1 &
+OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
 sleep 60 &&
-ollama pull qwen3:30b &&
-ollama pull deepseek-r1:32b &&
+ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&
+curl -f -L -o /tmp/hoshi-translator-30b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile || exit 1 &&
+ollama create hoshi-translator -f /tmp/hoshi-translator-30b.Modelfile || exit 1 &&
+echo 'hoshi-translator 30B ready' &&
 sleep infinity
 "
 ```
 
-#### Option B: Qwen3:30b Only (40GB storage)
+This will:
+1. Install Ollama with `zstd` support
+2. Bind Ollama to all interfaces (`OLLAMA_HOST=0.0.0.0`)
+3. Pull `huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M`
+4. Download and create the `hoshi-translator` custom model from this repo
 
-```bash
-bash -c "
-apt update && apt install -y curl lshw &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull qwen3:30b &&
-sleep infinity
-"
+---
+
+## Step 3 — Get Your Pod URL
+
+Once the pod is running, your Ollama URL is:
+
+```
+https://<POD_ID>-11434.proxy.runpod.net
 ```
 
-#### Option C: DeepSeek-R1:32b Only (40GB storage)
+Example: `https://kfgeaneoswl1fd-11434.proxy.runpod.net`
 
-```bash
-bash -c "
-apt update && apt install -y curl lshw &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull deepseek-r1:32b &&
-sleep infinity
-"
+Find your Pod ID in the RunPod dashboard.
+
+---
+
+## Step 4 — Configure in hoshi-trans
+
+In hoshi-trans, go to **Settings → Ollama Connection** and enter:
+
+```
+https://<POD_ID>-11434.proxy.runpod.net
 ```
 
-#### Option D: Custom LudoLingo Models (from GitHub)
+Click **Save**. The app will reconnect automatically.
 
-**⚠️ Important:** Ensure the modelfile files are committed and pushed to the GitHub repository before using these commands. The files must be available at the specified URLs.
+Or, if Ollama is shown as offline, enter the URL directly on the waiting screen and click **Connect**.
 
-**LudoLingo 7B (Qwen2.5-abliterate:7b):**
-```bash
-bash -c "
-apt update && apt install -y curl lshw &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull huihui_ai/qwen2.5-abliterate:7b &&
-curl -f -L -o /tmp/ludolingo.modelfile https://raw.githubusercontent.com/KATBlackCoder/LudoLingo/main/ludolingo.modelfile || exit 1 &&
-ollama create ludolingo -f /tmp/ludolingo.modelfile || exit 1 &&
-echo 'Model ludolingo created successfully' &&
-sleep infinity
-"
-```
+---
 
-**LudoLingo 14B Qwen (Qwen2.5-1m-abliterated:14b):**
-```bash
-bash -c "
-apt update && apt install -y curl lshw &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull huihui_ai/qwen2.5-1m-abliterated:14b &&
-curl -f -L -o /tmp/ludolingo-qwen14b.modelfile https://raw.githubusercontent.com/KATBlackCoder/LudoLingo/main/ludolingo-qwen14b.modelfile || exit 1 &&
-ollama create ludolingo-qwen14b -f /tmp/ludolingo-qwen14b.modelfile || exit 1 &&
-echo 'Model ludolingo-qwen14b created successfully' &&
-sleep infinity
-"
-```
+## Notes
 
-**LudoLingo DeepSeek-R1 14B (deepseek-r1:14b):**
-```bash
-bash -c "
-apt update && apt install -y curl lshw &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull deepseek-r1:14b &&
-curl -f -L -o /tmp/ludolingo-deepseek-r1-14b.modelfile https://raw.githubusercontent.com/KATBlackCoder/LudoLingo/main/ludolingo-deepseek-r1-14b.modelfile || exit 1 &&
-ollama create ludolingo-deepseek-r1-14b -f /tmp/ludolingo-deepseek-r1-14b.modelfile || exit 1 &&
-echo 'Model ludolingo-deepseek-r1-14b created successfully' &&
-sleep infinity
-"
-```
-
-
-**Note:** If the modelfile files are not yet available on GitHub, you can create them directly in the container using a heredoc. See the [RunPod documentation](https://docs.runpod.io/pods/overview) for alternative setup methods.
-
-### Step 3: Get Your Pod ID
-
-1. After your pod starts, find your pod ID in the RunPod dashboard
-2. It looks like: `abc123def456` (usually 12+ characters)
-3. Copy just the pod ID (not the full URL)
-
-### Step 4: Configure in LudoLingo
-
-In LudoLingo Settings:
-
-1. **Provider:** Select "RunPod"
-2. **Pod ID:** Enter your pod ID (e.g., `abc123def456`)
-3. **Model:** Select from available models:
-   - `qwen3:30b` (if using Option A or B)
-   - `deepseek-r1:32b` (if using Option A or C)
-   - `ludolingo` (if using Option D - 7B)
-   - `ludolingo-qwen14b` (if using Option D - 14B Qwen)
-   - `ludolingo-deepseek-r1-14b` (if using Option D - 14B DeepSeek-R1)
-
-**Note:** LudoLingo automatically converts your pod ID to the full RunPod URL: `https://abc123def456-11434.proxy.runpod.net`
+- The pod takes ~5–10 minutes to be fully ready (model download included).
+- Stop the pod when not translating to avoid unnecessary charges.
+- The `hoshi-translator` model is automatically recreated from the latest Modelfile on each pod start.

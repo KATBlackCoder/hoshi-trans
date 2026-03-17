@@ -8,19 +8,33 @@ use std::sync::{
 };
 use tauri::Emitter;
 
-/// Parse "http://host:port" into (host_with_scheme, port).
-/// Falls back to localhost:11434 on any parse error.
+/// Parse a URL like "http://host:port" or "https://host.proxy.runpod.net" into (host_with_scheme, port).
+/// For HTTPS URLs without an explicit port, uses 443 (required for RunPod proxy URLs).
+/// For HTTP URLs without an explicit port, uses 11434 (Ollama default).
 fn parse_ollama_url(url: &str) -> (String, u16) {
     let url = url.trim().trim_end_matches('/');
-    // Split off the port from the last ':'
-    if let Some(colon_pos) = url.rfind(':') {
-        let maybe_port = &url[colon_pos + 1..];
+
+    // Strip scheme
+    let (scheme, hostpart) = if let Some(s) = url.strip_prefix("https://") {
+        ("https", s)
+    } else if let Some(s) = url.strip_prefix("http://") {
+        ("http", s)
+    } else {
+        ("http", url)
+    };
+
+    // Check for explicit port at end of host (host:port)
+    if let Some(colon_pos) = hostpart.rfind(':') {
+        let maybe_port = &hostpart[colon_pos + 1..];
         if let Ok(port) = maybe_port.parse::<u16>() {
-            let host = url[..colon_pos].to_string();
+            let host = format!("{}://{}", scheme, &hostpart[..colon_pos]);
             return (host, port);
         }
     }
-    (url.to_string(), 11434)
+
+    // No explicit port — use scheme default (443 for HTTPS, 11434 for HTTP)
+    let default_port = if scheme == "https" { 443 } else { 11434 };
+    (format!("{}://{}", scheme, hostpart), default_port)
 }
 
 fn ollama_from_url(url: &str) -> Ollama {
