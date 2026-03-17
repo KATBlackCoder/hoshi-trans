@@ -20,6 +20,14 @@ static RE_AX_CSELF: LazyLock<Regex> =
 static RE_AY_CSELF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\\ay\[\\cself\[(\d+)\]\]").unwrap());
 
+// \m[\cself[n]] → {{WOLF_M_CS[n]}}   message position with cself expression
+static RE_M_CSELF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\m\[\\cself\[(\d+)\]\]").unwrap());
+
+// \udb[n:\d[m]] → {{WOLF_UDB_D[n:m]}}   user database with variable index (compound)
+static RE_UDB_D: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\udb\[(\d+):\\d\[(\d+)\]\]").unwrap());
+
 // --- Simple parametric codes ---
 
 // \cself[n] → {{WOLF_CSELF[n]}}   character self-variable (name, attribute)
@@ -80,6 +88,18 @@ static RE_INDENT: LazyLock<Regex> =
 static RE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\\space\[(\d+)\]").unwrap());
 
+// \udb[n:m] → {{WOLF_UDB[n:m]}}   user database reference (2-arg form)
+static RE_UDB: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\udb\[(\d+:\d+)\]").unwrap());
+
+// \m[n] → {{WOLF_M[n]}}   message position (n can be negative)
+static RE_M: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\m\[(-?\d+)\]").unwrap());
+
+// \my[n] → {{WOLF_MY[n]}}   message y-offset (n can be negative)
+static RE_MY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\my\[(-?\d+)\]").unwrap());
+
 // @n → {{WOLF_AT[n]}}   parameter reference
 static RE_AT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"@(\d+)").unwrap());
@@ -96,6 +116,10 @@ static RE_D_AX_CSELF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_AX_CS\[(\d+)\]\}\}").unwrap());
 static RE_D_AY_CSELF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_AY_CS\[(\d+)\]\}\}").unwrap());
+static RE_D_M_CSELF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{WOLF_M_CS\[(\d+)\]\}\}").unwrap());
+static RE_D_UDB_D: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{WOLF_UDB_D\[(\d+):(\d+)\]\}\}").unwrap());
 static RE_D_CSELF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_CSELF\[(\d+)\]\}\}").unwrap());
 static RE_D_CDB: LazyLock<Regex> =
@@ -124,6 +148,12 @@ static RE_D_INDENT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_INDENT\[(\d+)\]\}\}").unwrap());
 static RE_D_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_SPACE\[(\d+)\]\}\}").unwrap());
+static RE_D_UDB: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{WOLF_UDB\[(\d+:\d+)\]\}\}").unwrap());
+static RE_D_M: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{WOLF_M\[(-?\d+)\]\}\}").unwrap());
+static RE_D_MY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{WOLF_MY\[(-?\d+)\]\}\}").unwrap());
 static RE_D_AT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_AT\[(\d+)\]\}\}").unwrap());
 static RE_D_PC: LazyLock<Regex> =
@@ -149,6 +179,8 @@ pub fn encode(text: &str) -> String {
     s = RE_FONT_CSELF.replace_all(&s, "{{WOLF_FONT_CS[$1]}}").into_owned();
     s = RE_AX_CSELF.replace_all(&s, "{{WOLF_AX_CS[$1]}}").into_owned();
     s = RE_AY_CSELF.replace_all(&s, "{{WOLF_AY_CS[$1]}}").into_owned();
+    s = RE_M_CSELF.replace_all(&s, "{{WOLF_M_CS[$1]}}").into_owned();
+    s = RE_UDB_D.replace_all(&s, "{{WOLF_UDB_D[$1:$2]}}").into_owned();
 
     // 2. Long-prefix parametric codes (before short prefixes to avoid partial match)
     s = RE_CSELF.replace_all(&s, "{{WOLF_CSELF[$1]}}").into_owned();
@@ -156,6 +188,9 @@ pub fn encode(text: &str) -> String {
     s = RE_SYS.replace_all(&s, "{{WOLF_SYS[$1]}}").into_owned();
     s = RE_FONT_FULL.replace_all(&s, "{{WOLF_FONTFULL[$1]}}").into_owned();
     s = RE_SPACE.replace_all(&s, "{{WOLF_SPACE[$1]}}").into_owned();
+    s = RE_UDB.replace_all(&s, "{{WOLF_UDB[$1]}}").into_owned();
+    s = RE_MY.replace_all(&s, "{{WOLF_MY[$1]}}").into_owned();
+    s = RE_M.replace_all(&s, "{{WOLF_M[$1]}}").into_owned();
 
     // 3. Short-prefix parametric codes
     s = RE_COLOR_U.replace_all(&s, "{{WOLF_COLOR_U[$1]}}").into_owned(); // \C before \c
@@ -172,6 +207,7 @@ pub fn encode(text: &str) -> String {
 
     // 4. No-parameter codes — plain string replace
     s = s.replace(r"\E", "{{WOLF_END}}");
+    s = s.replace(r"\A-", "{{WOLF_AUTO}}");  // auto-fit alignment
     s = s.replace(r"\r", "{{WOLF_RUBY}}");   // ruby start (escape sequence \r, not char)
     s = s.replace('\r', "{{WOLF_CR}}");       // actual carriage return character
     s = s.replace('\n', "{{WOLF_NL}}");       // actual newline character
@@ -194,6 +230,8 @@ pub fn decode(text: &str) -> (String, bool) {
     s = RE_D_FONT_CSELF.replace_all(&s, r"\f[\cself[$1]]").into_owned();
     s = RE_D_AX_CSELF.replace_all(&s, r"\ax[\cself[$1]]").into_owned();
     s = RE_D_AY_CSELF.replace_all(&s, r"\ay[\cself[$1]]").into_owned();
+    s = RE_D_M_CSELF.replace_all(&s, r"\m[\cself[$1]]").into_owned();
+    s = RE_D_UDB_D.replace_all(&s, r"\udb[$1:\d[$2]]").into_owned();
 
     // Long-prefix parametric codes
     s = RE_D_CSELF.replace_all(&s, r"\cself[$1]").into_owned();
@@ -201,6 +239,9 @@ pub fn decode(text: &str) -> (String, bool) {
     s = RE_D_SYS.replace_all(&s, r"\sys[$1]").into_owned();
     s = RE_D_FONT_FULL.replace_all(&s, r"\font[$1]").into_owned();
     s = RE_D_SPACE.replace_all(&s, r"\space[$1]").into_owned();
+    s = RE_D_UDB.replace_all(&s, r"\udb[$1]").into_owned();
+    s = RE_D_MY.replace_all(&s, r"\my[$1]").into_owned();
+    s = RE_D_M.replace_all(&s, r"\m[$1]").into_owned();
 
     // Short-prefix parametric codes
     s = RE_D_COLOR_U.replace_all(&s, r"\C[$1]").into_owned();
@@ -217,6 +258,7 @@ pub fn decode(text: &str) -> (String, bool) {
 
     // No-parameter codes
     s = s.replace("{{WOLF_END}}", r"\E");
+    s = s.replace("{{WOLF_AUTO}}", r"\A-");
     s = s.replace("{{WOLF_RUBY}}", r"\r");
     s = s.replace("{{WOLF_CR}}", "\r");       // actual carriage return character
     s = s.replace("{{WOLF_NL}}", "\n");       // actual newline character
@@ -354,6 +396,46 @@ mod tests {
         let (decoded, intact) = decode(&encode(text));
         assert!(intact);
         assert_eq!(decoded, text);
+    }
+
+    #[test]
+    fn test_roundtrip_udb() {
+        let original = r"\udb[8:0]";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_roundtrip_udb_d() {
+        let original = r"\udb[7:\d[0]]";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_roundtrip_my_signed() {
+        let original = r"\my[-2]テキスト\my[2]";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_roundtrip_m_cself() {
+        let original = r"\m[\cself[19]]";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_roundtrip_auto_align() {
+        let original = r"\A-テキスト";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
     }
 
     #[test]
