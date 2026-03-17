@@ -1,6 +1,22 @@
+import { useState } from 'react'
 import { Terminal, Wifi } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useAppStore, DEFAULT_OLLAMA_HOST } from '@/stores/appStore'
 
 export function OnboardingPage() {
+  const { settings, updateSettings } = useAppStore()
+  const [hostDraft, setHostDraft] = useState(settings.ollamaHost)
+  const [saved, setSaved] = useState(false)
+
+  function saveHost() {
+    const trimmed = hostDraft.trim() || DEFAULT_OLLAMA_HOST
+    setHostDraft(trimmed)
+    updateSettings({ ollamaHost: trimmed })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
+  }
+
   return (
     <div className="flex items-center justify-center h-screen bg-background relative overflow-hidden">
       {/* Decorative 星 kanji watermark */}
@@ -66,9 +82,27 @@ export function OnboardingPage() {
           />
         </div>
 
-        <p className="text-[10.5px] text-muted-foreground/40 font-mono">
-          localhost:11434
-        </p>
+        {/* Ollama host override */}
+        <div className="w-full flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Input
+              value={hostDraft}
+              onChange={(e) => setHostDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveHost()}
+              className="font-mono text-xs h-7 bg-card/50"
+              placeholder="http://localhost:11434"
+            />
+            <Button size="sm" className="text-xs h-7 shrink-0" onClick={saveHost}>
+              {saved ? '✓' : 'Connect'}
+            </Button>
+          </div>
+          <button
+            className="text-[10px] text-muted-foreground/40 font-mono hover:text-muted-foreground/70 transition-colors text-left"
+            onClick={() => { setHostDraft(DEFAULT_OLLAMA_HOST); updateSettings({ ollamaHost: DEFAULT_OLLAMA_HOST }) }}
+          >
+            Reset to localhost:11434
+          </button>
+        </div>
       </div>
     </div>
   )

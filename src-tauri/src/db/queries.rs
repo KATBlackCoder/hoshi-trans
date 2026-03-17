@@ -29,6 +29,25 @@ pub async fn create_project(
     Ok(())
 }
 
+/// Returns projects with entry counts — used for the project library view.
+pub async fn get_projects_with_stats(
+    pool: &SqlitePool,
+) -> anyhow::Result<Vec<(String, String, String, String, String, i64, i64)>> {
+    // (id, game_dir, game_title, engine, target_lang, total, translated)
+    let rows: Vec<(String, String, String, String, String, i64, i64)> = sqlx::query_as(
+        "SELECT p.id, p.game_dir, p.game_title, p.engine, p.target_lang,
+                COUNT(e.id) AS total,
+                SUM(CASE WHEN e.status = 'translated' THEN 1 ELSE 0 END) AS translated
+         FROM projects p
+         LEFT JOIN entries e ON e.project_id = p.id
+         GROUP BY p.id
+         ORDER BY p.updated_at DESC",
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
 /// Returns (id, game_dir, engine, game_title, target_lang, json_path)
 pub async fn get_projects(
     pool: &SqlitePool,
@@ -129,6 +148,22 @@ pub async fn update_translation(
     Ok(())
 }
 
+/// Reset entries that were "translated" but with an empty translation back to pending.
+/// Returns the number of entries reset.
+pub async fn reset_empty_translations(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<u32> {
+    let result = sqlx::query(
+        "UPDATE entries SET status = 'pending', translation = NULL
+         WHERE project_id = ? AND status = 'translated' AND (translation IS NULL OR translation = '')",
+    )
+    .bind(project_id)
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() as u32)
+}
+
 pub async fn update_status(pool: &SqlitePool, entry_id: &str, status: &str) -> anyhow::Result<()> {
     sqlx::query("UPDATE entries SET status = ? WHERE id = ?")
         .bind(status)
@@ -171,42 +206,94 @@ pub async fn get_pending_entries(
     get_entries(pool, project_id, Some("pending"), None).await
 }
 
-pub async fn get_glossary(
+/// Fetch all glossary terms across all projects and global (for the Glossary page).
+pub async fn get_all_glossary_terms(
     pool: &SqlitePool,
-    project_id: &str,
 ) -> anyhow::Result<Vec<crate::models::GlossaryTerm>> {
     let rows = sqlx::query_as::<_, crate::models::GlossaryTerm>(
-        "SELECT id, project_id, source_term, target_term
+        "SELECT id, project_id, source_term, target_term, target_lang
          FROM glossary
-         WHERE project_id = ?
-         ORDER BY source_term",
+         ORDER BY source_term, target_lang",
     )
-    .bind(project_id)
     .fetch_all(pool)
     .await?;
     Ok(rows)
 }
 
+/// Fetch glossary terms for translation: global terms + project-specific terms for the
+/// given target_lang, with project terms taking priority over global ones.
+pub async fn get_glossary_for_translation(
+    pool: &SqlitePool,
+    project_id: &str,
+    target_lang: &str,
+) -> anyhow::Result<Vec<crate::models::GlossaryTerm>> {
+    // Fetch global first (NULL project_id), then project-specific — project overrides global
+    let rows = sqlx::query_as::<_, crate::models::GlossaryTerm>(
+        "SELECT id, project_id, source_term, target_term, target_lang
+         FROM glossary
+         WHERE (project_id = ? OR project_id IS NULL)
+           AND target_lang = ?
+         ORDER BY project_id NULLS FIRST, source_term",
+    )
+    .bind(project_id)
+    .bind(target_lang)
+    .fetch_all(pool)
+    .await?;
+
+    // Deduplicate: project-specific overrides global for same source_term
+    let mut map: std::collections::HashMap<String, crate::models::GlossaryTerm> =
+        std::collections::HashMap::new();
+    for term in rows {
+        map.insert(term.source_term.clone(), term);
+    }
+    let mut result: Vec<crate::models::GlossaryTerm> = map.into_values().collect();
+    result.sort_by(|a, b| a.source_term.cmp(&b.source_term));
+    Ok(result)
+}
+
 pub async fn upsert_glossary_term(
     pool: &SqlitePool,
     id: &str,
-    project_id: &str,
+    project_id: Option<&str>,
     source_term: &str,
     target_term: &str,
+    target_lang: &str,
 ) -> anyhow::Result<()> {
-    sqlx::query(
-        "INSERT INTO glossary (id, project_id, source_term, target_term)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(project_id, source_term) DO UPDATE SET
-           id = excluded.id,
-           target_term = excluded.target_term",
-    )
-    .bind(id)
-    .bind(project_id)
-    .bind(source_term)
-    .bind(target_term)
-    .execute(pool)
-    .await?;
+    match project_id {
+        None => {
+            // Global term — conflict on (source_term, target_lang) WHERE project_id IS NULL
+            sqlx::query(
+                "INSERT INTO glossary (id, project_id, source_term, target_term, target_lang)
+                 VALUES (?, NULL, ?, ?, ?)
+                 ON CONFLICT(source_term, target_lang) WHERE project_id IS NULL DO UPDATE SET
+                   id = excluded.id,
+                   target_term = excluded.target_term",
+            )
+            .bind(id)
+            .bind(source_term)
+            .bind(target_term)
+            .bind(target_lang)
+            .execute(pool)
+            .await?;
+        }
+        Some(pid) => {
+            // Project-scoped term — conflict on (project_id, source_term, target_lang)
+            sqlx::query(
+                "INSERT INTO glossary (id, project_id, source_term, target_term, target_lang)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON CONFLICT(project_id, source_term, target_lang) WHERE project_id IS NOT NULL DO UPDATE SET
+                   id = excluded.id,
+                   target_term = excluded.target_term",
+            )
+            .bind(id)
+            .bind(pid)
+            .bind(source_term)
+            .bind(target_term)
+            .bind(target_lang)
+            .execute(pool)
+            .await?;
+        }
+    }
     Ok(())
 }
 
@@ -237,43 +324,76 @@ mod glossary_tests {
     }
 
     #[tokio::test]
-    async fn test_upsert_and_get_glossary() {
+    async fn test_upsert_project_term_and_get_all() {
         let (pool, pid, _dir) = setup().await;
-        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori")
+        upsert_glossary_term(&pool, "id1", Some(&pid), "羽鳥", "Hatori", "en")
             .await
             .unwrap();
-        upsert_glossary_term(&pool, "id2", &pid, "六花", "Rikka")
+        upsert_glossary_term(&pool, "id2", Some(&pid), "六花", "Rikka", "en")
             .await
             .unwrap();
-        let terms = get_glossary(&pool, &pid).await.unwrap();
+        let terms = get_all_glossary_terms(&pool).await.unwrap();
         assert_eq!(terms.len(), 2);
-        assert!(terms
-            .iter()
-            .any(|t| t.source_term == "羽鳥" && t.target_term == "Hatori"));
+        assert!(terms.iter().any(|t| t.source_term == "羽鳥" && t.target_term == "Hatori"));
     }
 
     #[tokio::test]
-    async fn test_upsert_overwrites_existing() {
+    async fn test_upsert_global_term() {
+        let (pool, _pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "g1", None, "魔法", "magic", "en")
+            .await
+            .unwrap();
+        let terms = get_all_glossary_terms(&pool).await.unwrap();
+        assert_eq!(terms.len(), 1);
+        assert!(terms[0].project_id.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_project_overrides_global_in_translation() {
         let (pool, pid, _dir) = setup().await;
-        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori")
-            .await
-            .unwrap();
-        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori2")
-            .await
-            .unwrap();
-        let terms = get_glossary(&pool, &pid).await.unwrap();
+        // Global: 六花 → Rikka
+        upsert_glossary_term(&pool, "g1", None, "六花", "Rikka", "en").await.unwrap();
+        // Project-specific override: 六花 → Rokka
+        upsert_glossary_term(&pool, "p1", Some(&pid), "六花", "Rokka", "en").await.unwrap();
+        let terms = get_glossary_for_translation(&pool, &pid, "en").await.unwrap();
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].target_term, "Rokka");
+    }
+
+    #[tokio::test]
+    async fn test_global_appears_in_all_projects() {
+        let (pool, pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "g1", None, "魔法", "magic", "en").await.unwrap();
+        let terms = get_glossary_for_translation(&pool, &pid, "en").await.unwrap();
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].source_term, "魔法");
+    }
+
+    #[tokio::test]
+    async fn test_upsert_overwrites_existing_project() {
+        let (pool, pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "id1", Some(&pid), "羽鳥", "Hatori", "en").await.unwrap();
+        upsert_glossary_term(&pool, "id1", Some(&pid), "羽鳥", "Hatori2", "en").await.unwrap();
+        let terms = get_all_glossary_terms(&pool).await.unwrap();
         assert_eq!(terms.len(), 1);
         assert_eq!(terms[0].target_term, "Hatori2");
     }
 
     #[tokio::test]
+    async fn test_different_target_lang_not_duplicate() {
+        let (pool, _pid, _dir) = setup().await;
+        upsert_glossary_term(&pool, "g1", None, "六花", "Rikka", "en").await.unwrap();
+        upsert_glossary_term(&pool, "g2", None, "六花", "Rikka", "fr").await.unwrap();
+        let terms = get_all_glossary_terms(&pool).await.unwrap();
+        assert_eq!(terms.len(), 2);
+    }
+
+    #[tokio::test]
     async fn test_delete_glossary_term() {
         let (pool, pid, _dir) = setup().await;
-        upsert_glossary_term(&pool, "id1", &pid, "羽鳥", "Hatori")
-            .await
-            .unwrap();
+        upsert_glossary_term(&pool, "id1", Some(&pid), "羽鳥", "Hatori", "en").await.unwrap();
         delete_glossary_term(&pool, "id1").await.unwrap();
-        let terms = get_glossary(&pool, &pid).await.unwrap();
+        let terms = get_all_glossary_terms(&pool).await.unwrap();
         assert_eq!(terms.len(), 0);
     }
 }
@@ -366,5 +486,77 @@ mod tests {
 
         let all = get_entries(&pool, "p1", None, None).await.unwrap();
         assert_eq!(all.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_reset_empty_translations() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None)
+            .await
+            .unwrap();
+
+        // e1: translated with real content — must NOT be reset
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1','p1','こんにちは','Hello','translated','f',0)"
+        ).execute(&pool).await.unwrap();
+        // e2: translated with empty string — must be reset to pending
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e2','p1','ありがとう','','translated','f',1)"
+        ).execute(&pool).await.unwrap();
+        // e3: translated with NULL translation — must also be reset
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index)
+             VALUES ('e3','p1','さようなら','translated','f',2)"
+        ).execute(&pool).await.unwrap();
+        // e4: pending — must NOT be touched
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index)
+             VALUES ('e4','p1','おはよう','pending','f',3)"
+        ).execute(&pool).await.unwrap();
+
+        let count = reset_empty_translations(&pool, "p1").await.unwrap();
+        assert_eq!(count, 2, "should have reset e2 and e3");
+
+        let pending = get_entries(&pool, "p1", Some("pending"), None).await.unwrap();
+        assert_eq!(pending.len(), 3); // e2, e3, e4 are now pending
+
+        let translated = get_entries(&pool, "p1", Some("translated"), None).await.unwrap();
+        assert_eq!(translated.len(), 1); // only e1 remains translated
+        assert_eq!(translated[0].source_text, "こんにちは");
+    }
+
+    #[tokio::test]
+    async fn test_insert_entries_batch_no_duplicates() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None)
+            .await
+            .unwrap();
+
+        let make_entry = |id: &str, order: i64| crate::models::TranslationEntry {
+            id: id.to_string(),
+            project_id: "p1".into(),
+            source_text: "六花".into(),
+            translation: None,
+            status: "pending".into(),
+            context: None,
+            file_path: "data/Actors.json".into(),
+            order_index: order,
+        };
+
+        // First extraction
+        insert_entries_batch(&pool, &[make_entry("e1", 0)]).await.unwrap();
+        // Second extraction same position — different UUID, should be ignored
+        insert_entries_batch(&pool, &[make_entry("e2", 0)]).await.unwrap();
+
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM entries WHERE project_id = 'p1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(count.0, 1, "re-extraction must not create duplicates");
     }
 }

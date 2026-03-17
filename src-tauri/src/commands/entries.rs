@@ -29,6 +29,18 @@ pub async fn update_translation(
         .map_err(|e| e.to_string())
 }
 
+/// Reset entries with empty translation back to pending so they get retranslated.
+/// Returns the count of entries reset.
+#[tauri::command]
+pub async fn reset_empty_translations(
+    pool: tauri::State<'_, SqlitePool>,
+    project_id: String,
+) -> Result<u32, String> {
+    queries::reset_empty_translations(pool.inner(), &project_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn update_status(
     pool: tauri::State<'_, SqlitePool>,

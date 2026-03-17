@@ -42,15 +42,19 @@ pub fn run() {
             commands::project::create_project,
             commands::project::open_project,
             commands::project::get_projects,
+            commands::project::get_projects_with_stats,
             commands::project::delete_project,
             commands::extract::extract_strings,
             commands::entries::get_entries,
             commands::entries::update_translation,
             commands::entries::update_status,
+            commands::entries::reset_empty_translations,
             commands::inject::inject_translations,
-            commands::glossary::get_glossary,
+            commands::glossary::get_all_glossary_terms,
             commands::glossary::upsert_glossary_term,
             commands::glossary::delete_glossary_term,
+            commands::glossary::export_glossary,
+            commands::glossary::import_glossary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

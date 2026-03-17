@@ -53,7 +53,8 @@ export interface TranslationProgress {
 
 export interface GlossaryTerm {
   id: string
-  project_id: string
+  project_id: string | null  // null = global
   source_term: string
   target_term: string
+  target_lang: string
 }

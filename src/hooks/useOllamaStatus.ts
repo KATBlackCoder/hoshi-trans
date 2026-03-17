@@ -5,13 +5,14 @@ import { useAppStore } from '@/stores/appStore'
 
 export function useOllamaStatus() {
   const setOllamaStatus = useAppStore((s) => s.setOllamaStatus)
+  const ollamaHost = useAppStore((s) => s.settings.ollamaHost)
 
   const query = useQuery({
-    queryKey: ['ollama-status'],
+    queryKey: ['ollama-status', ollamaHost],
     queryFn: async () => {
-      const online = await invoke<boolean>('check_ollama')
+      const online = await invoke<boolean>('check_ollama', { ollamaHost })
       if (online) {
-        const models = await invoke<string[]>('list_models')
+        const models = await invoke<string[]>('list_models', { ollamaHost })
         return { online, models }
       }
       return { online: false, models: [] }

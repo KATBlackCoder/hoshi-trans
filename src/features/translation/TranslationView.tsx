@@ -9,7 +9,9 @@ import { TranslationRow } from './TranslationRow'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
 import { useAppStore } from '@/stores/appStore'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Bug } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
+import { openPath } from '@tauri-apps/plugin-opener'
 import type { TranslationEntry } from '@/types'
 
 const STATUS_FILTERS = [
@@ -58,9 +60,11 @@ function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; s
 interface Props {
   projectId: string
   gameTitle?: string
+  gameDir: string
+  outputDir: string
 }
 
-export function TranslationView({ projectId, gameTitle }: Props) {
+export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Props) {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('order')
@@ -71,6 +75,8 @@ export function TranslationView({ projectId, gameTitle }: Props) {
   const [selectedModel, setSelectedModel] = useState<string>('')
   const model = selectedModel || availableModels[0] || ''
   const { progress, running, start, cancel } = useTranslationBatch()
+  const [resetting, setResetting] = useState(false)
+  const [lastResetCount, setLastResetCount] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const { data: entries = [], refetch } = useQuery({
@@ -118,8 +124,39 @@ export function TranslationView({ projectId, gameTitle }: Props) {
 
   function handleStart() {
     const lang = settings.targetLang === 'fr' ? 'French' : 'English'
-    const prompt = settings.systemPrompt.replace('{lang}', lang)
-    start(projectId, model, settings.targetLang, prompt, concurrency, limit, settings.temperature)
+    // hoshi-translator has its own baked SYSTEM directive — sending a second
+    // system prompt in the user message confuses the model, so we send empty.
+    const effectivePrompt = model.includes('hoshi-translator')
+      ? ''
+      : settings.systemPrompt.replace('{lang}', lang)
+    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, concurrency, limit, settings.temperature)
+  }
+
+  const exportTranslated = useMutation({
+    mutationFn: async () => {
+      const count = await invoke<number>('inject_translations', { projectId, gameDir, outputDir })
+      await openPath(outputDir)
+      return count
+    },
+  })
+
+  const debugExport = useMutation({
+    mutationFn: async () => {
+      const path = await invoke<string>('export_debug_json', { projectId, outputDir })
+      await openPath(path)
+    },
+  })
+
+  async function handleReset() {
+    setResetting(true)
+    setLastResetCount(null)
+    try {
+      const count = await invoke<number>('reset_empty_translations', { projectId })
+      setLastResetCount(count)
+      await refetch()
+    } finally {
+      setResetting(false)
+    }
   }
 
   return (
@@ -222,6 +259,48 @@ export function TranslationView({ projectId, gameTitle }: Props) {
         </div>
 
         <div className="flex-1" />
+
+        {lastResetCount !== null && (
+          <span className="text-[10.5px] text-emerald-500/80 font-mono">
+            {lastResetCount} reset
+          </span>
+        )}
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          disabled={running || resetting}
+          title="Reset translated entries with empty translation back to pending"
+          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-foreground gap-1"
+        >
+          <RotateCcw className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
+          Reset empty
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => debugExport.mutate()}
+          disabled={debugExport.isPending}
+          title="Export translated entries to JSON"
+          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-foreground gap-1"
+        >
+          {debugExport.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bug className="w-3 h-3" />}
+          Debug JSON
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => exportTranslated.mutate()}
+          disabled={exportTranslated.isPending || running}
+          title="Inject translations and open output folder"
+          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-foreground gap-1"
+        >
+          {exportTranslated.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FolderOpen className="w-3 h-3" />}
+          Export
+        </Button>
 
         {!model && (
           <span className="text-[10.5px] text-amber-400/80 font-mono">no model selected</span>

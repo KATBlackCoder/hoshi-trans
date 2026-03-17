@@ -136,6 +136,31 @@ pub async fn delete_project(
 }
 
 #[tauri::command]
+pub async fn get_projects_with_stats(
+    pool: tauri::State<'_, SqlitePool>,
+) -> Result<Vec<serde_json::Value>, String> {
+    let rows = queries::get_projects_with_stats(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+    let result = rows
+        .into_iter()
+        .map(|(id, game_dir, game_title, engine, target_lang, total, translated)| {
+            serde_json::json!({
+                "id": id,
+                "game_dir": game_dir,
+                "game_title": game_title,
+                "engine": engine,
+                "target_lang": target_lang,
+                "total": total,
+                "translated": translated,
+                "pending": total - translated,
+            })
+        })
+        .collect();
+    Ok(result)
+}
+
+#[tauri::command]
 pub async fn get_projects(
     pool: tauri::State<'_, SqlitePool>,
 ) -> Result<Vec<serde_json::Value>, String> {

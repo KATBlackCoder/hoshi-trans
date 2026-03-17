@@ -7,7 +7,7 @@ pub async fn export_debug_json(
     project_id: String,
     output_dir: String,
 ) -> Result<String, String> {
-    let entries = queries::get_entries(pool.inner(), &project_id, None, None)
+    let entries = queries::get_entries(pool.inner(), &project_id, Some("translated"), None)
         .await
         .map_err(|e| e.to_string())?;
 

@@ -1,5 +1,8 @@
-import { useAppStore } from '@/stores/appStore'
+import { useState } from 'react'
+import { useAppStore, DEFAULT_OLLAMA_HOST } from '@/stores/appStore'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -27,6 +30,16 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export function SettingsPage() {
   const { settings, updateSettings, availableModels } = useAppStore()
+  const [hostDraft, setHostDraft] = useState(settings.ollamaHost)
+  const [saved, setSaved] = useState(false)
+
+  function saveHost() {
+    const trimmed = hostDraft.trim() || DEFAULT_OLLAMA_HOST
+    setHostDraft(trimmed)
+    updateSettings({ ollamaHost: trimmed })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -34,6 +47,34 @@ export function SettingsPage() {
         <div>
           <h2 className="text-sm font-semibold">Settings</h2>
           <p className="text-xs text-muted-foreground/50 mt-0.5">Configured per session, persisted across restarts.</p>
+        </div>
+
+        {/* Ollama Connection */}
+        <div>
+          <SectionLabel>Ollama Connection</SectionLabel>
+          <SettingCard>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Host URL</Label>
+              <Input
+                value={hostDraft}
+                onChange={(e) => setHostDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveHost()}
+                className="font-mono text-xs"
+                placeholder="http://localhost:11434"
+              />
+              <p className="text-[10.5px] text-muted-foreground/40">
+                Local Ollama or a remote VPS. Include the port.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setHostDraft(DEFAULT_OLLAMA_HOST)}>
+                Reset to local
+              </Button>
+              <Button size="sm" className="text-xs h-7" onClick={saveHost}>
+                {saved ? 'Saved ✓' : 'Save'}
+              </Button>
+            </div>
+          </SettingCard>
         </div>
 
         {/* Model & Language */}

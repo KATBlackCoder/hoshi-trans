@@ -8,9 +8,29 @@ use std::sync::{
 };
 use tauri::Emitter;
 
+/// Parse "http://host:port" into (host_with_scheme, port).
+/// Falls back to localhost:11434 on any parse error.
+fn parse_ollama_url(url: &str) -> (String, u16) {
+    let url = url.trim().trim_end_matches('/');
+    // Split off the port from the last ':'
+    if let Some(colon_pos) = url.rfind(':') {
+        let maybe_port = &url[colon_pos + 1..];
+        if let Ok(port) = maybe_port.parse::<u16>() {
+            let host = url[..colon_pos].to_string();
+            return (host, port);
+        }
+    }
+    (url.to_string(), 11434)
+}
+
+fn ollama_from_url(url: &str) -> Ollama {
+    let (host, port) = parse_ollama_url(url);
+    Ollama::new(host, port)
+}
+
 /// Internal function — testable without Tauri state
-pub async fn check_ollama_inner() -> Result<bool, String> {
-    let ollama = Ollama::default(); // connects to localhost:11434
+pub async fn check_ollama_inner(ollama_host: &str) -> Result<bool, String> {
+    let ollama = ollama_from_url(ollama_host);
     match ollama.list_local_models().await {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
@@ -18,13 +38,13 @@ pub async fn check_ollama_inner() -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn check_ollama() -> Result<bool, String> {
-    check_ollama_inner().await
+pub async fn check_ollama(ollama_host: String) -> Result<bool, String> {
+    check_ollama_inner(&ollama_host).await
 }
 
 #[tauri::command]
-pub async fn list_models() -> Result<Vec<String>, String> {
-    let ollama = Ollama::default();
+pub async fn list_models(ollama_host: String) -> Result<Vec<String>, String> {
+    let ollama = ollama_from_url(&ollama_host);
     let models = ollama
         .list_local_models()
         .await
@@ -74,6 +94,7 @@ pub async fn translate_batch(
     model: String,
     target_lang: String,
     system_prompt: String,
+    ollama_host: String,
     concurrency: u32,
     limit: u32,
     temperature: f32,
@@ -82,8 +103,8 @@ pub async fn translate_batch(
 
     cancel_flag.store(false, Ordering::Relaxed);
 
-    // Fetch glossary and prepend to system_prompt
-    let glossary_terms = queries::get_glossary(pool.inner(), &project_id)
+    // Fetch glossary (global + project-specific for target_lang) and prepend to system_prompt
+    let glossary_terms = queries::get_glossary_for_translation(pool.inner(), &project_id, &target_lang)
         .await
         .unwrap_or_default();
     let term_pairs: Vec<(String, String)> = glossary_terms
@@ -138,6 +159,7 @@ pub async fn translate_batch(
         let model = model.clone();
         let system_prompt = system_prompt.clone();
         let target_lang = target_lang.clone();
+        let ollama_host = ollama_host.clone();
         let done_count = done_count.clone();
         let temperature = temperature;
 
@@ -149,11 +171,20 @@ pub async fn translate_batch(
             }
 
             let encoded = placeholders::encode(&entry.source_text);
-            let prompt = format!(
-                "{}\n\nTranslate to {}:\n{}",
-                system_prompt, target_lang, encoded
-            );
-            let ollama = Ollama::default();
+            // Map lang code to full name so the prompt matches the Modelfile few-shot format:
+            // "Translate from Japanese to English: {text}"
+            let lang_name = match target_lang.as_str() {
+                "fr" => "French",
+                _ => "English",
+            };
+            let prompt = if system_prompt.is_empty() {
+                // hoshi-translator: SYSTEM baked in Modelfile — match few-shot format exactly
+                format!("Translate from Japanese to {}: {}", lang_name, encoded)
+            } else {
+                // Generic model: prepend settings system prompt
+                format!("{}\n\nTranslate from Japanese to {}: {}", system_prompt, lang_name, encoded)
+            };
+            let ollama = ollama_from_url(&ollama_host);
             let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
             let request = GenerationRequest::new(model.clone(), prompt).options(options);
 
@@ -232,7 +263,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_ollama_returns_bool() {
-        let result = check_ollama_inner().await;
+        let result = check_ollama_inner("http://localhost:11434").await;
         assert!(result.is_ok() || result.is_err());
     }
 

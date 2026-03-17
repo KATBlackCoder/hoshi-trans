@@ -2,13 +2,17 @@ import { create } from 'zustand'
 import { load } from '@tauri-apps/plugin-store'
 
 export interface Settings {
+  ollamaHost: string
   ollamaModel: string
   targetLang: 'en' | 'fr'
   systemPrompt: string
   temperature: number
 }
 
+export const DEFAULT_OLLAMA_HOST = 'http://localhost:11434'
+
 const DEFAULT_SETTINGS: Settings = {
+  ollamaHost: DEFAULT_OLLAMA_HOST,
   ollamaModel: '',
   targetLang: 'en',
   systemPrompt:
