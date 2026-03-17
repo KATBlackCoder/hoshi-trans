@@ -6,7 +6,6 @@ use sqlx::SqlitePool;
 #[tauri::command]
 pub async fn inject_translations(
     pool: tauri::State<'_, SqlitePool>,
-    app: tauri::AppHandle,
     project_id: String,
     game_dir: String,
     output_dir: String,
@@ -25,7 +24,7 @@ pub async fn inject_translations(
     let out_path = std::path::Path::new(&output_dir);
 
     match engine.as_str() {
-        "wolf_rpg" => wolf_injector::inject(&app, game_path, &entries, out_path)
+        "wolf_rpg" => wolf_injector::inject(game_path, &entries, out_path)
             .await
             .map_err(|e| e.to_string())?,
         _ => rpg_injector::inject(game_path, &entries, out_path)

@@ -6,7 +6,6 @@ use sqlx::SqlitePool;
 #[tauri::command]
 pub async fn extract_strings(
     pool: tauri::State<'_, SqlitePool>,
-    app: tauri::AppHandle,
     project_id: String,
     game_dir: String,
 ) -> Result<u32, String> {
@@ -18,7 +17,7 @@ pub async fn extract_strings(
     let path = std::path::Path::new(&game_dir);
 
     let entries = match engine.as_str() {
-        "wolf_rpg" => wolf_extractor::extract(&app, path, &project_id)
+        "wolf_rpg" => wolf_extractor::extract(path, &project_id)
             .await
             .map_err(|e| e.to_string())?,
         _ => rpg_extractor::extract(path, &project_id)
