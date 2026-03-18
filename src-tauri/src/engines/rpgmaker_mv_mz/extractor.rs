@@ -199,6 +199,8 @@ pub async fn extract(
             extract_map_events(&json, project_id, &file_rel, &mut entries);
         } else if filename == "CommonEvents.json" {
             extract_common_events(&json, project_id, &file_rel, &mut entries);
+        } else if filename == "System.json" {
+            extract_system(&json, project_id, &file_rel, &mut entries);
         } else if matches!(
             filename.as_str(),
             "Actors.json"
@@ -367,6 +369,66 @@ fn extract_database_objects(
                     );
                     order += 1;
                 }
+            }
+        }
+    }
+}
+
+/// Extract translatable strings from System.json.
+/// Covers: terms.commands, terms.basic, terms.params, terms.messages,
+///         skillTypes, weaponTypes, armorTypes, equipTypes, elements.
+/// Skips: switches, variables (internal dev names, never shown to player).
+fn extract_system(
+    json: &serde_json::Value,
+    project_id: &str,
+    file_path: &str,
+    entries: &mut Vec<TranslationEntry>,
+) {
+    let mut order: i64 = 0;
+
+    // Extract strings from a JSON array, encoding the array index in context
+    // so the injector can locate the exact slot even when some entries are skipped.
+    // Context format: "FIELD[i]" e.g. "terms.basic[0]"
+    let mut add_array = |arr: &serde_json::Value, field: &str| {
+        if let Some(items) = arr.as_array() {
+            for (i, item) in items.iter().enumerate() {
+                if let Some(text) = item.as_str() {
+                    add_entry(
+                        entries,
+                        project_id,
+                        text,
+                        Some(format!("{}[{}]", field, i)),
+                        file_path,
+                        order,
+                    );
+                    order += 1;
+                }
+            }
+        }
+    };
+
+    add_array(&json["terms"]["basic"],    "terms.basic");
+    add_array(&json["terms"]["commands"], "terms.commands");
+    add_array(&json["terms"]["params"],   "terms.params");
+    add_array(&json["skillTypes"],        "skillTypes");
+    add_array(&json["weaponTypes"],       "weaponTypes");
+    add_array(&json["armorTypes"],        "armorTypes");
+    add_array(&json["equipTypes"],        "equipTypes");
+    add_array(&json["elements"],          "elements");
+
+    // terms.messages: key→string object. %1/%2/%3 are RPG Maker tokens — preserved as-is.
+    if let Some(messages) = json["terms"]["messages"].as_object() {
+        for (key, val) in messages {
+            if let Some(text) = val.as_str() {
+                add_entry(
+                    entries,
+                    project_id,
+                    text,
+                    Some(format!("terms.messages.{}", key)),
+                    file_path,
+                    order,
+                );
+                order += 1;
             }
         }
     }

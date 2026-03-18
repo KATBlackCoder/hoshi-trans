@@ -34,6 +34,10 @@ static RE_UDB_D: LazyLock<Regex> =
 static RE_CSELF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\\cself\[(\d+)\]").unwrap());
 
+// \self[n] → {{WOLF_SELF[n]}}   event local variable (must come after \cself)
+static RE_SELF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\self\[(\d+)\]").unwrap());
+
 // \cdb[type:index:field] → {{WOLF_CDB[type:index:field]}}   database lookup
 static RE_CDB: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\\cdb\[(\d+:\d+:\d+)\]").unwrap());
@@ -122,6 +126,8 @@ static RE_D_UDB_D: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_UDB_D\[(\d+):(\d+)\]\}\}").unwrap());
 static RE_D_CSELF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_CSELF\[(\d+)\]\}\}").unwrap());
+static RE_D_SELF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{WOLF_SELF\[(\d+)\]\}\}").unwrap());
 static RE_D_CDB: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{WOLF_CDB\[(\d+:\d+:\d+)\]\}\}").unwrap());
 static RE_D_COLOR_L: LazyLock<Regex> =
@@ -184,6 +190,7 @@ pub fn encode(text: &str) -> String {
 
     // 2. Long-prefix parametric codes (before short prefixes to avoid partial match)
     s = RE_CSELF.replace_all(&s, "{{WOLF_CSELF[$1]}}").into_owned();
+    s = RE_SELF.replace_all(&s, "{{WOLF_SELF[$1]}}").into_owned();
     s = RE_CDB.replace_all(&s, "{{WOLF_CDB[$1]}}").into_owned();
     s = RE_SYS.replace_all(&s, "{{WOLF_SYS[$1]}}").into_owned();
     s = RE_FONT_FULL.replace_all(&s, "{{WOLF_FONTFULL[$1]}}").into_owned();
@@ -235,6 +242,7 @@ pub fn decode(text: &str) -> (String, bool) {
 
     // Long-prefix parametric codes
     s = RE_D_CSELF.replace_all(&s, r"\cself[$1]").into_owned();
+    s = RE_D_SELF.replace_all(&s, r"\self[$1]").into_owned();
     s = RE_D_CDB.replace_all(&s, r"\cdb[$1]").into_owned();
     s = RE_D_SYS.replace_all(&s, r"\sys[$1]").into_owned();
     s = RE_D_FONT_FULL.replace_all(&s, r"\font[$1]").into_owned();
@@ -428,6 +436,19 @@ mod tests {
         let (decoded, intact) = decode(&encode(original));
         assert!(intact);
         assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_roundtrip_self() {
+        let original = r"\self[0]のHP";
+        let (decoded, intact) = decode(&encode(original));
+        assert!(intact);
+        assert_eq!(decoded, original);
+        // \cself must not be partially matched
+        let mixed = r"\cself[1]\self[0]";
+        let (decoded2, intact2) = decode(&encode(mixed));
+        assert!(intact2);
+        assert_eq!(decoded2, mixed);
     }
 
     #[test]

@@ -70,7 +70,8 @@ pub async fn create_project(
         let title = rpgmaker_mv_mz::get_game_title(game_path).unwrap_or_else(|_| "Unknown".into());
         (EngineType::RpgmakerMvMz, "rpgmaker_mv_mz", title)
     } else if wolf_rpg::detect(game_path) {
-        (EngineType::WolfRpg, "wolf_rpg", "Unknown".into())
+        let title = wolf_rpg::get_game_title(game_path);
+        (EngineType::WolfRpg, "wolf_rpg", title)
     } else {
         return Err("Unsupported game engine — no recognized game files found".into());
     };
