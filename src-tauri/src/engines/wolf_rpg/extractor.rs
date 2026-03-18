@@ -10,10 +10,29 @@ pub async fn extract(
     extract_sync(game_dir, project_id)
 }
 
+/// Resolve the actual dump directory.
+/// If the user opened the game root (containing Game.exe + Data.wolf),
+/// the WolfTL dump may be in a `dump/` subdirectory.
+fn resolve_dump_dir(path: &Path) -> std::path::PathBuf {
+    // If the given path already has mps/ → use it directly
+    if path.join("mps").exists() {
+        return path.to_path_buf();
+    }
+    // Otherwise look for a dump/ subfolder (user opened game root, not dump/)
+    let sub = path.join("dump");
+    if sub.join("mps").exists() {
+        return sub;
+    }
+    // Fall back to given path — will produce empty results gracefully
+    path.to_path_buf()
+}
+
 pub fn extract_sync(
-    dump_dir: &Path,
+    path: &Path,
     project_id: &str,
 ) -> anyhow::Result<Vec<TranslationEntry>> {
+    let dump_dir = resolve_dump_dir(path);
+    let dump_dir = dump_dir.as_path();
     let mut entries = Vec::new();
 
     // mps/
@@ -293,5 +312,17 @@ mod tests {
         assert_eq!(entries[0].source_text, "はい");
         assert_eq!(entries[1].source_text, "いいえ");
         assert_eq!(entries[0].order_index, 5);
+    }
+
+    #[test]
+    fn test_extract_real_dump() {
+        let path = std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../engine_test/月咲流ホノカ ver1.03/dump"
+        ));
+        if !path.exists() { return; }
+        let entries = extract_sync(path, "test").unwrap();
+        println!("Real dump entries: {}", entries.len());
+        assert!(!entries.is_empty(), "Expected entries from real dump");
     }
 }

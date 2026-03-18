@@ -11,11 +11,24 @@ pub async fn inject(
     inject_sync(game_dir, entries, output_dir)
 }
 
+fn resolve_dump_dir(path: &Path) -> std::path::PathBuf {
+    if path.join("mps").exists() {
+        return path.to_path_buf();
+    }
+    let sub = path.join("dump");
+    if sub.join("mps").exists() {
+        return sub;
+    }
+    path.to_path_buf()
+}
+
 pub fn inject_sync(
-    dump_dir: &Path,
+    path: &Path,
     entries: &[TranslationEntry],
     output_dir: &Path,
 ) -> anyhow::Result<()> {
+    let dump_dir_owned = resolve_dump_dir(path);
+    let dump_dir = dump_dir_owned.as_path();
     // Index: (file_path, order_index, context) → translation
     let mut index: HashMap<(String, i64, String), String> = HashMap::new();
     for entry in entries {
@@ -33,9 +46,9 @@ pub fn inject_sync(
         if !src_dir.exists() {
             continue;
         }
-        for path in sorted_json_files(&src_dir)? {
-            let rel = rel_path(dump_dir, &path);
-            let content = std::fs::read_to_string(&path)?;
+        for file_path in sorted_json_files(&src_dir)? {
+            let rel = rel_path(dump_dir, &file_path);
+            let content = std::fs::read_to_string(&file_path)?;
             let mut json: serde_json::Value = serde_json::from_str(&content)
                 .map_err(|e| anyhow::anyhow!("Parse error {}: {}", rel, e))?;
 
