@@ -1,5 +1,5 @@
 use crate::db::queries;
-use crate::engines::rpgmaker_mv_mz::placeholders;
+use crate::engines::{rpgmaker_mv_mz::placeholders as rpgmaker_ph, wolf_rpg::placeholders as wolf_ph};
 use ollama_rs::{generation::completion::request::GenerationRequest, Ollama};
 use sqlx::SqlitePool;
 use std::sync::{
@@ -112,6 +112,7 @@ pub async fn translate_batch(
     concurrency: u32,
     limit: u32,
     temperature: f32,
+    entry_ids: Option<Vec<String>>,
 ) -> Result<(), String> {
     use tokio::sync::Semaphore;
 
@@ -132,18 +133,27 @@ pub async fn translate_batch(
         format!("{}{}", glossary_block, system_prompt)
     };
 
-    let all_entries = queries::get_pending_entries(pool.inner(), &project_id)
+    let engine = queries::get_project_engine_by_id(pool.inner(), &project_id)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?
+        .unwrap_or_default();
+    let is_wolf = engine == "wolf_rpg";
 
-    // Apply batch limit (0 = translate all)
-    let entries = if limit > 0 {
-        all_entries
-            .into_iter()
-            .take(limit as usize)
-            .collect::<Vec<_>>()
+    // If specific entry IDs provided, translate those regardless of status.
+    // Otherwise fall back to pending entries with optional limit.
+    let entries = if let Some(ids) = entry_ids {
+        queries::get_entries_by_ids(pool.inner(), &ids)
+            .await
+            .map_err(|e| e.to_string())?
     } else {
-        all_entries
+        let all_pending = queries::get_pending_entries(pool.inner(), &project_id)
+            .await
+            .map_err(|e| e.to_string())?;
+        if limit > 0 {
+            all_pending.into_iter().take(limit as usize).collect()
+        } else {
+            all_pending
+        }
     };
 
     let total = entries.len() as u32;
@@ -184,7 +194,11 @@ pub async fn translate_batch(
                 return;
             }
 
-            let encoded = placeholders::encode(&entry.source_text);
+            let encoded = if is_wolf {
+                wolf_ph::encode(&entry.source_text)
+            } else {
+                rpgmaker_ph::encode(&entry.source_text)
+            };
             // Map lang code to full name so the prompt matches the Modelfile few-shot format:
             // "Translate from Japanese to English: {text}"
             let lang_name = match target_lang.as_str() {
@@ -205,7 +219,11 @@ pub async fn translate_batch(
             match ollama.generate(request).await {
                 Ok(response) => {
                     let translated = response.response.trim().to_string();
-                    let (decoded, intact) = placeholders::decode(&translated);
+                    let (decoded, intact) = if is_wolf {
+                        wolf_ph::decode(&translated)
+                    } else {
+                        rpgmaker_ph::decode(&translated)
+                    };
                     let status = if intact {
                         "translated"
                     } else {

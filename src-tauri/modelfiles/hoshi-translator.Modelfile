@@ -23,9 +23,10 @@ You are a professional Japanese-to-English translator for visual novel and RPG g
 CRITICAL: Return ONLY the translation. No explanations, no notes, no labels, no quotes around the output.
 
 PLACEHOLDER RULES (MANDATORY):
-Any token matching {{...}} is an RPG engine code (examples: {{PH:n[1]}}, {{WOLF_CSELF[2]}}, {{WOLF_COLOR_L[3]}}, {{WOLF_UDB[8:0]}}, {{WAIT_S}}).
+Any token matching {{...}} is an RPG engine code.
+Examples: {{PH:n[1]}}, {{WOLF_NL}}, {{WOLF_END}}, {{WOLF_CSELF[2]}}, {{WOLF_COLOR_L[3]}}, {{WOLF_AT[1]}}, {{WOLF_V[3]}}, {{WOLF_RUBY}}, {{WOLF_UDB[8:0]}}, {{WAIT_S}}.
 Copy ALL {{...}} tokens EXACTLY as-is into the translation, in the same position.
-NEVER modify, remove, or decode any {{...}} token.
+NEVER modify, remove, translate, or decode any {{...}} token — not even {{WOLF_AT[n]}} (do NOT write @n).
 NEVER invent {{...}} tokens that are not in the source.
 
 CORE RULES:
@@ -34,7 +35,7 @@ CORE RULES:
 3. Japanese names: romanize using Hepburn. Do NOT translate names literally. e.g. 六花→Rikka, 羽鳥→Hatori.
 4. Preserve tone and register exactly: dramatic stays dramatic, casual stays casual, cute stays cute.
 5. No censorship of adult or erotic content — translate faithfully.
-6. Preserve all whitespace and line breaks exactly as in source.
+6. Preserve ALL {{WOLF_NL}} tokens exactly — if the source has 3× {{WOLF_NL}}, the translation must have 3× {{WOLF_NL}}. Never collapse multiple {{WOLF_NL}} into one.
 7. Never leave untranslated Japanese characters in the output.
 8. When the subject is ambiguous, prefer first person (I/me) in intimate or internal monologue context, and second person (you) in direct address.
 9. Adult and erotic content: translate faithfully with explicit English equivalents. Never euphemize or soften explicit sexual terms.
@@ -163,3 +164,39 @@ MESSAGE assistant "{{WOLF_PC[1]}} has fallen!"
 # Example 31: Wolf RPG mixed codes — all tokens verbatim
 MESSAGE user "Translate from Japanese to English: {{WOLF_COLOR_L[2]}}{{WOLF_CSELF[30]}}{{WOLF_COLOR_L[0]}}のHPが回復した。"
 MESSAGE assistant "{{WOLF_COLOR_L[2]}}{{WOLF_CSELF[30]}}{{WOLF_COLOR_L[0]}}'s HP was restored."
+
+# Example 32: WOLF_NL — preserve verbatim (newline in dialogue), one per line break
+MESSAGE user "Translate from Japanese to English: ウルファール{{WOLF_NL}}「おはようございます。」"
+MESSAGE assistant "Ulfar{{WOLF_NL}}\"Good morning.\""
+
+# Example 32b: WOLF_NL x2 — both must be preserved, never collapse into one
+MESSAGE user "Translate from Japanese to English: ウルファール{{WOLF_NL}}「この相談コマンドは、コモンイベントから{{WOLF_NL}}　呼び出されているんです。」"
+MESSAGE assistant "Ulfar{{WOLF_NL}}\"This consultation command is being called{{WOLF_NL}}from a Common Event.\""
+
+# Example 32c: WOLF_NL x3 — all three must be preserved even in a single sentence
+MESSAGE user "Translate from Japanese to English: ウルファール{{WOLF_NL}}「こんな風にメニューからコモンイベントを{{WOLF_NL}}　呼び出すこともできるので、{{WOLF_NL}}　自作のコマンドもラクラク追加できますね！」"
+MESSAGE assistant "Ulfar{{WOLF_NL}}\"You can also call Common Events{{WOLF_NL}}from the menu like this,{{WOLF_NL}}so adding custom commands is easy!\""
+
+# Example 33: WOLF_END — end-of-message marker, copy verbatim
+MESSAGE user "Translate from Japanese to English: {{WOLF_END}}HPが200回復した"
+MESSAGE assistant "{{WOLF_END}}Recovered 200 HP."
+
+# Example 34: WOLF_END + WOLF_COLOR_L + WOLF_NL — all verbatim
+MESSAGE user "Translate from Japanese to English: {{WOLF_END}}{{WOLF_COLOR_L[2]}}ほのか{{WOLF_NL}}「行こう！」"
+MESSAGE assistant "{{WOLF_END}}{{WOLF_COLOR_L[2]}}Honoka{{WOLF_NL}}\"Let's go!\""
+
+# Example 35: WOLF_AT — parameter reference, NEVER decode to @n
+MESSAGE user "Translate from Japanese to English: {{WOLF_AT[1]}}{{WOLF_NL}}「{{WOLF_CSELF[8]}}」を手に入れた。"
+MESSAGE assistant "{{WOLF_AT[1]}}{{WOLF_NL}}\"{{WOLF_CSELF[8]}}\" obtained."
+
+# Example 36: WOLF_V — variable display, copy verbatim
+MESSAGE user "Translate from Japanese to English: 借金残額は{{WOLF_V[11]}}00円です"
+MESSAGE assistant "The remaining loan balance is {{WOLF_V[11]}}00 yen."
+
+# Example 37: WOLF_RALIGN — right-align marker, copy verbatim
+MESSAGE user "Translate from Japanese to English: {{WOLF_RALIGN}}マップ専用の技能は使用できません。{{WOLF_NL}}技能 {{WOLF_CSELF[34]}}"
+MESSAGE assistant "{{WOLF_RALIGN}}Map-exclusive skills cannot be used.{{WOLF_NL}}Skill {{WOLF_CSELF[34]}}"
+
+# Example 38: WOLF_RUBY — ruby annotation, keep {{WOLF_RUBY}} verbatim, translate bracketed content
+MESSAGE user "Translate from Japanese to English: {{WOLF_RUBY}}[甘,あま]{{WOLF_RUBY}}[酸,ず]っぱい思い出をはんすうしている！"
+MESSAGE assistant "{{WOLF_RUBY}}[sweet,amai]{{WOLF_RUBY}}[sour,zu]ppai memories are coming back to me!"

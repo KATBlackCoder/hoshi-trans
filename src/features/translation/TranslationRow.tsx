@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Check, Pencil, X } from 'lucide-react'
+import { Check, Loader2, Pencil, Sparkles, X } from 'lucide-react'
 import type { TranslationEntry, TranslationStatus } from '@/types'
 
 function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dotCls: string; labelCls: string } {
@@ -24,9 +24,14 @@ interface Props {
   entry: TranslationEntry
   onUpdated: () => void
   style?: React.CSSProperties
+  selected?: boolean
+  onToggleSelect?: () => void
+  onTranslateSingle?: () => void
+  translating?: boolean
+  selectionActive?: boolean
 }
 
-export function TranslationRow({ entry, onUpdated, style }: Props) {
+export function TranslationRow({ entry, onUpdated, style, selected, onToggleSelect, onTranslateSingle, translating, selectionActive }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.translation ?? '')
 
@@ -47,20 +52,39 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
   return (
     <TableRow
       style={style}
-      className={`group absolute top-0 left-0 w-full flex hover:bg-white/3 border-b border-white/7 ${strip}`}
+      className={`group absolute top-0 left-0 w-full flex border-b border-white/7 ${strip} ${
+        selected ? 'bg-primary/5 hover:bg-primary/8' : 'hover:bg-white/3'
+      }`}
     >
       {/* Source — JP text */}
-      <TableCell className="w-1/2 align-top py-3 px-4">
-        <p className="font-mono text-xs leading-relaxed text-foreground/85 whitespace-pre-wrap wrap-break-word">
-          {entry.source_text}
-        </p>
-        <span className="text-[10px] text-muted-foreground/40 font-mono mt-1 block">
-          {filename} <span className="opacity-50">#{entry.order_index}</span>
-        </span>
+      <TableCell className="w-1/2 min-w-0 align-top py-3 px-4 overflow-hidden">
+        <div className="flex items-start gap-2">
+          {/* Checkbox — visible on hover or when selection active */}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleSelect?.() }}
+            className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-all ${
+              selected
+                ? 'bg-primary border-primary text-primary-foreground opacity-100'
+                : selectionActive
+                  ? 'border-border/60 opacity-100 hover:border-primary/60'
+                  : 'border-border/40 opacity-0 group-hover:opacity-100 hover:border-primary/60'
+            }`}
+          >
+            {selected && <Check className="w-2 h-2" />}
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-mono text-xs leading-relaxed text-foreground/85 whitespace-pre-wrap wrap-break-word">
+              {entry.source_text}
+            </p>
+            <span className="text-[10px] text-muted-foreground/40 font-mono mt-1 block">
+              {filename} <span className="opacity-50">#{entry.order_index}</span>
+            </span>
+          </div>
+        </div>
       </TableCell>
 
       {/* Translation */}
-      <TableCell className="w-1/2 align-top py-3 px-4 border-l border-white/6">
+      <TableCell className="w-1/2 min-w-0 align-top py-3 px-4 border-l border-white/6 overflow-hidden">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
             {/* Status dot + label */}
@@ -69,14 +93,29 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
               <span className={`text-[10px] font-mono font-medium uppercase tracking-wider ${labelCls}`}>{label}</span>
             </div>
             {!editing && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-auto text-muted-foreground/50 hover:text-foreground"
-                onClick={() => setEditing(true)}
-              >
-                <Pencil className="w-3 h-3" />
-              </Button>
+              <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Per-row translate button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 text-muted-foreground/50 hover:text-primary"
+                  onClick={e => { e.stopPropagation(); onTranslateSingle?.() }}
+                  disabled={translating}
+                  title="Translate this entry"
+                >
+                  {translating
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <Sparkles className="w-3 h-3" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 text-muted-foreground/50 hover:text-foreground"
+                  onClick={() => setEditing(true)}
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
+              </div>
             )}
           </div>
 
@@ -99,7 +138,7 @@ export function TranslationRow({ entry, onUpdated, style }: Props) {
               </div>
             </div>
           ) : (
-            <p className="text-xs leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/70 font-mono">
+            <p className="text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground/70 font-mono">
               {entry.translation ?? <span className="text-muted-foreground/40 italic font-sans">not translated</span>}
             </p>
           )}

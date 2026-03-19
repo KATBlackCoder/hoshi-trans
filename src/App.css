@@ -133,12 +133,12 @@
 
 /* Status strip colors for translation rows */
 @layer utilities {
-  .status-strip-pending    { border-left: 2px solid oklch(1 0 0 / 12%); }
-  .status-strip-translated { border-left: 2px solid oklch(0.72 0.17 145); }
-  .status-strip-warning    { border-left: 2px solid oklch(0.78 0.16 65); }
-  .status-strip-error      { border-left: 2px solid oklch(0.62 0.22 22); }
-  .status-strip-skipped    { border-left: 2px solid oklch(1 0 0 / 8%); }
-  .status-strip-reviewed   { border-left: 2px solid oklch(0.60 0.18 255); }
+  .status-strip-pending    { border-left: 2px solid oklch(1 0 0 / 8%); }
+  .status-strip-translated { border-left: 2px solid oklch(0.72 0.17 145 / 70%); }
+  .status-strip-warning    { border-left: 2px solid oklch(0.78 0.16 65 / 70%); }
+  .status-strip-error      { border-left: 2px solid oklch(0.62 0.22 22 / 70%); }
+  .status-strip-skipped    { border-left: 2px solid oklch(1 0 0 / 5%); }
+  .status-strip-reviewed   { border-left: 2px solid oklch(0.60 0.18 255 / 70%); }
 
   /* Shimmer animation for progress bar */
   @keyframes shimmer {

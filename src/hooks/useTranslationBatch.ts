@@ -16,6 +16,7 @@ export function useTranslationBatch() {
     concurrency: number = 4,
     limit: number = 0,
     temperature: number = 0.3,
+    entryIds?: string[],
   ) => {
     setRunning(true)
     setProgress(null)
@@ -35,6 +36,7 @@ export function useTranslationBatch() {
         concurrency,
         limit,
         temperature,
+        entryIds: entryIds ?? null,
       })
     } finally {
       unlisten()

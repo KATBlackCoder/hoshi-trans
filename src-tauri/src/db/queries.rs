@@ -206,6 +206,28 @@ pub async fn get_pending_entries(
     get_entries(pool, project_id, Some("pending"), None).await
 }
 
+/// Fetch specific entries by their IDs (for targeted / selection-based translation).
+pub async fn get_entries_by_ids(
+    pool: &SqlitePool,
+    ids: &[String],
+) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let placeholders = (0..ids.len()).map(|_| "?").collect::<Vec<_>>().join(", ");
+    let sql = format!(
+        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index
+         FROM entries WHERE id IN ({}) ORDER BY file_path, order_index",
+        placeholders
+    );
+    let mut query = sqlx::query_as::<_, crate::models::TranslationEntry>(&sql);
+    for id in ids {
+        query = query.bind(id.as_str());
+    }
+    let rows = query.fetch_all(pool).await?;
+    Ok(rows)
+}
+
 /// Fetch all glossary terms across all projects and global (for the Glossary page).
 pub async fn get_all_glossary_terms(
     pool: &SqlitePool,

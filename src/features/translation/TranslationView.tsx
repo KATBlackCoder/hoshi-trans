@@ -77,6 +77,8 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const { progress, running, start, cancel } = useTranslationBatch()
   const [resetting, setResetting] = useState(false)
   const [lastResetCount, setLastResetCount] = useState<number | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [translatingRowId, setTranslatingRowId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const { data: entries = [], refetch } = useQuery({
@@ -122,6 +124,25 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function handleTranslateSingle(entry: TranslationEntry) {
+    if (translatingRowId || running) return
+    setTranslatingRowId(entry.id)
+    const lang = settings.targetLang === 'fr' ? 'French' : 'English'
+    const effectivePrompt = model.includes('hoshi-translator')
+      ? ''
+      : settings.systemPrompt.replace('{lang}', lang)
+    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, 1, 0, settings.temperature, [entry.id])
+      .finally(() => { setTranslatingRowId(null); refetch() })
+  }
+
   function handleStart() {
     const lang = settings.targetLang === 'fr' ? 'French' : 'English'
     // hoshi-translator has its own baked SYSTEM directive — sending a second
@@ -129,7 +150,9 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     const effectivePrompt = model.includes('hoshi-translator')
       ? ''
       : settings.systemPrompt.replace('{lang}', lang)
-    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, concurrency, limit, settings.temperature)
+    const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined
+    setSelectedIds(new Set())
+    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, concurrency, limit, settings.temperature, ids)
   }
 
   const exportTranslated = useMutation({
@@ -162,31 +185,32 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-5 py-3 border-b border-border/60 flex items-center justify-between gap-4 shrink-0 bg-background/80 backdrop-blur-sm">
+      <div className="px-5 py-2.5 border-b border-border/50 flex items-center justify-between gap-4 shrink-0 bg-background/60 backdrop-blur-sm">
         <div className="flex flex-col gap-0.5 min-w-0">
-          <h2 className="font-semibold text-sm truncate">{gameTitle ?? 'Translation'}</h2>
-          <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground/60 font-mono">
-            <span>{entries.length} entries</span>
+          <h2 className="font-semibold text-sm truncate text-foreground/90">{gameTitle ?? 'Translation'}</h2>
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 font-mono">
+            <span className="tabular-nums">{entries.length}</span>
+            <span className="opacity-50">entries</span>
             {translatedCount > 0 && (
-              <><span className="opacity-40">·</span><span className="text-emerald-500/80">{translatedCount} done</span></>
+              <><span className="opacity-30">·</span><span className="text-emerald-500/60 tabular-nums">{translatedCount} done</span></>
             )}
             {pendingCount > 0 && (
-              <><span className="opacity-40">·</span><span>{pendingCount} pending</span></>
+              <><span className="opacity-30">·</span><span className="tabular-nums">{pendingCount} pending</span></>
             )}
             {search && (
-              <><span className="opacity-40">·</span><span className="text-primary">{filtered.length} found</span></>
+              <><span className="opacity-30">·</span><span className="text-primary/70 tabular-nums">{filtered.length} found</span></>
             )}
           </div>
         </div>
 
         {/* Batch controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {running && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10.5px] text-muted-foreground/60 font-mono tabular-nums">
+            <div className="flex items-center gap-2 mr-1">
+              <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums">
                 {progress?.done}<span className="opacity-40">/</span>{progress?.total}
               </span>
-              <Button variant="ghost" size="sm" onClick={cancel} className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive">
+              <Button variant="ghost" size="sm" onClick={cancel} className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-destructive">
                 <X className="w-3 h-3 mr-1" />Cancel
               </Button>
             </div>
@@ -205,33 +229,45 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
           </Select>
 
           {/* Concurrency segmented control */}
-          <div className="flex items-center border border-border/60 rounded overflow-hidden">
+          <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
             {CONCURRENCY_OPTIONS.map(n => (
               <button key={n} onClick={() => setConcurrency(n)} disabled={running}
                 title={`${n} parallel requests`}
                 className={`w-7 h-7 text-[11px] font-mono transition-colors border-r border-border/40 last:border-r-0 ${
                   concurrency === n
                     ? 'bg-secondary text-secondary-foreground font-semibold'
-                    : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40'
+                    : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
                 }`}
               >{n}×</button>
             ))}
           </div>
 
           {/* Limit segmented control */}
-          <div className="flex items-center border border-border/60 rounded overflow-hidden">
+          <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
             {LIMIT_OPTIONS.map(o => (
               <button key={o.value} onClick={() => setLimit(o.value)} disabled={running}
                 title={o.value === 0 ? 'Translate all pending' : `Translate next ${o.value}`}
                 className={`px-1.5 h-7 text-[11px] font-mono transition-colors border-r border-border/40 last:border-r-0 ${
                   limit === o.value
                     ? 'bg-secondary text-secondary-foreground font-semibold'
-                    : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40'
+                    : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
                 }`}
               >{o.label}</button>
             ))}
           </div>
 
+          {selectedIds.size > 0 && !running && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleStart}
+              disabled={!model}
+              className="h-7 gap-1.5 text-xs font-medium px-3 border-primary/40 text-primary hover:bg-primary/10"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Translate {selectedIds.size} selected
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={handleStart}
@@ -369,6 +405,11 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
+                    selected={selectedIds.has(entry.id)}
+                    onToggleSelect={() => toggleSelect(entry.id)}
+                    selectionActive={selectedIds.size > 0}
+                    onTranslateSingle={() => handleTranslateSingle(entry)}
+                    translating={translatingRowId === entry.id}
                   />
                 )
               })}
