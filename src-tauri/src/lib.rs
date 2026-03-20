@@ -3,6 +3,7 @@ mod db;
 mod engines;
 mod models;
 
+pub use commands::ollama::BatchRunning;
 use sqlx::SqlitePool;
 use std::sync::{atomic::AtomicBool, Arc};
 use tauri::Manager;
@@ -30,7 +31,8 @@ pub fn run() {
             let app_data_dir = app.path().app_data_dir()?.to_string_lossy().to_string();
             let pool: SqlitePool = tauri::async_runtime::block_on(db::init_pool(&app_data_dir))?;
             app.manage(pool);
-            app.manage(Arc::new(AtomicBool::new(false)));
+            app.manage(Arc::new(AtomicBool::new(false))); // cancel flag
+            app.manage(BatchRunning(Arc::new(AtomicBool::new(false)))); // batch running flag
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -39,6 +41,7 @@ pub fn run() {
             commands::ollama::list_models,
             commands::ollama::translate_batch,
             commands::ollama::cancel_batch,
+            commands::ollama::is_batch_running,
             commands::project::create_project,
             commands::project::open_project,
             commands::project::get_projects,

@@ -73,10 +73,18 @@ pub struct TranslationProgress {
     pub entry_id: String,
 }
 
+/// Newtype wrapper so Tauri can distinguish the batch-running flag from the cancel flag.
+pub struct BatchRunning(pub Arc<AtomicBool>);
+
 #[tauri::command]
 pub async fn cancel_batch(cancel_flag: tauri::State<'_, Arc<AtomicBool>>) -> Result<(), String> {
     cancel_flag.store(true, Ordering::Relaxed);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn is_batch_running(batch_running: tauri::State<'_, BatchRunning>) -> Result<bool, String> {
+    Ok(batch_running.inner().0.load(Ordering::Relaxed))
 }
 
 fn format_glossary_block(terms: &[(String, String)]) -> String {
@@ -104,6 +112,7 @@ pub async fn translate_batch(
     app: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
     cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
+    batch_running: tauri::State<'_, BatchRunning>,
     project_id: String,
     model: String,
     target_lang: String,
@@ -117,6 +126,7 @@ pub async fn translate_batch(
     use tokio::sync::Semaphore;
 
     cancel_flag.store(false, Ordering::Relaxed);
+    batch_running.inner().0.store(true, Ordering::Relaxed);
 
     // Fetch glossary (global + project-specific for target_lang) and prepend to system_prompt
     let glossary_terms = queries::get_glossary_for_translation(pool.inner(), &project_id, &target_lang)
@@ -218,7 +228,8 @@ pub async fn translate_batch(
 
             match ollama.generate(request).await {
                 Ok(response) => {
-                    let translated = response.response.trim().to_string();
+                    // LLMs sometimes over-escape quotes: \" → " cleanup
+                    let translated = response.response.trim().replace("\\\"", "\"");
                     let (decoded, intact) = if is_wolf {
                         wolf_ph::decode(&translated)
                     } else {
@@ -266,6 +277,9 @@ pub async fn translate_batch(
         .title("hoshi-trans")
         .body(&message)
         .show();
+
+    batch_running.inner().0.store(false, Ordering::Relaxed);
+    let _ = window.emit("translation:complete", ());
 
     Ok(())
 }

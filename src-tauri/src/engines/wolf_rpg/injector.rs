@@ -66,6 +66,31 @@ pub fn inject_sync(
             std::fs::write(&dest, serde_json::to_string_pretty(&json)?)?;
         }
     }
+    // Game.json — game title
+    let game_json = dump_dir.join("Game.json");
+    if game_json.exists() {
+        let content = std::fs::read_to_string(&game_json)?;
+        let mut json: serde_json::Value = serde_json::from_str(&content)
+            .map_err(|e| anyhow::anyhow!("Parse error Game.json: {}", e))?;
+        for field in &["Title", "TitlePlus", "StartUpMsg", "TitleMsg"] {
+            let ctx = format!("game:{}", field.to_lowercase());
+            if let Some(t) = index.get(&("Game.json".to_string(), 0, ctx)) {
+                json[field] = serde_json::Value::String(t.clone());
+            }
+        }
+        // Append hoshi-trans signature to Title
+        if let Some(title) = json["Title"].as_str() {
+            let signed = if title.contains("| TL:") {
+                title.to_string()
+            } else {
+                format!("{} | TL: hoshi-trans", title)
+            };
+            json["Title"] = serde_json::Value::String(signed);
+        }
+        let dest = output_dir.join("Game.json");
+        std::fs::write(&dest, serde_json::to_string_pretty(&json)?)?;
+    }
+
     Ok(())
 }
 
@@ -117,13 +142,20 @@ fn inject_command_list(
                     cmd["stringArgs"][0] = serde_json::Value::String(t.clone());
                 }
             }
-            "Choice" => {
+            "Choices" => {
                 let n = cmd["stringArgs"].as_array().map(|a| a.len()).unwrap_or(0);
                 for i in 0..n {
                     let ctx = format!("{}:idx:{}:choice:{}", ctx_prefix, cmd_index, i);
-                    if let Some(t) = index.get(&(file_path.to_string(), cmd_index, ctx)) {
+                    let order = cmd_index * 100 + i as i64;
+                    if let Some(t) = index.get(&(file_path.to_string(), order, ctx)) {
                         cmd["stringArgs"][i] = serde_json::Value::String(t.clone());
                     }
+                }
+            }
+            "SetString" => {
+                let ctx = format!("{}:idx:{}:setstring", ctx_prefix, cmd_index);
+                if let Some(t) = index.get(&(file_path.to_string(), cmd_index, ctx)) {
+                    cmd["stringArgs"][0] = serde_json::Value::String(t.clone());
                 }
             }
             _ => {}
@@ -131,11 +163,20 @@ fn inject_command_list(
     }
 }
 
+fn is_system_db(file_path: &str) -> bool {
+    let name = file_path.split('/').last().unwrap_or(file_path);
+    name == "SysDatabase.json"
+}
+
 fn inject_db(
     json: &mut serde_json::Value,
     file_path: &str,
     index: &HashMap<(String, i64, String), String>,
 ) {
+    if is_system_db(file_path) {
+        return;
+    }
+
     let mut order: i64 = 0;
     if let Some(types) = json["types"].as_array_mut() {
         for (ti, typ) in types.iter_mut().enumerate() {
@@ -148,6 +189,18 @@ fn inject_db(
                                 item[*field] = serde_json::Value::String(t.clone());
                             }
                             order += 1;
+                        }
+                    }
+                    // Inject string field values (same logic as extractor)
+                    if let Some(fields) = item["data"].as_array_mut() {
+                        for (fi, f) in fields.iter_mut().enumerate() {
+                            if f["value"].as_str().is_some() {
+                                let ctx = format!("db:type:{}:data:{}:field:{}", ti, di, fi);
+                                if let Some(t) = index.get(&(file_path.to_string(), order, ctx)) {
+                                    f["value"] = serde_json::Value::String(t.clone());
+                                }
+                                order += 1;
+                            }
                         }
                     }
                 }
@@ -217,19 +270,19 @@ mod tests {
     }
 
     #[test]
-    fn test_inject_choice_options() {
+    fn test_inject_choices_options() {
         let dir = tempfile::tempdir().unwrap();
         let map_path = dir.path().join("mps/Map001.json");
         std::fs::create_dir_all(map_path.parent().unwrap()).unwrap();
         std::fs::write(&map_path, r#"{
             "events": [{"id": 1, "name": "", "pages": [{"id": 0, "list": [
-                {"code": 401, "codeStr": "Choice", "stringArgs": ["はい", "いいえ"], "index": 5}
+                {"code": 102, "codeStr": "Choices", "stringArgs": ["はい", "いいえ"], "index": 5}
             ]}]}]
         }"#).unwrap();
 
         let entries = vec![
-            entry("mps/Map001.json", 5, "event:1:page:0:idx:5:choice:0", "Yes"),
-            entry("mps/Map001.json", 5, "event:1:page:0:idx:5:choice:1", "No"),
+            entry("mps/Map001.json", 500, "event:1:page:0:idx:5:choice:0", "Yes"),
+            entry("mps/Map001.json", 501, "event:1:page:0:idx:5:choice:1", "No"),
         ];
         inject_sync(dir.path(), &entries, dir.path()).unwrap();
 
@@ -239,6 +292,59 @@ mod tests {
         let args = &out["events"][0]["pages"][0]["list"][0]["stringArgs"];
         assert_eq!(args[0], "Yes");
         assert_eq!(args[1], "No");
+    }
+
+    #[test]
+    fn test_inject_setstring() {
+        let dir = tempfile::tempdir().unwrap();
+        let map_path = dir.path().join("mps/Map001.json");
+        std::fs::create_dir_all(map_path.parent().unwrap()).unwrap();
+        std::fs::write(&map_path, r#"{
+            "events": [{"id": 1, "name": "", "pages": [{"id": 0, "list": [
+                {"code": 122, "codeStr": "SetString", "stringArgs": ["個"], "index": 7}
+            ]}]}]
+        }"#).unwrap();
+
+        let entries = vec![
+            entry("mps/Map001.json", 7, "event:1:page:0:idx:7:setstring", "unit"),
+        ];
+        inject_sync(dir.path(), &entries, dir.path()).unwrap();
+
+        let out: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join("mps/Map001.json")).unwrap()
+        ).unwrap();
+        assert_eq!(out["events"][0]["pages"][0]["list"][0]["stringArgs"][0], "unit");
+    }
+
+    #[test]
+    fn test_inject_db_field_values() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("mps")).unwrap();
+        std::fs::create_dir_all(dir.path().join("common")).unwrap();
+        let db_path = dir.path().join("db/DataBase.json");
+        std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
+        std::fs::write(&db_path, r#"{
+            "types": [{"data": [
+                {"name": "Punch", "description": "", "data": [
+                    {"name": "技能の名前", "value": "突き拳"},
+                    {"name": "説明", "value": "敵にダメージを与える"}
+                ]}
+            ]}]
+        }"#).unwrap();
+
+        // name("Punch") at order=0, description("") at order=1 — both skipped (no JP)
+        // data fields start at order=2
+        let entries = vec![
+            entry("db/DataBase.json", 2, "db:type:0:data:0:field:0", "Punch"),
+            entry("db/DataBase.json", 3, "db:type:0:data:0:field:1", "Deals damage to enemy"),
+        ];
+        inject_sync(dir.path(), &entries, dir.path()).unwrap();
+
+        let out: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join("db/DataBase.json")).unwrap()
+        ).unwrap();
+        assert_eq!(out["types"][0]["data"][0]["data"][0]["value"], "Punch");
+        assert_eq!(out["types"][0]["data"][0]["data"][1]["value"], "Deals damage to enemy");
     }
 
     #[test]
@@ -252,7 +358,8 @@ mod tests {
             ]}]}]
         }"#).unwrap();
 
-        inject_sync(dir.path(), &[], dir.path()).unwrap();
+        let empty: Vec<TranslationEntry> = vec![];
+        inject_sync(dir.path(), &empty, dir.path()).unwrap();
 
         let out: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(dir.path().join("mps/Map001.json")).unwrap()

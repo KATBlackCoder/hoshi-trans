@@ -1,11 +1,37 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { TranslationProgress } from '@/types'
 
 export function useTranslationBatch() {
   const [progress, setProgress] = useState<TranslationProgress | null>(null)
   const [running, setRunning] = useState(false)
+
+  // Re-subscribe if a batch was already running when this hook mounted
+  // (e.g. the webview reloaded mid-batch)
+  useEffect(() => {
+    let unlistenProgress: (() => void) | null = null
+    let unlistenComplete: (() => void) | null = null
+
+    invoke<boolean>('is_batch_running').then(async (isRunning) => {
+      if (!isRunning) return
+      setRunning(true)
+      unlistenProgress = await listen<TranslationProgress>(
+        'translation:progress',
+        (e) => setProgress(e.payload),
+      )
+      unlistenComplete = await listen('translation:complete', () => {
+        setRunning(false)
+        unlistenProgress?.()
+        unlistenComplete?.()
+      })
+    })
+
+    return () => {
+      unlistenProgress?.()
+      unlistenComplete?.()
+    }
+  }, [])
 
   const start = useCallback(async (
     projectId: string,

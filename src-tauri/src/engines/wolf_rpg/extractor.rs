@@ -71,6 +71,26 @@ pub fn extract_sync(
         }
     }
 
+    // Game.json — game title (player-visible on title screen)
+    let game_json = dump_dir.join("Game.json");
+    if game_json.exists() {
+        let content = std::fs::read_to_string(&game_json)?;
+        let json: serde_json::Value = serde_json::from_str(&content)
+            .map_err(|e| anyhow::anyhow!("Parse error Game.json: {}", e))?;
+        for field in &["Title", "TitlePlus", "StartUpMsg", "TitleMsg"] {
+            if let Some(text) = json[field].as_str() {
+                add_entry(
+                    &mut entries,
+                    project_id,
+                    text,
+                    Some(format!("game:{}", field.to_lowercase())),
+                    "Game.json",
+                    0,
+                );
+            }
+        }
+    }
+
     Ok(entries)
 }
 
@@ -160,7 +180,9 @@ fn extract_command_list(
                     );
                 }
             }
-            "Choice" => {
+            // Wolf RPG uses "Choices" (not "Choice") for multi-option prompts.
+            // Each option gets index*100+i to ensure unique order_index per DB constraint.
+            "Choices" => {
                 if let Some(args) = cmd["stringArgs"].as_array() {
                     for (i, arg) in args.iter().enumerate() {
                         if let Some(text) = arg.as_str() {
@@ -170,15 +192,39 @@ fn extract_command_list(
                                 text,
                                 Some(format!("{}:idx:{}:choice:{}", ctx_prefix, index, i)),
                                 file_path,
-                                index,
+                                index * 100 + i as i64,
                             );
                         }
                     }
                 }
             }
+            // SetString: assigns a string to a variable — can contain visible player text
+            // (e.g. unit suffixes like 個/枚/人, UI labels, item counts)
+            "SetString" => {
+                if let Some(text) = cmd["stringArgs"][0].as_str() {
+                    add_entry(
+                        entries,
+                        project_id,
+                        text,
+                        Some(format!("{}:idx:{}:setstring", ctx_prefix, index)),
+                        file_path,
+                        index,
+                    );
+                }
+            }
             _ => {}
         }
     }
+}
+
+/// Returns true for Wolf RPG system database files that contain only engine-internal
+/// configuration (resistances, system flags, gender labels, etc.) — never player-visible text.
+/// Dragon Blood (a fully translated game) leaves SysDatabase.json 100% in Japanese.
+/// CDataBase.json can contain player-visible character names (e.g. "いぬこ" → "Inuko"),
+/// so it is NOT skipped — should_skip() filters out non-Japanese strings automatically.
+fn is_system_db(file_path: &str) -> bool {
+    let name = file_path.split('/').last().unwrap_or(file_path);
+    name == "SysDatabase.json"
 }
 
 fn extract_db_file(
@@ -187,11 +233,16 @@ fn extract_db_file(
     file_path: &str,
     entries: &mut Vec<TranslationEntry>,
 ) {
+    if is_system_db(file_path) {
+        return;
+    }
+
     let mut order: i64 = 0;
     if let Some(types) = json["types"].as_array() {
         for (ti, typ) in types.iter().enumerate() {
             if let Some(data) = typ["data"].as_array() {
                 for (di, item) in data.iter().enumerate() {
+                    // item name and description (skill/item labels visible to player)
                     for field in &["name", "description"] {
                         if let Some(text) = item[field].as_str() {
                             add_entry(
@@ -203,6 +254,24 @@ fn extract_db_file(
                                 order,
                             );
                             order += 1;
+                        }
+                    }
+                    // Extract all string field values (skill names, item names, descriptions, etc.)
+                    // Fields with numeric values (effect types, animation counts, etc.) are i64 in JSON.
+                    // Non-Japanese strings (asset paths, English) are filtered by should_skip().
+                    if let Some(fields) = item["data"].as_array() {
+                        for (fi, f) in fields.iter().enumerate() {
+                            if let Some(text) = f["value"].as_str() {
+                                add_entry(
+                                    entries,
+                                    project_id,
+                                    text,
+                                    Some(format!("db:type:{}:data:{}:field:{}", ti, di, fi)),
+                                    file_path,
+                                    order,
+                                );
+                                order += 1;
+                            }
                         }
                     }
                 }
@@ -301,7 +370,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         write_file(dir.path(), "mps/Map001.json", r#"{
             "events": [{"id": 1, "name": "", "pages": [{"id": 0, "list": [
-                {"code": 401, "codeStr": "Choice", "stringArgs": ["はい", "いいえ"], "index": 5}
+                {"code": 102, "codeStr": "Choices", "stringArgs": ["はい", "いいえ"], "index": 5}
             ]}]}]
         }"#);
         std::fs::create_dir_all(dir.path().join("common")).unwrap();
@@ -311,7 +380,83 @@ mod tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].source_text, "はい");
         assert_eq!(entries[1].source_text, "いいえ");
-        assert_eq!(entries[0].order_index, 5);
+        // Choices use index*100+i to ensure unique order_index
+        assert_eq!(entries[0].order_index, 500);
+        assert_eq!(entries[1].order_index, 501);
+    }
+
+    #[test]
+    fn test_extract_setstring() {
+        let dir = tempfile::tempdir().unwrap();
+        write_file(dir.path(), "mps/Map001.json", r#"{
+            "events": [{"id": 1, "name": "", "pages": [{"id": 0, "list": [
+                {"code": 122, "codeStr": "SetString", "stringArgs": ["個"], "index": 5}
+            ]}]}]
+        }"#);
+        std::fs::create_dir_all(dir.path().join("common")).unwrap();
+        std::fs::create_dir_all(dir.path().join("db")).unwrap();
+
+        let entries = extract_sync(dir.path(), "proj1").unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].source_text, "個");
+    }
+
+    #[test]
+    fn test_skip_system_db() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("mps")).unwrap();
+        std::fs::create_dir_all(dir.path().join("common")).unwrap();
+        // SysDatabase = engine-internal, skipped
+        write_file(dir.path(), "db/SysDatabase.json", r#"{"types":[{"data":[{"name":"テスト","description":"説明","data":[]}]}]}"#);
+        // DataBase = game data, extracted
+        write_file(dir.path(), "db/DataBase.json", r#"{"types":[{"data":[{"name":"スキル","description":"","data":[{"name":"文","value":"攻撃"}]}]}]}"#);
+        // CDataBase = can contain player-visible character names, extracted
+        write_file(dir.path(), "db/CDataBase.json", r#"{"types":[{"data":[{"name":"","description":"","data":[{"name":"名前","value":"いぬこ"}]}]}]}"#);
+
+        let entries = extract_sync(dir.path(), "proj1").unwrap();
+        // SysDatabase skipped; DataBase: "スキル" + "攻撃"; CDataBase: "いぬこ"
+        assert_eq!(entries.len(), 3);
+        assert!(entries.iter().any(|e| e.source_text == "スキル"));
+        assert!(entries.iter().any(|e| e.source_text == "攻撃"));
+        assert!(entries.iter().any(|e| e.source_text == "いぬこ"));
+    }
+
+    #[test]
+    fn test_extract_game_json_title() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("mps")).unwrap();
+        std::fs::create_dir_all(dir.path().join("common")).unwrap();
+        std::fs::create_dir_all(dir.path().join("db")).unwrap();
+        write_file(dir.path(), "Game.json", r#"{"Title":"いぬこちゃんは見習い魔女","TitlePlus":"","StartUpMsg":"","TitleMsg":""}"#);
+
+        let entries = extract_sync(dir.path(), "proj1").unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].source_text, "いぬこちゃんは見習い魔女");
+        assert_eq!(entries[0].file_path, "Game.json");
+        assert_eq!(entries[0].context, Some("game:title".to_string()));
+    }
+
+    #[test]
+    fn test_extract_db_string_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("mps")).unwrap();
+        std::fs::create_dir_all(dir.path().join("common")).unwrap();
+        write_file(dir.path(), "db/DataBase.json", r#"{
+            "types": [{"data": [
+                {"name": "Punch", "description": "", "data": [
+                    {"name": "技能の名前", "value": "突き拳"},
+                    {"name": "説明", "value": "敵にダメージを与える"},
+                    {"name": "効果対象", "value": 10}
+                ]}
+            ]}]
+        }"#);
+
+        let entries = extract_sync(dir.path(), "proj1").unwrap();
+        // String values with Japanese extracted, numeric fields skipped
+        assert!(entries.iter().any(|e| e.source_text == "突き拳"));
+        assert!(entries.iter().any(|e| e.source_text == "敵にダメージを与える"));
+        // Numeric value not extracted
+        assert!(!entries.iter().any(|e| e.source_text == "10"));
     }
 
     #[test]
