@@ -31,6 +31,7 @@ export interface ProjectFile {
   stats: ProjectStats
   last_model: string | null
   output_dir: string
+  wolf_rpg_font_size?: number | null
 }
 
 export interface TranslationEntry {

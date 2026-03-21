@@ -43,9 +43,9 @@ REACT → all UI, Zustand state, Tauri command invocations, file picker, notific
 
 ### Frontend (`src/`)
 
-- `features/` — one folder per major screen/flow: `onboarding`, `translation`, `file-import`, `file-export`, `settings`, `donations`
+- `features/` — one folder per major screen/flow: `onboarding`, `translation`, `file-import`, `file-export`, `settings`, `ollama`, `about`, `glossary`, `project-library`
 - `hooks/` — Tauri command wrappers (`useOllamaStatus`, `useProject`, `useTranslationBatch`)
-- `stores/appStore.ts` — Zustand (active project, batch status, Ollama config)
+- `stores/appStore.ts` — Zustand (active project, batch status, Ollama config + app settings). Exports `applyTheme()` to toggle dark/light class and CSS variable `--primary`.
 - `types/index.ts` — TypeScript mirror types for all Rust structs — must stay in sync
 - `components/ui/` — shadcn/ui components, do not modify
 
@@ -55,7 +55,9 @@ Frontend stack: React 19, TypeScript strict, Tailwind CSS + shadcn/ui, Zustand, 
 
 ### App boot flow
 
-`main.tsx` wraps `<App>` in `<QueryClientProvider>`. `App` calls `useOllamaStatus()` (TanStack Query, polls every 5s via `check_ollama` Tauri command) and reads `ollamaOnline` from Zustand. If false → `<OnboardingPage>`; if true → `<MainLayout>` (sidebar + content area).
+`main.tsx` adds `dark` class immediately to `<html>` to avoid flash, then mounts React. `App` calls `useOllamaStatus()` (TanStack Query, polls every 5s via `check_ollama` Tauri command) and reads `ollamaOnline` from Zustand. `loadSettings()` runs on mount — restores all persisted settings and calls `applyTheme(theme, accentColor)` to apply the saved theme + accent color. If `ollamaOnline` false → `<OnboardingPage>`; if true → `<MainLayout>` (sidebar + content area).
+
+**Navigation views:** `library` | `translation` | `settings` | `ollama` | `glossary` | `about`
 
 ### Backend (`src-tauri/src/`)
 
@@ -90,15 +92,33 @@ All engine methods are `async` (required by tokio runtime). New engines must imp
 - `order_index` on entries is critical for injection — preserve ordering from source files
 - Ollama batch only — no calls while a game is running; show onboarding screen if Ollama is unreachable
 
-### Wolf RPG sidecars
+### Wolf RPG — Dump-based pipeline (no sidecar)
 
-Binaries in `src-tauri/bin/` with target-triple suffix (e.g. `WolfTL-x86_64-pc-windows-msvc.exe`). Called via `tauri-plugin-shell`. Requires Wine on Linux.
+User provides the `dump/` folder produced by WolfTL. hoshi-trans reads the JSON directly — no Wine, no sidecar required.
 
-Pipeline: `[encrypted] → UberWolf.exe → [decrypted] → WolfTL.exe dump → [JSON] → translate → WolfTL.exe patch`
+Extracted commands (mps/ and common/): `Message` (101), `Choices` (102), `SetString` (122) only.
+DB files: `DataBase.json` only — `data[].data[].value` string fields only. `item["name"]` and `item["description"]` are editor labels (duplicates of value[0]) — NOT extracted.
+`CDataBase.json` skipped entirely — runtime variable store looked up by name at runtime; translating names breaks the game engine.
+`SysDatabase.json` skipped — engine-internal configuration.
+`Game.json`: `Title` field extracted and injected with `| TL: hoshi-trans` signature appended.
+
+**order_index formula (mps):** `event_id * 1_000_000 + page_id * 100_000 + cmd_index` — encodes event+page+cmd globally per file. Required because `cmd["index"]` is local to each event/page list; multiple events share the same index values, causing DB unique constraint collisions.
+**Choices:** `order_index = mps_order_index * 100 + option_position` to satisfy `UNIQUE(project_id, file_path, order_index)`.
+**Common files:** `order_index = cmd_index` directly (no event/page context).
+
+### Wolf RPG — Font override at injection
+
+`ProjectFile.wolf_rpg_font_size: Option<u32>` controls a per-project font size injected at export time.
+
+- Command `update_wolf_rpg_font(game_dir, font_size)` reads/writes `hoshi-trans.json`
+- During injection, `apply_font_prefix(text, font_size)` prepends `\f[n]` to every `Message`, `Choices`, and `SetString` text — **skipped if the text already starts with `\f[`** (future: consider overwriting instead)
+- UI: compact panel in sidebar below the project card, visible only for Wolf RPG projects; shows `~X chars/line` estimate; reset clears to game default
 
 ### Project file (`hoshi-trans.json`)
 
 Created automatically in the game folder on first extraction. Contains metadata + stats + link to DB. If the game folder is read-only, stored in `app_data_dir/projects/<uuid>.json` instead (path recorded in `projects.json_path` DB column).
+
+Engine-specific settings are stored here too (e.g. `wolf_rpg_font_size`) — omitted from JSON when `None` via `#[serde(default, skip_serializing_if = "Option::is_none")]`.
 
 ### Database
 
@@ -110,9 +130,16 @@ SQLite via `sqlx`, stored in `app_data_dir/hoshi-trans.db`. Migrations in `src-t
 
 Key tables: `projects` (one row per game+language), `entries` (all translatable strings with `order_index`, `status`, `file_path`).
 
-### Cancel flag for batch translation
+### Batch translation state
 
-`Arc<AtomicBool>` managed via `tauri::State`, set by a cancel command, checked before each entry in `translate_batch`. Progress emitted via `window.emit("translation:progress", ...)`.
+Two `Arc<AtomicBool>` states managed via `tauri::State`:
+- `Arc<AtomicBool>` — cancel flag (reset to false at batch start)
+- `BatchRunning(Arc<AtomicBool>)` — true while batch runs, false when done
+
+`translate_batch` accepts optional `entry_ids: Option<Vec<String>>` — when provided, translates those specific entries regardless of status (used for single-row and multi-selection translate).
+
+Events emitted: `translation:progress` (per entry) and `translation:complete` (on finish).
+`is_batch_running` command allows the frontend to re-subscribe after webview reload.
 
 ## TypeScript types
 

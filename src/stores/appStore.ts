@@ -7,14 +7,31 @@ export interface Settings {
   targetLang: 'en' | 'fr'
   systemPrompt: string
   temperature: number
+  theme: 'dark' | 'light'
+  accentColor: string
 }
 
 export const DEFAULT_OLLAMA_HOST = 'http://localhost:11434'
+
+export function applyTheme(theme: 'dark' | 'light', accentColor: string) {
+  const root = document.documentElement
+  if (theme === 'dark') {
+    root.classList.add('dark')
+  } else {
+    root.classList.remove('dark')
+  }
+  root.style.setProperty('--primary', accentColor)
+  root.style.setProperty('--ring', accentColor)
+  root.style.setProperty('--sidebar-primary', accentColor)
+  root.style.setProperty('--sidebar-ring', accentColor)
+}
 
 const DEFAULT_SETTINGS: Settings = {
   ollamaHost: DEFAULT_OLLAMA_HOST,
   ollamaModel: '',
   targetLang: 'en',
+  theme: 'dark',
+  accentColor: 'oklch(0.76 0.16 65)',
   systemPrompt:
     'You are a professional Japanese-to-{lang} game translator.\n\n' +
     'Rules:\n' +
@@ -50,12 +67,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
         (saved as Record<string, unknown>)[key] = val
       }
     }
-    set({ settings: { ...DEFAULT_SETTINGS, ...saved } })
+    const merged = { ...DEFAULT_SETTINGS, ...saved }
+    set({ settings: merged })
+    applyTheme(merged.theme, merged.accentColor)
   },
 
   updateSettings: async (patch) => {
     const next = { ...get().settings, ...patch }
     set({ settings: next })
+    if (patch.theme || patch.accentColor) {
+      applyTheme(next.theme, next.accentColor)
+    }
     const store = await load('settings.json', )
     for (const [k, v] of Object.entries(patch)) {
       await store.set(k, v)

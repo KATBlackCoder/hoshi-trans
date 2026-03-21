@@ -11,6 +11,8 @@ pub struct ProjectFile {
     pub stats: ProjectStats,
     pub last_model: Option<String>,
     pub output_dir: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wolf_rpg_font_size: Option<u32>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]

@@ -27,6 +27,7 @@ fn build_project_file(
         stats: ProjectStats::default(),
         last_model: None,
         output_dir: format!("{}/hoshi-trans-output", game_dir),
+        wolf_rpg_font_size: None,
     }
 }
 
@@ -134,6 +135,36 @@ pub async fn delete_project(
     let _ = std::fs::remove_file(json_path);
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn update_wolf_rpg_font(
+    app: tauri::AppHandle,
+    game_dir: String,
+    font_size: Option<u32>,
+) -> Result<ProjectFile, String> {
+    use tauri::Manager;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let local_path = std::path::Path::new(&game_dir).join("hoshi-trans.json");
+    let content = std::fs::read_to_string(&local_path).map_err(|e| e.to_string())?;
+    let mut project: ProjectFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+
+    project.wolf_rpg_font_size = font_size;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    project.updated_at = now;
+
+    write_project_file(&project, &game_dir, &app_data_dir).map_err(|e| e.to_string())?;
+
+    Ok(project)
 }
 
 #[tauri::command]

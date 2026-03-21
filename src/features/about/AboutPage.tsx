@@ -1,37 +1,4 @@
-import { useState } from 'react'
-import { useAppStore } from '@/stores/appStore'
-import { Button } from '@/components/ui/button'
-import { Copy, Check, ExternalLink } from 'lucide-react'
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
-      <span className="text-xs text-muted-foreground/60 shrink-0">{label}</span>
-      <span className="text-xs font-mono text-foreground/80 text-right truncate">{value}</span>
-    </div>
-  )
-}
-
-function CopyableUrl({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false)
-
-  function copy() {
-    navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-1">
-      <code className="flex-1 text-[11px] font-mono bg-muted/50 border border-border/40 rounded px-3 py-2 text-foreground/80 truncate">
-        {url}
-      </code>
-      <Button size="sm" variant="outline" className="h-8 w-8 p-0 shrink-0" onClick={copy} title="Copy URL">
-        {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-      </Button>
-    </div>
-  )
-}
+import { ExternalLink, Heart, Coffee, Github } from 'lucide-react'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -49,13 +16,16 @@ function Card({ children }: { children: React.ReactNode }) {
   )
 }
 
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
+      <span className="text-xs text-muted-foreground/60 shrink-0">{label}</span>
+      <span className="text-xs font-mono text-foreground/80 text-right truncate">{value}</span>
+    </div>
+  )
+}
+
 export function AboutPage() {
-  const { settings } = useAppStore()
-  const ollamaOnline = useAppStore((s) => s.ollamaOnline)
-  const availableModels = useAppStore((s) => s.availableModels)
-
-  const isRunPod = settings.ollamaHost.includes('runpod.net')
-
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-lg p-6 flex flex-col gap-6">
@@ -71,68 +41,55 @@ export function AboutPage() {
           </div>
         </div>
 
-        {/* Ollama connection */}
+        {/* About */}
         <div>
-          <SectionLabel>Ollama Connection</SectionLabel>
+          <SectionLabel>About</SectionLabel>
           <Card>
-            <InfoRow
-              label="Status"
-              value={
-                <span className={ollamaOnline ? 'text-green-500' : 'text-amber-500'}>
-                  {ollamaOnline ? '● Online' : '● Offline'}
-                </span>
-              }
-            />
-            <InfoRow label="Host" value={settings.ollamaHost} />
-            <InfoRow label="Provider" value={isRunPod ? 'RunPod (cloud)' : 'Local'} />
-            {availableModels.length > 0 && (
-              <InfoRow label="Models" value={`${availableModels.length} available`} />
-            )}
+            <p className="text-xs text-muted-foreground/60 leading-relaxed">
+              hoshi-trans is a free, offline-first desktop app for translating Japanese RPG games
+              (RPG Maker MV/MZ, Wolf RPG, Bakin) using local AI models via Ollama.
+              No data leaves your machine.
+            </p>
           </Card>
         </div>
 
-        {/* RunPod section */}
+        {/* Support */}
         <div>
-          <SectionLabel>RunPod Cloud GPU</SectionLabel>
+          <SectionLabel>Support the project</SectionLabel>
           <Card>
-            <p className="text-xs text-muted-foreground/60 mb-3">
-              Use a cloud GPU to translate with <code className="font-mono bg-muted/60 px-1 rounded text-[10px]">hoshi-translator</code> (30B MoE).
-              Your pod URL to paste in Settings:
+            <p className="text-xs text-muted-foreground/60 mb-3 leading-relaxed">
+              hoshi-trans is developed and maintained for free. If it saves you time on your translation projects,
+              consider supporting its development.
             </p>
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[10.5px] text-muted-foreground/40 font-mono">
-                https://&lt;POD_ID&gt;-11434.proxy.runpod.net
-              </p>
-              {isRunPod && (
-                <>
-                  <p className="text-[10.5px] text-muted-foreground/60 mt-1">Current pod URL:</p>
-                  <CopyableUrl url={settings.ollamaHost} />
-                </>
-              )}
+            <div className="flex flex-col gap-2">
+              <a
+                href="https://ko-fi.com/katblackcoder"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded border border-border/50 bg-background/40 hover:bg-primary/8 hover:border-primary/30 transition-colors group"
+              >
+                <Coffee className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">Ko-fi</p>
+                  <p className="text-[10.5px] text-muted-foreground/40">Buy me a coffee</p>
+                </div>
+                <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
+              </a>
+
+              <a
+                href="https://github.com/sponsors/KATBlackCoder"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded border border-border/50 bg-background/40 hover:bg-primary/8 hover:border-primary/30 transition-colors group"
+              >
+                <Heart className="w-4 h-4 text-pink-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">GitHub Sponsors</p>
+                  <p className="text-[10.5px] text-muted-foreground/40">Monthly support</p>
+                </div>
+                <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
+              </a>
             </div>
-            <div className="mt-3 pt-3 border-t border-border/30">
-              <p className="text-[10.5px] text-muted-foreground/40 mb-2">Container Start Command:</p>
-              <pre className="text-[10px] font-mono bg-muted/40 border border-border/30 rounded p-3 overflow-x-auto text-foreground/70 leading-relaxed whitespace-pre-wrap">{`bash -c "
-apt update && apt install -y curl lshw zstd &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&
-curl -f -L -o /tmp/hoshi-translator-30b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile || exit 1 &&
-ollama create hoshi-translator -f /tmp/hoshi-translator-30b.Modelfile || exit 1 &&
-echo 'hoshi-translator 30B ready' &&
-sleep infinity
-"`}</pre>
-            </div>
-            <a
-              href="https://github.com/KATBlackCoder/hoshi-trans/blob/main/RUNPOD.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[10.5px] text-primary/70 hover:text-primary transition-colors mt-2"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Full setup guide (RUNPOD.md)
-            </a>
           </Card>
         </div>
 
@@ -147,7 +104,18 @@ sleep infinity
                 rel="noopener noreferrer"
                 className="text-primary/70 hover:text-primary transition-colors flex items-center gap-1"
               >
+                <Github className="w-3 h-3" />
                 KATBlackCoder/hoshi-trans <ExternalLink className="w-3 h-3" />
+              </a>
+            } />
+            <InfoRow label="Issues" value={
+              <a
+                href="https://github.com/KATBlackCoder/hoshi-trans/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary/70 hover:text-primary transition-colors flex items-center gap-1"
+              >
+                Report a bug <ExternalLink className="w-3 h-3" />
               </a>
             } />
           </Card>

@@ -1,165 +1,104 @@
-import { useState } from 'react'
-import { useAppStore, DEFAULT_OLLAMA_HOST } from '@/stores/appStore'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useAppStore } from '@/stores/appStore'
+import { Moon, Sun } from 'lucide-react'
 
-function SettingCard({ children }: { children: React.ReactNode }) {
+const ACCENT_PRESETS = [
+  { name: 'Amber',  value: 'oklch(0.76 0.16 65)',  dot: '#f59e0b' },
+  { name: 'Blue',   value: 'oklch(0.65 0.18 240)', dot: '#3b82f6' },
+  { name: 'Green',  value: 'oklch(0.68 0.18 145)', dot: '#22c55e' },
+  { name: 'Rose',   value: 'oklch(0.68 0.22 10)',  dot: '#f43f5e' },
+  { name: 'Purple', value: 'oklch(0.68 0.18 285)', dot: '#a855f7' },
+  { name: 'Cyan',   value: 'oklch(0.72 0.16 200)', dot: '#06b6d4' },
+]
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded border border-border/50 bg-card/40 p-4 flex flex-col gap-3">
-      {children}
+    <div className="rounded-md border border-border/40 bg-card/30 overflow-hidden">
+      <div className="px-3.5 py-2 border-b border-border/30 bg-muted/20">
+        <span className="text-[9.5px] font-semibold uppercase tracking-widest text-muted-foreground/40">{title}</span>
+      </div>
+      <div className="px-3.5 py-3 flex flex-col gap-4">{children}</div>
     </div>
   )
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function PanelRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-widest mb-1">
-      {children}
-    </p>
+    <div className="flex items-start gap-4">
+      <div className="w-28 shrink-0 pt-0.5">
+        <span className="text-[11px] text-muted-foreground/50 font-medium">{label}</span>
+        {hint && <p className="text-[9.5px] text-muted-foreground/30 mt-0.5 leading-tight">{hint}</p>}
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
   )
 }
 
 export function SettingsPage() {
-  const { settings, updateSettings, availableModels } = useAppStore()
-  const [hostDraft, setHostDraft] = useState(settings.ollamaHost)
-  const [saved, setSaved] = useState(false)
-
-  function saveHost() {
-    const trimmed = hostDraft.trim() || DEFAULT_OLLAMA_HOST
-    setHostDraft(trimmed)
-    updateSettings({ ollamaHost: trimmed })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 1500)
-  }
+  const { settings, updateSettings } = useAppStore()
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-lg p-6 flex flex-col gap-5">
+      <div className="max-w-xl p-6 flex flex-col gap-4">
+
         <div>
           <h2 className="text-sm font-semibold">Settings</h2>
-          <p className="text-xs text-muted-foreground/50 mt-0.5">Configured per session, persisted across restarts.</p>
+          <p className="text-[11px] text-muted-foreground/40 mt-0.5">Application preferences.</p>
         </div>
 
-        {/* Ollama Connection */}
-        <div>
-          <SectionLabel>Ollama Connection</SectionLabel>
-          <SettingCard>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">Host URL</Label>
-              <Input
-                value={hostDraft}
-                onChange={(e) => setHostDraft(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && saveHost()}
-                className="font-mono text-xs"
-                placeholder="http://localhost:11434"
-              />
-              <p className="text-[10.5px] text-muted-foreground/40">
-                Local Ollama or a remote VPS. Include the port.
-              </p>
-            </div>
+        <Panel title="Appearance">
+
+          <PanelRow label="Theme" hint="Light or dark interface">
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setHostDraft(DEFAULT_OLLAMA_HOST)}>
-                Reset to local
-              </Button>
-              <Button size="sm" className="text-xs h-7" onClick={saveHost}>
-                {saved ? 'Saved ✓' : 'Save'}
-              </Button>
-            </div>
-          </SettingCard>
-        </div>
-
-        {/* Model & Language */}
-        <div>
-          <SectionLabel>Model</SectionLabel>
-          <SettingCard>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">Ollama model</Label>
-              <Select
-                value={settings.ollamaModel}
-                onValueChange={(v) => updateSettings({ ollamaModel: v ?? '' })}
+              <button
+                onClick={() => updateSettings({ theme: 'dark' })}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded border text-xs transition-colors ${
+                  settings.theme === 'dark'
+                    ? 'border-primary/40 bg-primary/10 text-foreground'
+                    : 'border-border/30 bg-background/30 text-muted-foreground/50 hover:bg-muted/20'
+                }`}
               >
-                <SelectTrigger className="font-mono text-xs">
-                  <SelectValue placeholder="Select a model…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableModels.map((m) => (
-                    <SelectItem key={m} value={m} className="font-mono text-xs">{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">Target language</Label>
-              <Select
-                value={settings.targetLang}
-                onValueChange={(v) => updateSettings({ targetLang: v as 'en' | 'fr' })}
+                <Moon className="w-3.5 h-3.5" />
+                Dark
+              </button>
+              <button
+                onClick={() => updateSettings({ theme: 'light' })}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded border text-xs transition-colors ${
+                  settings.theme === 'light'
+                    ? 'border-primary/40 bg-primary/10 text-foreground'
+                    : 'border-border/30 bg-background/30 text-muted-foreground/50 hover:bg-muted/20'
+                }`}
               >
-                <SelectTrigger className="text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                </SelectContent>
-              </Select>
+                <Sun className="w-3.5 h-3.5" />
+                Light
+              </button>
             </div>
-          </SettingCard>
-        </div>
+          </PanelRow>
 
-        {/* Temperature */}
-        <div>
-          <SectionLabel>Generation</SectionLabel>
-          <SettingCard>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Temperature</Label>
-                <span className="text-xs font-mono text-primary">{settings.temperature.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.1}
-                value={settings.temperature}
-                onChange={(e) => updateSettings({ temperature: parseFloat(e.target.value) })}
-                className="w-full accent-amber-400 h-1"
-              />
-              <div className="flex justify-between text-[9.5px] text-muted-foreground/40 font-mono">
-                <span>0.0 — consistent</span>
-                <span>1.0 — creative</span>
-              </div>
+          <PanelRow label="Accent color" hint="Primary UI color">
+            <div className="flex flex-wrap gap-2">
+              {ACCENT_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => updateSettings({ accentColor: preset.value })}
+                  title={preset.name}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded border text-xs transition-colors ${
+                    settings.accentColor === preset.value
+                      ? 'border-foreground/20 bg-muted/30 text-foreground/80'
+                      : 'border-border/20 bg-background/20 text-muted-foreground/40 hover:bg-muted/20 hover:text-muted-foreground/60'
+                  }`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: preset.dot, boxShadow: settings.accentColor === preset.value ? `0 0 6px 1px ${preset.dot}80` : 'none' }}
+                  />
+                  {preset.name}
+                </button>
+              ))}
             </div>
-          </SettingCard>
-        </div>
+          </PanelRow>
 
-        {/* System Prompt */}
-        <div>
-          <SectionLabel>Prompt</SectionLabel>
-          <SettingCard>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">System prompt</Label>
-              <Textarea
-                value={settings.systemPrompt}
-                onChange={(e) => updateSettings({ systemPrompt: e.target.value })}
-                rows={6}
-                className="font-mono text-[11.5px] leading-relaxed resize-none bg-background/50"
-              />
-              <p className="text-[10.5px] text-muted-foreground/40">
-                Use <code className="font-mono bg-muted/60 px-1 rounded text-[10px]">{'{lang}'}</code> as placeholder for the target language name.
-              </p>
-            </div>
-          </SettingCard>
-        </div>
+        </Panel>
+
       </div>
     </div>
   )

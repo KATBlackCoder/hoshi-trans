@@ -6,6 +6,8 @@ import './App.css'
 
 const queryClient = new QueryClient()
 
+// Apply dark mode immediately (before React mounts) to avoid flash of light theme.
+// The persisted theme preference is applied later in loadSettings().
 document.documentElement.classList.add('dark')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

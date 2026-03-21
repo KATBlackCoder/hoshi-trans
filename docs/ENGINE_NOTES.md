@@ -1,3 +1,94 @@
+# Wolf RPG — Notes de traduction
+
+> Pipeline dump-based : l'utilisateur fournit le dossier `dump/` généré par WolfTL.
+> Pas de sidecar, pas de Wine requis.
+
+---
+
+## 📁 Fichiers du module
+
+| Fichier | Rôle |
+|---|---|
+| `extractor.rs` | Lit mps/, common/, db/, Game.json — produit des `TranslationEntry` |
+| `injector.rs` | Réécrit les JSON dans `output/` avec les traductions |
+| `placeholders.rs` | Codes Wolf (`\c[n]`, `\cself[n]`, `\E`, etc.) ↔ `{{WOLF_...}}` |
+| `skip.rs` | Règles Wolf + délègue à `common::skip` |
+
+---
+
+## 🗂️ Commandes Wolf RPG à extraire
+
+Seuls les codes suivants contiennent du texte joueur-visible :
+
+| Code | codeStr | Traitement |
+|---|---|---|
+| 101 | `Message` | `stringArgs[0]` — dialogue |
+| 102 | `Choices` | `stringArgs[0..n]` — options de choix |
+| 122 | `SetString` | `stringArgs[0]` — labels UI, suffixes |
+
+Tous les autres codes (`VariableCondition`, `SetLabel`, `Sound`, `Move`, etc.) portent parfois du texte en `stringArgs` comme **contexte WolfTL**, pas du texte joueur. Ne pas extraire.
+
+---
+
+## 📊 order_index
+
+| Source | Formule |
+|---|---|
+| `Message` | `cmd.index` |
+| `SetString` | `cmd.index` |
+| `Choices` option i | `cmd.index * 100 + i` |
+| `db/` champs | compteur séquentiel (name, description, puis data[].value) |
+| `Game.json` | `0` |
+
+⚠️ **Contrainte DB** : `UNIQUE(project_id, file_path, order_index)`. Les `Choices` partagent le même `cmd.index` → la formule `*100+i` est obligatoire sinon seule la première option est insérée.
+
+---
+
+## 🗄️ Fichiers DB Wolf RPG
+
+| Fichier | Extraire ? | Raison |
+|---|---|---|
+| `DataBase.json` | ✅ Oui | Skills, items, noms — contenu joueur |
+| `CDataBase.json` | ✅ Oui | Peut contenir des noms de personnages |
+| `SysDatabase.json` | ❌ Non | Config moteur interne, jamais visible joueur |
+
+Champs extraits de `DataBase.json` / `CDataBase.json` :
+- `types[ti].data[di].name` (si JP)
+- `types[ti].data[di].description` (si JP)
+- `types[ti].data[di].data[fi].value` (strings seulement, si JP)
+
+---
+
+## 🔄 Placeholders Wolf RPG
+
+| Code | Placeholder | Notes |
+|---|---|---|
+| `\E` | `{{WOLF_END}}` | Fin de message |
+| `\c[n]` | `{{WOLF_COLOR_L[n]}}` | Couleur minuscule |
+| `\C[n]` | `{{WOLF_COLOR_U[n]}}` | Couleur majuscule |
+| `\cself[n]` | `{{WOLF_CSELF[n]}}` | Variable self du personnage |
+| `\self[n]` | `{{WOLF_SELF[n]}}` | Variable locale d'événement |
+| `\v[n]` | `{{WOLF_V[n]}}` | Variable |
+| `\f[n]` / `\font[n]` | `{{WOLF_FONT[n]}}` / `{{WOLF_FONTFULL[n]}}` | Police |
+| `\f[\cself[n]]` | `{{WOLF_FONT_CS[n]}}` | Compound — encodé en premier |
+| `\udb[n:m]` | `{{WOLF_UDB[n:m]}}` | User database |
+| `\m[n]` / `\my[n]` | `{{WOLF_M[n]}}` / `{{WOLF_MY[n]}}` | Position message |
+| `\A-` | `{{WOLF_AUTO}}` | Alignement auto |
+| `\n` (newline) | `{{WOLF_NL}}` | Saut de ligne réel |
+| `@n` | `{{WOLF_AT[n]}}` | Paramètre |
+| `%n` / `％n` | `{{WOLF_PC[n]}}` | Substitution dynamique |
+
+---
+
+## ⛔ Skip rules Wolf RPG
+
+En plus de `common::skip` :
+- `cdb[` ou débute par `sdb:` → référence DB interne
+- `X[` (majuscule) → référence catégorie DB Wolf (ex: `X[戦]技能選択実行`)
+- Débute par `Data\` ou `Data/` → chemin système Wolf
+
+---
+
 # RPG Maker MV/MZ — Notes de traduction
 
 > Ce fichier est lu par Claude au début de chaque session touchant ce moteur.
@@ -91,28 +182,26 @@ pub fn should_skip(text: &str) -> bool {
 
 ---
 
-## 🧪 Observations de tests (à remplir au fur et à mesure)
+## 🧪 Observations de tests
 
-### [Date] — [Jeu testé]
-_Aucune observation pour le moment. Ajouter ici les cas particuliers rencontrés._
+### 2026-03-20 — 月咲流ホノカ ver1.03 (Wolf RPG)
+- **CHOICES order_index** : toutes les options d'un `Choices` (code 102) partagent le même `index` dans le dump. La contrainte DB unique `(project_id, file_path, order_index)` ne garde que la première option. Fix : `order_index = command_index * 100 + position`.
+- **codeStr "Choices" pas "Choice"** : Wolf RPG utilise `"Choices"` (pas `"Choice"`) — vérifier si d'autres moteurs ont ce même piège.
+- **VariableCondition (111) dans WolfTL** : les `stringArgs` de ce command répètent le texte du `Message`/`Choices` précédent comme contexte — **ne pas extraire**, ce serait des doublons.
+- **SysDatabase.json** : 100% configuration moteur (résistances, flags système). Ne jamais extraire. Confirmé sur Dragon Blood (jeu traduit) et ホノカ.
+- **CDataBase.json** : peut contenir des noms de personnages visibles (ex: `"いぬこ"` dans Little Witch Inuko). Extraire — `should_skip()` filtre les non-japonais automatiquement.
+- **Sound/ChangeColor/Teleport/Move dans WolfTL** : ces commands portent le texte du dernier Message comme référence dans leurs `stringArgs`. Ne pas extraire (doublons).
 
-Exemples de format :
-```
-### 2026-03-15 — [Nom du jeu]
-- PLACEHOLDER: Les strings de type `\SE[n]` (sound effect) dans les dialogues
-  causent une traduction partielle. Ajouter à la table de placeholders.
-- SKIP: Les strings dans System.json > terms > commands sont parfois en JP
-  mais ce sont des étiquettes UI (menus), pas des dialogues. Traiter séparément.
-- MODÈLE: qwen2.5:7b donne de meilleurs résultats sur les dialogues eroge
-  que mistral pour le JP → EN.
-```
+### 2026-03-20 — Little Witch Inuko (Wolf RPG, dump traduit analysé)
+- **mps/ sans dialogue direct** : tous les dialogues passent par `CommonEventByName` → common/. Les fichiers mps/ ne contiennent que de la logique (Wait, EraseEvent, etc.).
+- **SetString partiellement traduit** : le traducteur humain a traduit les SetString UI-critiques mais sauté les dialogues — confirme que SetString est bien du texte joueur.
+- **Game.json Title** : champ `"Title"` traduit par le traducteur humain. Extraire + injecter avec signature.
 
 ---
 
 ## 📝 Patterns connus à investiguer
 
-_À remplir lors des tests :_
-- [ ] Comportement des `\SE[n]` (commandes son dans le texte)
+- [ ] Comportement des `\SE[n]` (commandes son dans le texte RPG Maker)
 - [ ] Strings dans `System.json > terms > basic` (HP, MP, TP...)
 - [ ] Noms de skills dans `Skills.json` — souvent en Romaji, skip ?
-- [ ] Plugin commands (code 356) — parfois du JP en paramètre
+- [ ] Plugin commands RPG Maker (code 356) — parfois du JP en paramètre

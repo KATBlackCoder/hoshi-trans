@@ -47,6 +47,7 @@ pub fn run() {
             commands::project::get_projects,
             commands::project::get_projects_with_stats,
             commands::project::delete_project,
+            commands::project::update_wolf_rpg_font,
             commands::extract::extract_strings,
             commands::entries::get_entries,
             commands::entries::update_translation,

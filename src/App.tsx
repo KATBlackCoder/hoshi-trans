@@ -7,6 +7,7 @@ import { SettingsPage } from '@/features/settings'
 import { GlossaryPage } from '@/features/glossary'
 import { ProjectLibrary } from '@/features/project-library'
 import { AboutPage } from '@/features/about'
+import { OllamaPage } from '@/features/ollama'
 import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
@@ -19,17 +20,112 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2 } from 'lucide-react'
+import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2, Cpu } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
-type View = 'library' | 'translation' | 'settings' | 'glossary' | 'about'
+type View = 'library' | 'translation' | 'settings' | 'glossary' | 'about' | 'ollama'
 
-function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onViewChange }: {
+// Approximate safe chars/line for Wolf RPG at a given font size.
+// Based on ~480px text area width and avg Latin char width ratio.
+function wolfCharsPerLine(size: number): number {
+  return Math.round(10560 / (size * 10))
+}
+
+function WolfRpgFontPanel({
+  project,
+  onUpdate,
+}: {
+  project: ProjectFile
+  onUpdate: (p: ProjectFile) => void
+}) {
+  const [value, setValue] = useState<string>(
+    project.wolf_rpg_font_size != null ? String(project.wolf_rpg_font_size) : ''
+  )
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function applyFont(newValue: string) {
+    const parsed = newValue === '' ? null : parseInt(newValue, 10)
+    if (parsed !== null && (isNaN(parsed) || parsed < 8 || parsed > 64)) return
+    setSaving(true)
+    try {
+      const updated: ProjectFile = await invoke('update_wolf_rpg_font', {
+        gameDir: project.game_dir,
+        fontSize: parsed,
+      })
+      onUpdate(updated)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const numVal = value === '' ? null : parseInt(value, 10)
+  const charsHint = numVal != null && !isNaN(numVal) ? wolfCharsPerLine(numVal) : null
+
+  return (
+    <div className="rounded-lg border border-sidebar-border/60 bg-sidebar-accent/10 px-2.5 py-2 flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+          Wolf RPG font
+        </span>
+        {charsHint != null && (
+          <span className="text-[9px] text-muted-foreground/40">~{charsHint} chars/line</span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={() => {
+            const v = Math.max(8, (numVal ?? 22) - 1)
+            const s = String(v)
+            setValue(s)
+            applyFont(s)
+          }}
+          className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-sidebar-accent/60 transition-colors text-xs shrink-0"
+        >−</button>
+        <input
+          ref={inputRef}
+          type="number"
+          min={8}
+          max={64}
+          value={value}
+          placeholder="default"
+          onChange={e => setValue(e.target.value)}
+          onBlur={e => applyFont(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') applyFont(value) }}
+          className="flex-1 min-w-0 bg-transparent border border-sidebar-border/50 rounded px-1.5 py-0.5 text-[11px] text-center text-sidebar-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <button
+          onClick={() => {
+            const v = Math.min(64, (numVal ?? 22) + 1)
+            const s = String(v)
+            setValue(s)
+            applyFont(s)
+          }}
+          className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-sidebar-accent/60 transition-colors text-xs shrink-0"
+        >+</button>
+        {value !== '' && (
+          <button
+            onClick={() => { setValue(''); applyFont('') }}
+            className="text-[9px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors shrink-0"
+            title="Reset to game default"
+          >✕</button>
+        )}
+      </div>
+      {saving && <span className="text-[9px] text-muted-foreground/40 text-center">saving…</span>}
+      <p className="text-[9px] text-muted-foreground/35 leading-relaxed">
+        Try the game first before changing the font. Ideal size for Latin text: <span className="text-muted-foreground/55 font-medium">20–22</span>.
+      </p>
+    </div>
+  )
+}
+
+function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUpdated, view, onViewChange }: {
   activeProject: ProjectFile | null
   onProjectOpened: (p: ProjectFile) => void
   onProjectDeleted: () => void
+  onProjectUpdated: (p: ProjectFile) => void
   view: View
   onViewChange: (v: View) => void
 }) {
@@ -135,6 +231,9 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onVie
                 {activeProject.engine.replace(/_/g, ' ')}
               </p>
             </div>
+            {activeProject.engine === 'wolf_rpg' && (
+              <WolfRpgFontPanel project={activeProject} onUpdate={onProjectUpdated} />
+            )}
           </div>
         )}
       </div>
@@ -143,6 +242,7 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, view, onVie
       <Separator className="bg-sidebar-border" />
       <div className="flex flex-col py-1">
         {navBtn('glossary', 'Glossary', <BookOpen className="w-3.5 h-3.5" />)}
+        {navBtn('ollama', 'Ollama', <Cpu className="w-3.5 h-3.5" />)}
         {navBtn('settings', 'Settings', <Settings className="w-3.5 h-3.5" />)}
         {navBtn('about', 'About', <Info className="w-3.5 h-3.5" />)}
       </div>
@@ -170,11 +270,14 @@ function MainLayout() {
         activeProject={activeProject}
         onProjectOpened={handleProjectOpened}
         onProjectDeleted={handleProjectDeleted}
+        onProjectUpdated={setActiveProject}
         view={view}
         onViewChange={setView}
       />
       <main className="flex-1 overflow-hidden">
-        {view === 'settings' ? (
+        {view === 'ollama' ? (
+          <OllamaPage />
+        ) : view === 'settings' ? (
           <SettingsPage />
         ) : view === 'glossary' ? (
           <GlossaryPage />

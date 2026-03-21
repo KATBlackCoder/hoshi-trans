@@ -7,8 +7,9 @@ pub async fn inject(
     game_dir: &Path,
     entries: &[TranslationEntry],
     output_dir: &Path,
+    font_size: Option<u32>,
 ) -> anyhow::Result<()> {
-    inject_sync(game_dir, entries, output_dir)
+    inject_sync(game_dir, entries, output_dir, font_size)
 }
 
 fn resolve_dump_dir(path: &Path) -> std::path::PathBuf {
@@ -26,6 +27,7 @@ pub fn inject_sync(
     path: &Path,
     entries: &[TranslationEntry],
     output_dir: &Path,
+    font_size: Option<u32>,
 ) -> anyhow::Result<()> {
     let dump_dir_owned = resolve_dump_dir(path);
     let dump_dir = dump_dir_owned.as_path();
@@ -53,8 +55,8 @@ pub fn inject_sync(
                 .map_err(|e| anyhow::anyhow!("Parse error {}: {}", rel, e))?;
 
             match *subdir {
-                "mps" => inject_mps(&mut json, &rel, &index),
-                "common" => inject_common(&mut json, &rel, &index),
+                "mps" => inject_mps(&mut json, &rel, &index, font_size),
+                "common" => inject_common(&mut json, &rel, &index, font_size),
                 "db" => inject_db(&mut json, &rel, &index),
                 _ => {}
             }
@@ -94,10 +96,15 @@ pub fn inject_sync(
     Ok(())
 }
 
+fn mps_order_index(event_id: i64, page_id: i64, cmd_index: i64) -> i64 {
+    event_id * 1_000_000 + page_id * 100_000 + cmd_index
+}
+
 fn inject_mps(
     json: &mut serde_json::Value,
     file_path: &str,
     index: &HashMap<(String, i64, String), String>,
+    font_size: Option<u32>,
 ) {
     if let Some(events) = json["events"].as_array_mut() {
         for event in events.iter_mut() {
@@ -107,7 +114,7 @@ fn inject_mps(
                     let page_id = page["id"].as_i64().unwrap_or(0);
                     let ctx_prefix = format!("event:{}:page:{}", event_id, page_id);
                     if let Some(list) = page["list"].as_array_mut() {
-                        inject_command_list(list, file_path, &ctx_prefix, index);
+                        inject_command_list(list, file_path, &ctx_prefix, Some((event_id, page_id)), index, font_size);
                     }
                 }
             }
@@ -119,9 +126,19 @@ fn inject_common(
     json: &mut serde_json::Value,
     file_path: &str,
     index: &HashMap<(String, i64, String), String>,
+    font_size: Option<u32>,
 ) {
     if let Some(commands) = json["commands"].as_array_mut() {
-        inject_command_list(commands, file_path, "cmd", index);
+        inject_command_list(commands, file_path, "cmd", None, index, font_size);
+    }
+}
+
+fn apply_font_prefix(text: &str, font_size: Option<u32>) -> String {
+    // NOTE: currently we skip if text already starts with \f[ to avoid double-prefixing.
+    // In a future revision, evaluate whether we should overwrite existing \f[ codes instead.
+    match font_size {
+        Some(n) if !text.starts_with("\\f[") => format!("\\f[{}]{}", n, text),
+        _ => text.to_string(),
     }
 }
 
@@ -129,33 +146,42 @@ fn inject_command_list(
     list: &mut [serde_json::Value],
     file_path: &str,
     ctx_prefix: &str,
+    mps_ids: Option<(i64, i64)>, // Some((event_id, page_id)) for mps, None for common
     index: &HashMap<(String, i64, String), String>,
+    font_size: Option<u32>,
 ) {
     for cmd in list.iter_mut() {
         let code_str = cmd["codeStr"].as_str().unwrap_or("").to_string();
         let cmd_index = cmd["index"].as_i64().unwrap_or(0);
+        let order = match mps_ids {
+            Some((event_id, page_id)) => mps_order_index(event_id, page_id, cmd_index),
+            None => cmd_index,
+        };
 
         match code_str.as_str() {
             "Message" => {
                 let ctx = format!("{}:idx:{}", ctx_prefix, cmd_index);
-                if let Some(t) = index.get(&(file_path.to_string(), cmd_index, ctx)) {
-                    cmd["stringArgs"][0] = serde_json::Value::String(t.clone());
+                if let Some(t) = index.get(&(file_path.to_string(), order, ctx)) {
+                    let text = apply_font_prefix(t, font_size);
+                    cmd["stringArgs"][0] = serde_json::Value::String(text);
                 }
             }
             "Choices" => {
                 let n = cmd["stringArgs"].as_array().map(|a| a.len()).unwrap_or(0);
                 for i in 0..n {
                     let ctx = format!("{}:idx:{}:choice:{}", ctx_prefix, cmd_index, i);
-                    let order = cmd_index * 100 + i as i64;
-                    if let Some(t) = index.get(&(file_path.to_string(), order, ctx)) {
-                        cmd["stringArgs"][i] = serde_json::Value::String(t.clone());
+                    let choice_order = order * 100 + i as i64;
+                    if let Some(t) = index.get(&(file_path.to_string(), choice_order, ctx)) {
+                        let text = apply_font_prefix(t, font_size);
+                        cmd["stringArgs"][i] = serde_json::Value::String(text);
                     }
                 }
             }
             "SetString" => {
                 let ctx = format!("{}:idx:{}:setstring", ctx_prefix, cmd_index);
-                if let Some(t) = index.get(&(file_path.to_string(), cmd_index, ctx)) {
-                    cmd["stringArgs"][0] = serde_json::Value::String(t.clone());
+                if let Some(t) = index.get(&(file_path.to_string(), order, ctx)) {
+                    let text = apply_font_prefix(t, font_size);
+                    cmd["stringArgs"][0] = serde_json::Value::String(text);
                 }
             }
             _ => {}
@@ -163,35 +189,23 @@ fn inject_command_list(
     }
 }
 
-fn is_system_db(file_path: &str) -> bool {
-    let name = file_path.split('/').last().unwrap_or(file_path);
-    name == "SysDatabase.json"
-}
-
 fn inject_db(
     json: &mut serde_json::Value,
     file_path: &str,
     index: &HashMap<(String, i64, String), String>,
 ) {
-    if is_system_db(file_path) {
+    let name = file_path.split('/').last().unwrap_or(file_path);
+    if matches!(name, "SysDatabase.json" | "CDataBase.json") {
         return;
     }
+    let skip_name_desc = false;
 
     let mut order: i64 = 0;
     if let Some(types) = json["types"].as_array_mut() {
         for (ti, typ) in types.iter_mut().enumerate() {
             if let Some(data) = typ["data"].as_array_mut() {
                 for (di, item) in data.iter_mut().enumerate() {
-                    for field in &["name", "description"] {
-                        if item[field].as_str().is_some() {
-                            let ctx = format!("db:type:{}:data:{}:{}", ti, di, field);
-                            if let Some(t) = index.get(&(file_path.to_string(), order, ctx)) {
-                                item[*field] = serde_json::Value::String(t.clone());
-                            }
-                            order += 1;
-                        }
-                    }
-                    // Inject string field values (same logic as extractor)
+                    // item["name"]/["description"] are editor labels — not extracted, not injected.
                     if let Some(fields) = item["data"].as_array_mut() {
                         for (fi, f) in fields.iter_mut().enumerate() {
                             if f["value"].as_str().is_some() {
@@ -260,8 +274,9 @@ mod tests {
             ]}]}]
         }"#).unwrap();
 
-        let entries = vec![entry("mps/Map001.json", 3, "event:1:page:0:idx:3", "Hello")];
-        inject_sync(dir.path(), &entries, dir.path()).unwrap();
+        // order_index = event_id=1 * 1_000_000 + page_id=0 * 100_000 + cmd_index=3
+        let entries = vec![entry("mps/Map001.json", 1_000_003, "event:1:page:0:idx:3", "Hello")];
+        inject_sync(dir.path(), &entries, dir.path(), None).unwrap();
 
         let out: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(dir.path().join("mps/Map001.json")).unwrap()
@@ -280,11 +295,13 @@ mod tests {
             ]}]}]
         }"#).unwrap();
 
+        // order = event_id=1 * 1_000_000 + page_id=0 * 100_000 + cmd_index=5 = 1_000_005
+        // choices: order*100+i = 100_000_500, 100_000_501
         let entries = vec![
-            entry("mps/Map001.json", 500, "event:1:page:0:idx:5:choice:0", "Yes"),
-            entry("mps/Map001.json", 501, "event:1:page:0:idx:5:choice:1", "No"),
+            entry("mps/Map001.json", 100_000_500, "event:1:page:0:idx:5:choice:0", "Yes"),
+            entry("mps/Map001.json", 100_000_501, "event:1:page:0:idx:5:choice:1", "No"),
         ];
-        inject_sync(dir.path(), &entries, dir.path()).unwrap();
+        inject_sync(dir.path(), &entries, dir.path(), None).unwrap();
 
         let out: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(dir.path().join("mps/Map001.json")).unwrap()
@@ -305,10 +322,11 @@ mod tests {
             ]}]}]
         }"#).unwrap();
 
+        // order_index = event_id=1 * 1_000_000 + page_id=0 * 100_000 + cmd_index=7
         let entries = vec![
-            entry("mps/Map001.json", 7, "event:1:page:0:idx:7:setstring", "unit"),
+            entry("mps/Map001.json", 1_000_007, "event:1:page:0:idx:7:setstring", "unit"),
         ];
-        inject_sync(dir.path(), &entries, dir.path()).unwrap();
+        inject_sync(dir.path(), &entries, dir.path(), None).unwrap();
 
         let out: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(dir.path().join("mps/Map001.json")).unwrap()
@@ -332,13 +350,12 @@ mod tests {
             ]}]
         }"#).unwrap();
 
-        // name("Punch") at order=0, description("") at order=1 — both skipped (no JP)
-        // data fields start at order=2
+        // item name/description skipped — data fields start at order=0
         let entries = vec![
-            entry("db/DataBase.json", 2, "db:type:0:data:0:field:0", "Punch"),
-            entry("db/DataBase.json", 3, "db:type:0:data:0:field:1", "Deals damage to enemy"),
+            entry("db/DataBase.json", 0, "db:type:0:data:0:field:0", "Punch"),
+            entry("db/DataBase.json", 1, "db:type:0:data:0:field:1", "Deals damage to enemy"),
         ];
-        inject_sync(dir.path(), &entries, dir.path()).unwrap();
+        inject_sync(dir.path(), &entries, dir.path(), None).unwrap();
 
         let out: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(dir.path().join("db/DataBase.json")).unwrap()
@@ -359,7 +376,7 @@ mod tests {
         }"#).unwrap();
 
         let empty: Vec<TranslationEntry> = vec![];
-        inject_sync(dir.path(), &empty, dir.path()).unwrap();
+        inject_sync(dir.path(), &empty, dir.path(), None).unwrap();
 
         let out: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(dir.path().join("mps/Map001.json")).unwrap()

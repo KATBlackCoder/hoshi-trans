@@ -1,7 +1,7 @@
 # hoshi-trans — CONTEXT.md
 
 > Ce fichier est lu au début de chaque session de développement.
-> Version : 0.6 — corrections architecture (async trait, order_index, cancel_flag, types TS)
+> Version : 0.7 — Wolf RPG order_index fix + font override at injection
 
 ---
 
@@ -87,8 +87,11 @@ hoshi-trans/
 │   │   ├── translation/              # Vue liste strings + édition
 │   │   ├── file-import/              # Sélection dossier + détection moteur
 │   │   ├── file-export/              # Export + ouverture output/
-│   │   ├── settings/                 # Modèle Ollama, langue, prompt
-│   │   └── donations/                # Ko-fi + QR codes crypto
+│   │   ├── ollama/                   # OllamaPage : connexion, modèle, température, prompt, RunPod
+│   │   ├── settings/                 # SettingsPage : préférences app (thème dark/light, couleur accent)
+│   │   ├── about/                    # AboutPage : infos app + liens donations (Ko-fi, GitHub Sponsors)
+│   │   ├── glossary/                 # Glossaire global + par projet
+│   │   └── project-library/          # Grille de tous les projets
 │   ├── hooks/
 │   │   ├── useOllamaStatus.ts        # invoke check_ollama
 │   │   ├── useProject.ts             # invoke get_project, get_entries...
@@ -105,7 +108,7 @@ hoshi-trans/
 │   ├── src/
 │   │   ├── commands/
 │   │   │   ├── mod.rs
-│   │   │   ├── project.rs            # create_project, get_projects, open_project, delete_project
+│   │   │   ├── project.rs            # create_project, get_projects, open_project, delete_project, update_wolf_rpg_font
 │   │   │   ├── entries.rs            # get_entries, update_translation, update_status
 │   │   │   ├── extract.rs            # extract_strings → parse + insert batch DB + write .hoshi.json
 │   │   │   ├── inject.rs             # inject_translations → output/
@@ -192,7 +195,8 @@ C'est la mémoire légère du projet — métadonnées + stats + lien vers la DB
     "pending": 216
   },
   "last_model": "qwen2.5:7b",
-  "output_dir": "/home/user/games/MyGame/hoshi-trans-output"
+  "output_dir": "/home/user/games/MyGame/hoshi-trans-output",
+  "wolf_rpg_font_size": 20
 }
 ```
 
@@ -234,6 +238,8 @@ pub struct ProjectFile {
     pub stats: ProjectStats,
     pub last_model: Option<String>,
     pub output_dir: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wolf_rpg_font_size: Option<u32>,  // Wolf RPG only — font size prepended at injection
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -393,13 +399,34 @@ Détection : `data/System.json` + champ `"gameTitle"`.
 | `Actors/Items/Weapons/Armors/Skills/Enemies/States.json` | `name`, `description`, `message*` |
 | `MapInfos.json`, `System.json` | `name`, `gameTitle`, `terms` |
 
-### Wolf RPG (P2) — Sidecar
-```
-[chiffré] → UberWolf.exe → [déchiffré] → WolfTL.exe dump → [JSON]
-[JSON traduit] → WolfTL.exe patch → [patchés]
-```
-Binaires dans `src-tauri/bin/` (suffix target triple obligatoire).
-Appel via `tauri-plugin-shell`. ⚠️ Wine requis sur Linux.
+### Wolf RPG (P2) — Dump-based (sans sidecar)
+
+Pipeline : l'utilisateur fournit le dossier `dump/` produit par WolfTL. hoshi-trans lit directement les JSON.
+
+| Dossier/Fichier | Champs extraits |
+|---|---|
+| `mps/*.json` | `events[].pages[].list[]` — codeStr `Message` (101), `Choices` (102), `SetString` (122) |
+| `common/*.json` | `commands[]` — mêmes codeStr |
+| `db/DataBase.json` | `types[].data[].data[].value` (strings uniquement) — `item["name"]`/`["description"]` ignorés (labels éditeur, doublons) |
+| `db/CDataBase.json` | **Skippé entièrement** — store de variables runtime, lookup par nom à l'exécution. Traduire les noms casse le moteur. |
+| `db/SysDatabase.json` | **Skippé** — configuration moteur interne uniquement |
+| `Game.json` | `Title`, `TitlePlus`, `StartUpMsg`, `TitleMsg` |
+
+**order_index (mps) :**
+- Formule : `event_id * 1_000_000 + page_id * 100_000 + cmd_index` — encode l'event, la page et le cmd dans un seul entier globalement unique par fichier.
+- Raison : `cmd["index"]` est **local** à chaque liste event/page. Plusieurs events dans le même fichier peuvent partager les mêmes valeurs d'index → collision sur la contrainte `UNIQUE(project_id, file_path, order_index)` → `INSERT OR IGNORE` silencieux supprimait les doublons (187 dialogues perdus détectés sur ホノカ Map009.json).
+- `Choices` : `mps_order_index * 100 + position_option` — car toutes les options partagent le même `cmd.index`.
+- **Common files** : `order_index = cmd_index` directement (pas de context event/page).
+
+**Font override à l'injection (Wolf RPG) :**
+- `ProjectFile.wolf_rpg_font_size: Option<u32>` — taille de police injectée en préfixe sur chaque texte traduit (Message, Choices, SetString).
+- Format : `\f[n]texte` — skippé si le texte commence déjà par `\f[`.
+- Commande `update_wolf_rpg_font(game_dir, font_size)` — lit/écrit `hoshi-trans.json`.
+- UI sidebar : panel compact sous la carte projet, uniquement pour les projets Wolf RPG. Indicateur `~X chars/line` calculé selon la taille.
+
+**Injection :** écrit dans `output/` (non-destructif), applique la signature `| TL: hoshi-trans` au champ `Title` de `Game.json`.
+
+**Résolution du dump :** si l'utilisateur ouvre la racine du jeu, `resolve_dump_dir()` cherche `dump/mps/` automatiquement.
 
 ### Bakin (P3)
 `data.rbpack` → unpack → `dic.txt` (clé`\t`valeur) → inject.
@@ -488,22 +515,44 @@ Tables complètes des codes par moteur → dans les `ENGINE_NOTES.md` respectifs
 ## 🤖 Ollama (Rust uniquement)
 
 ```rust
-// State partagé pour l'annulation — Arc<AtomicBool> géré via tauri::State
-// Déclaré dans main.rs : app.manage(Arc::new(AtomicBool::new(false)));
+// Deux states AtomicBool gérés via tauri::State :
+// - Arc<AtomicBool>   : cancel flag (reset à false au début de chaque batch)
+// - BatchRunning(Arc<AtomicBool>) : batch en cours (true pendant, false après)
+// Déclarés dans lib.rs setup() :
+//   app.manage(Arc::new(AtomicBool::new(false)));
+//   app.manage(BatchRunning(Arc::new(AtomicBool::new(false))));
+
 #[tauri::command]
 pub async fn translate_batch(
     window: tauri::Window,
+    app: tauri::AppHandle,
     pool: tauri::State<'_, SqlitePool>,
-    cancel_flag: tauri::State<'_, Arc<std::sync::atomic::AtomicBool>>,
+    cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
+    batch_running: tauri::State<'_, BatchRunning>,
     project_id: String,
     model: String,
     target_lang: String,
     system_prompt: String,
+    ollama_host: String,
+    concurrency: u32,
+    limit: u32,
+    temperature: f32,
+    entry_ids: Option<Vec<String>>,  // si Some → traduit ces entrées spécifiques
 ) -> Result<(), String>
 // Émet window.emit("translation:progress", TranslationProgress { done, total, entry_id })
-// Vérifie cancel_flag.load(Ordering::Relaxed) avant chaque entrée
-// Met à jour DB + hoshi-trans.json stats après chaque entrée
+// Émet window.emit("translation:complete", ()) à la fin
+// Vérifie cancel_flag avant chaque entrée
+// Post-processing : remplace \" par " dans la réponse Ollama (artefact LLM)
+
+// is_batch_running : permet au frontend de se re-subscribe après rechargement
+#[tauri::command]
+pub async fn is_batch_running(batch_running: tauri::State<'_, BatchRunning>) -> Result<bool, String>
+
+// get_entries_by_ids : pour traduire une sélection d'entrées
+pub async fn get_entries_by_ids(pool: &SqlitePool, ids: &[String]) -> anyhow::Result<Vec<TranslationEntry>>
 ```
+
+**Re-connexion après rechargement webview :** `useTranslationBatch` appelle `is_batch_running` au montage. Si `true`, re-subscribe à `translation:progress` + `translation:complete` → l'indicateur reprend sans intervention.
 
 ### Types TypeScript miroir (`src/types/index.ts`)
 
@@ -567,15 +616,9 @@ export interface ProjectStats {
 
 ## 💰 Donations
 
-```ts
-// src/lib/constants.ts
-export const DONATIONS = {
-  KO_FI_URL:  'https://ko-fi.com/[À REMPLIR]',
-  BTC:        '[À REMPLIR]',
-  USDT_TRC20: '[À REMPLIR]',
-  XMR:        '[À REMPLIR]',
-} as const
-```
+Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
+- Ko-fi : `https://ko-fi.com/katblackcoder`
+- GitHub Sponsors : `https://github.com/sponsors/KATBlackCoder`
 
 ---
 
@@ -597,14 +640,19 @@ export const DONATIONS = {
 
 - [x] Scaffold + ESLint + Prettier + TS strict
 - [x] Architecture Rust (trait GameEngine, modèles, séparation stricte)
-- [x] SQLx Rust (schema, init pool, insert batch)
+- [x] SQLx Rust (schema, migrations, init pool, insert batch)
 - [x] Fichier projet `hoshi-trans.json` défini
 - [x] Plugins Tauri (npm frontend uniquement)
 - [x] Cargo.toml + CI/CD
-- [x] Placeholders + skip logic + ENGINE_NOTES.md
-- [x] Sidecar WolfTL/UberWolf + donations
-- [ ] **[NEXT]** Layout principal + `useOllamaStatus` + onboarding
-- [ ] Init SQLx pool + migrations
-- [ ] RPG Maker MV/MZ `extractor.rs` + insert batch + `hoshi-trans.json`
-- [ ] Interface de traduction + batch + annulation
-- [ ] RPG Maker MV/MZ `injector.rs`
+- [x] Placeholders + skip logic (common + par moteur)
+- [x] RPG Maker MV/MZ extractor + injector
+- [x] Wolf RPG extractor + injector (dump-based, sans sidecar)
+  - [x] Fix : CDataBase skippé entièrement (évite crash type 18 runtime)
+  - [x] Fix : item["name"]/["description"] ignorés (évite doublons)
+- [x] Interface de traduction + batch + annulation + sélection multi-lignes
+- [x] Glossaire (global + par projet + import/export)
+- [x] Batch translation re-connexion après rechargement webview
+- [x] Signature `| TL: hoshi-trans` dans les titres de jeux exportés
+- [x] Page Ollama (connexion, modèle, température, prompt, RunPod — layout 2 colonnes)
+- [x] Page Settings (thème dark/light + couleur accent, persisté dans settings.json)
+- [x] Page About (description app + Ko-fi + GitHub Sponsors + liens)

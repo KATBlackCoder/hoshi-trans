@@ -136,6 +136,7 @@ fn extract_mps_file(
                             project_id,
                             file_path,
                             &format!("event:{}:page:{}", event_id, page_id),
+                            Some((event_id, page_id)),
                             entries,
                         );
                     }
@@ -152,7 +153,19 @@ fn extract_common_file(
     entries: &mut Vec<TranslationEntry>,
 ) {
     if let Some(commands) = json["commands"].as_array() {
-        extract_command_list(commands, project_id, file_path, "cmd", entries);
+        extract_command_list(commands, project_id, file_path, "cmd", None, entries);
+    }
+}
+
+/// Compute a globally unique order_index for mps commands.
+/// cmd_index alone is local to its event/page list — multiple events in the same
+/// file can have commands with the same index, causing DB unique constraint collisions.
+/// Encoding event_id and page_id makes it file-globally unique.
+/// For common/ files (no event/page nesting), mps_ids is None → use cmd_index directly.
+fn mps_order_index(mps_ids: Option<(i64, i64)>, cmd_index: i64) -> i64 {
+    match mps_ids {
+        Some((event_id, page_id)) => event_id * 1_000_000 + page_id * 100_000 + cmd_index,
+        None => cmd_index,
     }
 }
 
@@ -161,11 +174,13 @@ fn extract_command_list(
     project_id: &str,
     file_path: &str,
     ctx_prefix: &str,
+    mps_ids: Option<(i64, i64)>, // Some((event_id, page_id)) for mps, None for common
     entries: &mut Vec<TranslationEntry>,
 ) {
     for cmd in list {
         let code_str = cmd["codeStr"].as_str().unwrap_or("");
-        let index = cmd["index"].as_i64().unwrap_or(0);
+        let cmd_index = cmd["index"].as_i64().unwrap_or(0);
+        let order = mps_order_index(mps_ids, cmd_index);
 
         match code_str {
             "Message" => {
@@ -174,14 +189,14 @@ fn extract_command_list(
                         entries,
                         project_id,
                         text,
-                        Some(format!("{}:idx:{}", ctx_prefix, index)),
+                        Some(format!("{}:idx:{}", ctx_prefix, cmd_index)),
                         file_path,
-                        index,
+                        order,
                     );
                 }
             }
             // Wolf RPG uses "Choices" (not "Choice") for multi-option prompts.
-            // Each option gets index*100+i to ensure unique order_index per DB constraint.
+            // Each option gets order*100+i to ensure unique order_index per DB constraint.
             "Choices" => {
                 if let Some(args) = cmd["stringArgs"].as_array() {
                     for (i, arg) in args.iter().enumerate() {
@@ -190,9 +205,9 @@ fn extract_command_list(
                                 entries,
                                 project_id,
                                 text,
-                                Some(format!("{}:idx:{}:choice:{}", ctx_prefix, index, i)),
+                                Some(format!("{}:idx:{}:choice:{}", ctx_prefix, cmd_index, i)),
                                 file_path,
-                                index * 100 + i as i64,
+                                order * 100 + i as i64,
                             );
                         }
                     }
@@ -206,9 +221,9 @@ fn extract_command_list(
                         entries,
                         project_id,
                         text,
-                        Some(format!("{}:idx:{}:setstring", ctx_prefix, index)),
+                        Some(format!("{}:idx:{}:setstring", ctx_prefix, cmd_index)),
                         file_path,
-                        index,
+                        order,
                     );
                 }
             }
@@ -220,8 +235,6 @@ fn extract_command_list(
 /// Returns true for Wolf RPG system database files that contain only engine-internal
 /// configuration (resistances, system flags, gender labels, etc.) — never player-visible text.
 /// Dragon Blood (a fully translated game) leaves SysDatabase.json 100% in Japanese.
-/// CDataBase.json can contain player-visible character names (e.g. "いぬこ" → "Inuko"),
-/// so it is NOT skipped — should_skip() filters out non-Japanese strings automatically.
 fn is_system_db(file_path: &str) -> bool {
     let name = file_path.split('/').last().unwrap_or(file_path);
     name == "SysDatabase.json"
@@ -233,32 +246,20 @@ fn extract_db_file(
     file_path: &str,
     entries: &mut Vec<TranslationEntry>,
 ) {
-    if is_system_db(file_path) {
+    let name = file_path.split('/').last().unwrap_or(file_path);
+    // SysDatabase: engine-internal config, never player-visible.
+    // CDataBase: runtime variable store (flags, counters, character stats) — values are
+    //   numeric or file paths; skipping entirely avoids injecting broken paths/system keys.
+    if matches!(name, "SysDatabase.json" | "CDataBase.json") {
         return;
     }
-
     let mut order: i64 = 0;
     if let Some(types) = json["types"].as_array() {
         for (ti, typ) in types.iter().enumerate() {
             if let Some(data) = typ["data"].as_array() {
                 for (di, item) in data.iter().enumerate() {
-                    // item name and description (skill/item labels visible to player)
-                    for field in &["name", "description"] {
-                        if let Some(text) = item[field].as_str() {
-                            add_entry(
-                                entries,
-                                project_id,
-                                text,
-                                Some(format!("db:type:{}:data:{}:{}", ti, di, field)),
-                                file_path,
-                                order,
-                            );
-                            order += 1;
-                        }
-                    }
-                    // Extract all string field values (skill names, item names, descriptions, etc.)
-                    // Fields with numeric values (effect types, animation counts, etc.) are i64 in JSON.
-                    // Non-Japanese strings (asset paths, English) are filtered by should_skip().
+                    // item["name"] and item["description"] are editor-facing labels —
+                    // identical copies of the first data[].value field. Skip to avoid duplicates.
                     if let Some(fields) = item["data"].as_array() {
                         for (fi, f) in fields.iter().enumerate() {
                             if let Some(text) = f["value"].as_str() {
@@ -327,7 +328,8 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].source_text, "こんにちは");
         assert_eq!(entries[0].file_path, "mps/Map001.json");
-        assert_eq!(entries[0].order_index, 3);
+        // event_id=1, page_id=0, cmd_index=3 → 1*1_000_000 + 0*100_000 + 3
+        assert_eq!(entries[0].order_index, 1_000_003);
     }
 
     #[test]
@@ -380,9 +382,9 @@ mod tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].source_text, "はい");
         assert_eq!(entries[1].source_text, "いいえ");
-        // Choices use index*100+i to ensure unique order_index
-        assert_eq!(entries[0].order_index, 500);
-        assert_eq!(entries[1].order_index, 501);
+        // event_id=1, page_id=0, cmd_index=5 → order=1_000_005; choices: order*100+i
+        assert_eq!(entries[0].order_index, 100_000_500);
+        assert_eq!(entries[1].order_index, 100_000_501);
     }
 
     #[test]
@@ -406,19 +408,22 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("mps")).unwrap();
         std::fs::create_dir_all(dir.path().join("common")).unwrap();
-        // SysDatabase = engine-internal, skipped
+        // SysDatabase = engine-internal, skipped entirely
         write_file(dir.path(), "db/SysDatabase.json", r#"{"types":[{"data":[{"name":"テスト","description":"説明","data":[]}]}]}"#);
-        // DataBase = game data, extracted
+        // DataBase = only data[].value extracted (item name/description are editor labels, skipped)
         write_file(dir.path(), "db/DataBase.json", r#"{"types":[{"data":[{"name":"スキル","description":"","data":[{"name":"文","value":"攻撃"}]}]}]}"#);
-        // CDataBase = can contain player-visible character names, extracted
-        write_file(dir.path(), "db/CDataBase.json", r#"{"types":[{"data":[{"name":"","description":"","data":[{"name":"名前","value":"いぬこ"}]}]}]}"#);
+        // CDataBase = skipped entirely (runtime variables, file paths, system keys)
+        write_file(dir.path(), "db/CDataBase.json", r#"{"types":[{"data":[{"name":"戦闘中フラグ","description":"システム","data":[{"name":"名前","value":"いぬこ"}]}]}]}"#);
 
         let entries = extract_sync(dir.path(), "proj1").unwrap();
-        // SysDatabase skipped; DataBase: "スキル" + "攻撃"; CDataBase: "いぬこ"
-        assert_eq!(entries.len(), 3);
-        assert!(entries.iter().any(|e| e.source_text == "スキル"));
+        // SysDatabase: nothing; DataBase: "攻撃" (value only, "スキル" item name skipped); CDataBase: nothing
+        assert_eq!(entries.len(), 1);
         assert!(entries.iter().any(|e| e.source_text == "攻撃"));
-        assert!(entries.iter().any(|e| e.source_text == "いぬこ"));
+        assert!(!entries.iter().any(|e| e.source_text == "スキル"));
+        // CDataBase must NOT be extracted at all
+        assert!(!entries.iter().any(|e| e.source_text == "いぬこ"));
+        assert!(!entries.iter().any(|e| e.source_text == "戦闘中フラグ"));
+        assert!(!entries.iter().any(|e| e.source_text == "システム"));
     }
 
     #[test]
