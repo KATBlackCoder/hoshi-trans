@@ -42,6 +42,17 @@ pub async fn reset_empty_translations(
 }
 
 #[tauri::command]
+pub async fn update_refined_manual(
+    pool: tauri::State<'_, sqlx::SqlitePool>,
+    entry_id: String,
+    refined_text: String,
+) -> Result<(), String> {
+    crate::db::queries::update_refined_manual(pool.inner(), &entry_id, &refined_text)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn update_status(
     pool: tauri::State<'_, SqlitePool>,
     entry_id: String,

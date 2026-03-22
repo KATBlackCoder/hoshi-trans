@@ -119,6 +119,14 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
             )}
           </div>
 
+          {/* Placeholder count mismatch warning */}
+          {entry.ph_count_source != null && entry.ph_count_draft != null
+            && entry.ph_count_source !== entry.ph_count_draft && (
+            <span className="text-[9px] text-amber-400/70 font-mono">
+              ⚠ {entry.ph_count_draft}/{entry.ph_count_source} ph
+            </span>
+          )}
+
           {editing ? (
             <div className="flex flex-col gap-1.5">
               <Textarea
@@ -138,9 +146,28 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
               </div>
             </div>
           ) : (
-            <p className="text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground/70 font-mono">
-              {entry.translation ?? <span className="text-muted-foreground/40 italic font-sans">not translated</span>}
-            </p>
+            <div className="text-xs leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/70 font-mono">
+              {entry.refined_text && entry.refined_status !== 'unchanged' ? (
+                <>
+                  <span className="text-amber-400/70 mr-1 text-[9px]">
+                    {entry.refined_status === 'manual' ? '✎' : '✦'}
+                  </span>
+                  {entry.refined_text}
+                  {entry.refined_status === 'reviewed' && entry.translation && (
+                    <div className="mt-1 text-[9.5px] text-muted-foreground/30 line-through leading-relaxed">
+                      {entry.translation}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {entry.translation ?? <span className="text-muted-foreground/40 italic font-sans">not translated</span>}
+                  {entry.refined_status === 'unchanged' && (
+                    <span className="ml-1.5 text-[9px] text-emerald-500/50">✓</span>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       </TableCell>

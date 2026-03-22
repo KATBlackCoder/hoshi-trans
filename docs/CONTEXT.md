@@ -1,7 +1,7 @@
 # hoshi-trans — CONTEXT.md
 
 > Ce fichier est lu au début de chaque session de développement.
-> Version : 0.7 — Wolf RPG order_index fix + font override at injection
+> Version : 0.8 — Refine pass (second-pass quality review)
 
 ---
 
@@ -95,7 +95,8 @@ hoshi-trans/
 │   ├── hooks/
 │   │   ├── useOllamaStatus.ts        # invoke check_ollama
 │   │   ├── useProject.ts             # invoke get_project, get_entries...
-│   │   └── useTranslationBatch.ts    # invoke translate_batch + progress events
+│   │   ├── useTranslationBatch.ts    # invoke translate_batch + progress events
+│   │   └── useRefineBatch.ts         # invoke refine_batch + refine:progress/complete events
 │   ├── lib/
 │   │   └── constants.ts              # Ko-fi URL + adresses crypto
 │   ├── stores/
@@ -109,10 +110,10 @@ hoshi-trans/
 │   │   ├── commands/
 │   │   │   ├── mod.rs
 │   │   │   ├── project.rs            # create_project, get_projects, open_project, delete_project, update_wolf_rpg_font
-│   │   │   ├── entries.rs            # get_entries, update_translation, update_status
+│   │   │   ├── entries.rs            # get_entries, update_translation, update_status, update_refined_manual
 │   │   │   ├── extract.rs            # extract_strings → parse + insert batch DB + write .hoshi.json
 │   │   │   ├── inject.rs             # inject_translations → output/
-│   │   │   └── ollama.rs             # check_ollama, list_models, translate_batch
+│   │   │   └── ollama.rs             # check_ollama, list_models, translate_batch, refine_batch
 │   │   ├── db/
 │   │   │   ├── mod.rs                # init_pool()
 │   │   │   └── queries.rs            # Toutes les requêtes sqlx
@@ -148,7 +149,11 @@ hoshi-trans/
 │   │   ├── WolfTL-x86_64-pc-windows-msvc.exe
 │   │   └── UberWolf-x86_64-pc-windows-msvc.exe
 │   ├── migrations/
-│   │   └── 001_init.sql
+│   │   ├── 001_init.sql
+│   │   ├── 002_glossary.sql
+│   │   ├── 003_unique_entries.sql
+│   │   ├── 004_glossary_global.sql
+│   │   └── 005_refine_columns.sql    # 7 colonnes refine-pass nullable sur entries
 │   └── Cargo.toml
 │
 ├── .github/workflows/release.yml
@@ -270,7 +275,7 @@ pub enum EngineType {
 
 ## 🗄️ SQLite avec SQLx
 
-### Schema (`migrations/001_init.sql`)
+### Schema (`migrations/001_init.sql` + `005_refine_columns.sql`)
 
 ```sql
 CREATE TABLE IF NOT EXISTS projects (
@@ -295,7 +300,15 @@ CREATE TABLE IF NOT EXISTS entries (
     status       TEXT NOT NULL DEFAULT 'pending',
     context      TEXT,
     file_path    TEXT NOT NULL,
-    order_index  INTEGER NOT NULL DEFAULT 0,  -- position dans le fichier source, CRITIQUE pour l'injection
+    order_index      INTEGER NOT NULL DEFAULT 0,  -- position dans le fichier source, CRITIQUE pour l'injection
+    -- Refine-pass columns (migration 005) — all nullable, NULL before refine is run
+    refined_text     TEXT,
+    refined_status   TEXT,     -- 'reviewed' | 'unchanged' | 'manual'
+    ph_count_source  INTEGER,  -- count of {{...}} tokens in encoded source
+    ph_count_draft   INTEGER,  -- count of {{...}} tokens in encoded draft translation
+    ph_count_refined INTEGER,  -- count of {{...}} tokens in encoded refined text
+    text_type        TEXT,     -- 'dialogue' | 'item' | 'ui' | 'general' (inferred from file_path)
+    refined_at       INTEGER,  -- unix timestamp of last refine
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
@@ -364,16 +377,24 @@ pub trait GameEngine {
     ) -> anyhow::Result<()>;
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
 pub struct TranslationEntry {
     pub id: String,
     pub project_id: String,
     pub source_text: String,
     pub translation: Option<String>,
-    pub status: TranslationStatus,
+    pub status: String,         // stored as string in DB; use TranslationStatus for app logic
     pub context: Option<String>,
     pub file_path: String,
-    pub order_index: i64,  // position dans le fichier source — CRITIQUE pour injection dans le bon ordre
+    pub order_index: i64,       // CRITIQUE pour injection dans le bon ordre
+    // Refine-pass fields — None before refine is run
+    pub refined_text: Option<String>,
+    pub refined_status: Option<String>,   // "reviewed" | "unchanged" | "manual"
+    pub ph_count_source: Option<i64>,
+    pub ph_count_draft: Option<i64>,
+    pub ph_count_refined: Option<i64>,
+    pub text_type: Option<String>,
+    pub refined_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -381,6 +402,15 @@ pub struct TranslationEntry {
 pub enum TranslationStatus {
     Pending, Translated, Reviewed, Skipped,
     Error(String), Warning(String),
+}
+
+/// Status of the refine pass — stored as string in DB.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RefinedStatus {
+    Reviewed,   // thinking model changed at least one character
+    Unchanged,  // thinking model confirmed draft was already correct
+    Manual,     // user manually edited refined_text
 }
 ```
 
@@ -515,12 +545,14 @@ Tables complètes des codes par moteur → dans les `ENGINE_NOTES.md` respectifs
 ## 🤖 Ollama (Rust uniquement)
 
 ```rust
-// Deux states AtomicBool gérés via tauri::State :
-// - Arc<AtomicBool>   : cancel flag (reset à false au début de chaque batch)
-// - BatchRunning(Arc<AtomicBool>) : batch en cours (true pendant, false après)
+// Trois states AtomicBool gérés via tauri::State :
+// - Arc<AtomicBool>    : cancel flag partagé (reset à false au début de chaque batch/refine)
+// - BatchRunning(Arc<AtomicBool>)  : batch de traduction en cours
+// - RefineRunning(Arc<AtomicBool>) : batch de refine en cours
 // Déclarés dans lib.rs setup() :
 //   app.manage(Arc::new(AtomicBool::new(false)));
 //   app.manage(BatchRunning(Arc::new(AtomicBool::new(false))));
+//   app.manage(RefineRunning(Arc::new(AtomicBool::new(false))));
 
 #[tauri::command]
 pub async fn translate_batch(
@@ -554,12 +586,63 @@ pub async fn get_entries_by_ids(pool: &SqlitePool, ids: &[String]) -> anyhow::Re
 
 **Re-connexion après rechargement webview :** `useTranslationBatch` appelle `is_batch_running` au montage. Si `true`, re-subscribe à `translation:progress` + `translation:complete` → l'indicateur reprend sans intervention.
 
+### Refine pass (second-pass quality review)
+
+Le refine pass envoie les entrées déjà traduites à un modèle pour relecture et amélioration.
+
+```rust
+#[tauri::command]
+pub async fn refine_batch(
+    window: tauri::Window,
+    app: tauri::AppHandle,
+    pool: tauri::State<'_, SqlitePool>,
+    cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
+    refine_running: tauri::State<'_, RefineRunning>,
+    project_id: String,
+    model: String,          // même modèle que traduction ou un modèle thinking dédié
+    target_lang: String,
+    ollama_host: String,
+    concurrency: u32,       // cappé à 4 (thinking model lent)
+    entry_ids: Option<Vec<String>>,  // None = toutes les entrées traduites
+) -> Result<(), String>
+// Émet "refine:progress" et "refine:complete"
+```
+
+**Pipeline refine par entrée :**
+1. Récupère les entrées `status = 'translated' | 'warning:...'` avec `translation IS NOT NULL`
+2. Re-encode `source_text` et `translation` avec `wolf_ph::encode` / `rpgmaker_ph::encode` → les `{{...}}` tokens sont restaurés pour le modèle
+3. Envoie `(encoded_source, encoded_draft)` avec un prompt de critique
+4. Décode la réponse du modèle avec `decode()`
+5. Compare `decoded_refined.trim()` vs `draft.trim()` :
+   - Différent → `refined_status = "reviewed"`
+   - Identique → `refined_status = "unchanged"`
+6. Sauvegarde `refined_text`, `refined_status`, counts placeholders, `text_type`, `refined_at`
+7. Le statut `status` de l'entrée **n'est pas modifié** — seules les colonnes refine sont mises à jour
+
+**Export COALESCE :** `get_translated_entries_ordered` utilise `COALESCE(refined_text, translation) AS translation` — les textes raffinés sont automatiquement exportés à la place du draft.
+
+**Helpers :**
+- `count_placeholders(text)` — compte les `{{...}}` tokens (i64)
+- `infer_text_type(file_path)` — `'dialogue'` (mps/, common/, map) | `'item'` | `'ui'` | `'general'` — priorité dialogue > item > ui > general
+- `build_review_prompt(encoded_source, encoded_draft, ph_count_source, ph_count_draft, lang_name)` — prompt critique structuré
+
+**Commande manuelle :** `update_refined_manual(entry_id, refined_text)` — déclenché quand l'utilisateur édite manuellement un texte raffiné → `refined_status = "manual"`.
+
+**UI :**
+- Bouton **Refine** (amber) dans la toolbar de `TranslationView`, à côté de Translate
+- Refine all ou Refine N selected (mêmes sélections que Translate)
+- Filtre status `Reviewed` dans la table
+- `TranslationRow` : `✦` pour reviewed (avec draft barré en dessous), `✓` pour unchanged, `✎` pour manual
+- Badge `⚠ N/M ph` si `ph_count_draft ≠ ph_count_source`
+
 ### Types TypeScript miroir (`src/types/index.ts`)
 
 Ces types doivent correspondre exactement aux structs Rust sérialisées :
 
 ```ts
 // Miroir de TranslationEntry (Rust)
+export type RefinedStatus = 'reviewed' | 'unchanged' | 'manual'
+
 export interface TranslationEntry {
   id: string
   project_id: string
@@ -569,6 +652,14 @@ export interface TranslationEntry {
   context: string | null
   file_path: string
   order_index: number
+  // Refine-pass fields — null before refine is run
+  refined_text: string | null
+  refined_status: RefinedStatus | null
+  ph_count_source: number | null
+  ph_count_draft: number | null
+  ph_count_refined: number | null
+  text_type: string | null
+  refined_at: number | null
 }
 
 // Miroir de TranslationStatus (Rust enum sérialisé en snake_case)
@@ -656,3 +747,9 @@ Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
 - [x] Page Ollama (connexion, modèle, température, prompt, RunPod — layout 2 colonnes)
 - [x] Page Settings (thème dark/light + couleur accent, persisté dans settings.json)
 - [x] Page About (description app + Ko-fi + GitHub Sponsors + liens)
+- [x] Refine pass (second-pass quality review avec n'importe quel modèle)
+  - [x] Migration 005 : 7 colonnes refine nullable sur `entries`
+  - [x] `refine_batch` command + `RefineRunning` state + `cancel_refine` / `is_refine_running`
+  - [x] `update_refined_manual` pour éditions utilisateur
+  - [x] Export COALESCE : `refined_text` priorisé sur `translation` à l'injection
+  - [x] UI : bouton Refine (amber), filtre Reviewed, `✦`/`✓`/`✎` badges, ⚠ placeholder count diff

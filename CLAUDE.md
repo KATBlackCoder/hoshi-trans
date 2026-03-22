@@ -44,7 +44,7 @@ REACT → all UI, Zustand state, Tauri command invocations, file picker, notific
 ### Frontend (`src/`)
 
 - `features/` — one folder per major screen/flow: `onboarding`, `translation`, `file-import`, `file-export`, `settings`, `ollama`, `about`, `glossary`, `project-library`
-- `hooks/` — Tauri command wrappers (`useOllamaStatus`, `useProject`, `useTranslationBatch`)
+- `hooks/` — Tauri command wrappers (`useOllamaStatus`, `useProject`, `useTranslationBatch`, `useRefineBatch`)
 - `stores/appStore.ts` — Zustand (active project, batch status, Ollama config + app settings). Exports `applyTheme()` to toggle dark/light class and CSS variable `--primary`.
 - `types/index.ts` — TypeScript mirror types for all Rust structs — must stay in sync
 - `components/ui/` — shadcn/ui components, do not modify
@@ -66,7 +66,7 @@ Frontend stack: React 19, TypeScript strict, Tailwind CSS + shadcn/ui, Zustand, 
 - `engines/` — one module per game engine, each implements the `GameEngine` trait
   - `common/` — shared `skip.rs` (universal skip logic) and `placeholders.rs` (JP detection, placeholder validation)
   - `rpgmaker_mv_mz/`, `wolf_rpg/`, `bakin/` — engine-specific extractor, injector, placeholders, skip
-- `models/` — `TranslationEntry`, `TranslationStatus`, `ProjectFile`, `ProjectStats`, `EngineType`
+- `models/` — `TranslationEntry`, `TranslationStatus`, `RefinedStatus`, `ProjectFile`, `ProjectStats`, `EngineType`
 
 ### GameEngine trait
 
@@ -143,18 +143,31 @@ SQLite via `sqlx`, stored in `app_data_dir/hoshi-trans.db`. Migrations in `src-t
 > **Note:** `src-tauri/.env` with `DATABASE_URL=sqlite:./dev.db` is required for sqlx compile-time macro checks.
 > **Note:** Use `sqlx::query` / `sqlx::query_as` (runtime) instead of `sqlx::query!` macros — the macros require a live DB at compile time which breaks CI and cold builds.
 
-Key tables: `projects` (one row per game+language), `entries` (all translatable strings with `order_index`, `status`, `file_path`).
+Key tables: `projects` (one row per game+language), `entries` (all translatable strings with `order_index`, `status`, `file_path`, plus 7 nullable refine-pass columns added in migration `005_refine_columns.sql`).
 
 ### Batch translation state
 
-Two `Arc<AtomicBool>` states managed via `tauri::State`:
-- `Arc<AtomicBool>` — cancel flag (reset to false at batch start)
-- `BatchRunning(Arc<AtomicBool>)` — true while batch runs, false when done
+Three `Arc<AtomicBool>` states managed via `tauri::State`:
+- `Arc<AtomicBool>` — cancel flag shared by both translate and refine (reset to false at start)
+- `BatchRunning(Arc<AtomicBool>)` — true while translate batch runs, false when done
+- `RefineRunning(Arc<AtomicBool>)` — true while refine batch runs, false when done
 
 `translate_batch` accepts optional `entry_ids: Option<Vec<String>>` — when provided, translates those specific entries regardless of status (used for single-row and multi-selection translate).
 
 Events emitted: `translation:progress` (per entry) and `translation:complete` (on finish).
 `is_batch_running` command allows the frontend to re-subscribe after webview reload.
+
+### Refine pass (second-pass quality review)
+
+`refine_batch` sends already-translated entries to any Ollama model for critique and improvement.
+
+- Only processes entries with `status = 'translated' | 'warning:...'` and non-null `translation`
+- Re-encodes `source_text` + `translation` → `{{...}}` form before sending to model
+- After model response: decodes output, compares to draft → sets `refined_status` (`reviewed` | `unchanged`)
+- Stores `refined_text`, placeholder counts, `text_type`, `refined_at` — never modifies `status`
+- Export uses `COALESCE(refined_text, translation)` — refined text is used automatically at injection
+- Events: `refine:progress` (per entry) and `refine:complete` (on finish)
+- `update_refined_manual` command for user manual edits → `refined_status = 'manual'`
 
 ## TypeScript types
 

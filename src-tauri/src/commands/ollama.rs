@@ -284,9 +284,298 @@ pub async fn translate_batch(
     Ok(())
 }
 
+/// Count the number of `{{...}}` placeholder tokens in a string.
+/// Used to compare placeholder counts between source, draft, and refined text.
+pub fn count_placeholders(text: &str) -> i64 {
+    static PH_RE: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"\{\{[^}]+\}\}").unwrap());
+    PH_RE.find_iter(text).count() as i64
+}
+
+/// Infer the semantic type of a string from its file path.
+/// Used to give the review model additional context.
+pub fn infer_text_type(file_path: &str) -> &'static str {
+    let lower = file_path.to_lowercase();
+    let item_keywords = ["item", "weapon", "armor", "skill", "actor", "class", "enemy",
+                         "troop", "state", "アイテム", "武器", "防具", "スキル"];
+    let ui_keywords = ["system", "game.json"];
+    let dialogue_keywords = ["mps/", "common/", "map"];
+
+    // Check dialogue path patterns first — common/ and mps/ are always dialogue
+    // regardless of what's in the filename (e.g. アイテム増減 common event)
+    if dialogue_keywords.iter().any(|k| lower.contains(k)) {
+        "dialogue"
+    } else if item_keywords.iter().any(|k| lower.contains(k)) {
+        "item"
+    } else if ui_keywords.iter().any(|k| lower.contains(k)) {
+        "ui"
+    } else {
+        "general"
+    }
+}
+
+/// Build the critique prompt sent to the thinking model during the refine pass.
+/// The model receives encoded source + encoded draft so it can reason about placeholders.
+pub fn build_review_prompt(
+    encoded_source: &str,
+    encoded_draft: &str,
+    ph_count_source: i64,
+    ph_count_draft: i64,
+    lang_name: &str,
+) -> String {
+    format!(
+        "Review this Japanese-to-{lang} game translation.\n\
+         Source (JP): {source}\n\
+         Draft translation: {draft}\n\
+         Source has {ph_src} placeholder token(s). Draft has {ph_draft} placeholder token(s).\n\n\
+         Review criteria:\n\
+         1. Placeholder count: if counts differ, fix the draft to preserve all placeholders.\n\
+         2. Accuracy: faithfully represent the Japanese meaning and tone.\n\
+         3. Fluency: natural, idiomatic {lang}.\n\
+         4. Register: preserve emotional register (dramatic, casual, cute, etc.).\n\n\
+         If the draft is already correct and natural, output it EXACTLY unchanged.\n\
+         If you can improve it, output ONLY the improved translation — no commentary.",
+        lang = lang_name,
+        source = encoded_source,
+        draft = encoded_draft,
+        ph_src = ph_count_source,
+        ph_draft = ph_count_draft,
+    )
+}
+
+/// Newtype for the refine-batch running flag (distinct from BatchRunning).
+pub struct RefineRunning(pub Arc<AtomicBool>);
+
+#[tauri::command]
+pub async fn cancel_refine(cancel_flag: tauri::State<'_, Arc<AtomicBool>>) -> Result<(), String> {
+    cancel_flag.store(true, Ordering::Relaxed);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn is_refine_running(refine_running: tauri::State<'_, RefineRunning>) -> Result<bool, String> {
+    Ok(refine_running.inner().0.load(Ordering::Relaxed))
+}
+
+/// Refine pass: sends already-translated entries to a thinking model for quality review.
+///
+/// - Sends (encoded_source, encoded_draft) to the model with a critique prompt.
+/// - If model output differs from draft → `refined_status = "reviewed"`.
+/// - If model output matches draft → `refined_status = "unchanged"`.
+/// - Placeholder counts are stored for display in the UI.
+/// - Entry `status` (translated/warning) is NOT modified — only refine columns are updated.
+#[tauri::command]
+pub async fn refine_batch(
+    window: tauri::Window,
+    app: tauri::AppHandle,
+    pool: tauri::State<'_, SqlitePool>,
+    cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
+    refine_running: tauri::State<'_, RefineRunning>,
+    project_id: String,
+    model: String,
+    target_lang: String,
+    ollama_host: String,
+    concurrency: u32,
+    entry_ids: Option<Vec<String>>,
+) -> Result<(), String> {
+    use tokio::sync::Semaphore;
+
+    cancel_flag.store(false, Ordering::Relaxed);
+    refine_running.inner().0.store(true, Ordering::Relaxed);
+
+    let engine = queries::get_project_engine_by_id(pool.inner(), &project_id)
+        .await
+        .map_err(|e| e.to_string())?
+        .unwrap_or_default();
+    let is_wolf = engine == "wolf_rpg";
+
+    let ids = entry_ids.unwrap_or_default();
+    let entries = queries::get_refinable_entries(pool.inner(), &project_id, &ids)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let total = entries.len() as u32;
+    let concurrency = concurrency.max(1).min(4) as usize; // cap at 4 for thinking model
+    let semaphore = Arc::new(Semaphore::new(concurrency));
+    let done_count = Arc::new(AtomicU32::new(0));
+    let cancel = cancel_flag.inner().clone();
+    let pool_inner = pool.inner().clone();
+    let mut join_set = tokio::task::JoinSet::new();
+
+    for entry in entries {
+        if cancel.load(Ordering::Relaxed) { break; }
+        let permit = semaphore.clone().acquire_owned().await.unwrap();
+        if cancel.load(Ordering::Relaxed) { break; }
+
+        let pool = pool_inner.clone();
+        let cancel = cancel.clone();
+        let window = window.clone();
+        let model = model.clone();
+        let target_lang = target_lang.clone();
+        let ollama_host = ollama_host.clone();
+        let done_count = done_count.clone();
+
+        join_set.spawn(async move {
+            let _permit = permit;
+            if cancel.load(Ordering::Relaxed) { return; }
+
+            let draft = match &entry.translation {
+                Some(t) => t.clone(),
+                None => return,
+            };
+
+            // Encode both source and draft so the model reasons in {{...}} form
+            let encoded_source = if is_wolf {
+                wolf_ph::encode(&entry.source_text)
+            } else {
+                rpgmaker_ph::encode(&entry.source_text)
+            };
+            let encoded_draft = if is_wolf {
+                wolf_ph::encode(&draft)
+            } else {
+                rpgmaker_ph::encode(&draft)
+            };
+
+            let ph_count_source = count_placeholders(&encoded_source);
+            let ph_count_draft = count_placeholders(&encoded_draft);
+
+            let lang_name = match target_lang.as_str() {
+                "fr" => "French",
+                _ => "English",
+            };
+            let prompt = build_review_prompt(
+                &encoded_source,
+                &encoded_draft,
+                ph_count_source,
+                ph_count_draft,
+                lang_name,
+            );
+
+            let ollama = ollama_from_url(&ollama_host);
+            let options = ollama_rs::models::ModelOptions::default().temperature(0.0);
+            let request = GenerationRequest::new(model.clone(), prompt).options(options);
+
+            match ollama.generate(request).await {
+                Ok(response) => {
+                    let raw = response.response.trim().replace("\\\"", "\"");
+                    let (decoded_refined, _intact) = if is_wolf {
+                        wolf_ph::decode(&raw)
+                    } else {
+                        rpgmaker_ph::decode(&raw)
+                    };
+
+                    let ph_count_refined = count_placeholders(&raw);
+
+                    let refined_status = if decoded_refined.trim() == draft.trim() {
+                        "unchanged"
+                    } else {
+                        "reviewed"
+                    };
+
+                    let text_type = infer_text_type(&entry.file_path);
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs() as i64;
+
+                    let _ = queries::update_refined(
+                        &pool,
+                        &entry.id,
+                        &decoded_refined,
+                        refined_status,
+                        ph_count_source,
+                        ph_count_draft,
+                        ph_count_refined,
+                        text_type,
+                        now,
+                    ).await;
+                }
+                Err(e) => {
+                    eprintln!("refine error for {}: {}", entry.id, e);
+                }
+            }
+
+            let done = done_count.fetch_add(1, Ordering::Relaxed) + 1;
+            let _ = window.emit(
+                "refine:progress",
+                TranslationProgress { done, total, entry_id: entry.id.clone() },
+            );
+        });
+    }
+
+    while join_set.join_next().await.is_some() {}
+
+    use tauri_plugin_notification::NotificationExt;
+    let done = done_count.load(Ordering::Relaxed);
+    let _ = app
+        .notification()
+        .builder()
+        .title("hoshi-trans")
+        .body(&format!("Refine complete: {} entries reviewed.", done))
+        .show();
+
+    refine_running.inner().0.store(false, Ordering::Relaxed);
+    let _ = window.emit("refine:complete", ());
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_count_placeholders_zero() {
+        assert_eq!(count_placeholders("Hello world"), 0);
+    }
+
+    #[test]
+    fn test_count_placeholders_one() {
+        assert_eq!(count_placeholders("{{WOLF_NL}}"), 1);
+    }
+
+    #[test]
+    fn test_count_placeholders_multiple() {
+        assert_eq!(count_placeholders("{{WOLF_AT[1]}}{{WOLF_NL}}\"{{WOLF_CSELF[8]}}\" obtained."), 3);
+    }
+
+    #[test]
+    fn test_infer_text_type_dialogue() {
+        assert_eq!(infer_text_type("mps/Map001.json"), "dialogue");
+        assert_eq!(infer_text_type("common/0_○アイテム増減.json"), "dialogue");
+    }
+
+    #[test]
+    fn test_infer_text_type_item() {
+        assert_eq!(infer_text_type("data/Items.json"), "item");
+        assert_eq!(infer_text_type("data/Weapons.json"), "item");
+        assert_eq!(infer_text_type("data/Skills.json"), "item");
+    }
+
+    #[test]
+    fn test_infer_text_type_ui() {
+        assert_eq!(infer_text_type("Game.json"), "ui");
+        assert_eq!(infer_text_type("data/System.json"), "ui");
+    }
+
+    #[test]
+    fn test_infer_text_type_general_fallback() {
+        assert_eq!(infer_text_type("unknown/File.json"), "general");
+    }
+
+    #[test]
+    fn test_build_review_prompt_includes_source_and_draft() {
+        let prompt = build_review_prompt("こんにちは", "Hello", 0, 0, "English");
+        assert!(prompt.contains("こんにちは"));
+        assert!(prompt.contains("Hello"));
+        assert!(prompt.contains("English"));
+    }
+
+    #[test]
+    fn test_build_review_prompt_includes_placeholder_counts() {
+        let prompt = build_review_prompt("{{PH:n[1]}}は戦士", "{{PH:n[1]}} is a warrior", 1, 1, "English");
+        assert!(prompt.contains("1"));
+    }
 
     #[test]
     fn test_format_glossary_block_empty() {

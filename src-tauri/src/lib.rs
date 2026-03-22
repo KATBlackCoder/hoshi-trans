@@ -4,6 +4,7 @@ mod engines;
 mod models;
 
 pub use commands::ollama::BatchRunning;
+pub use commands::ollama::RefineRunning;
 use sqlx::SqlitePool;
 use std::sync::{atomic::AtomicBool, Arc};
 use tauri::Manager;
@@ -33,6 +34,7 @@ pub fn run() {
             app.manage(pool);
             app.manage(Arc::new(AtomicBool::new(false))); // cancel flag
             app.manage(BatchRunning(Arc::new(AtomicBool::new(false)))); // batch running flag
+            app.manage(RefineRunning(Arc::new(AtomicBool::new(false)))); // refine running flag
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -42,6 +44,10 @@ pub fn run() {
             commands::ollama::translate_batch,
             commands::ollama::cancel_batch,
             commands::ollama::is_batch_running,
+            commands::ollama::refine_batch,
+            commands::ollama::is_refine_running,
+            commands::ollama::cancel_refine,
+            commands::entries::update_refined_manual,
             commands::project::create_project,
             commands::project::open_project,
             commands::project::get_projects,

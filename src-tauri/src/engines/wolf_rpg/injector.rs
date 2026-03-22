@@ -260,6 +260,13 @@ mod tests {
             context: Some(ctx.into()),
             file_path: file_path.into(),
             order_index,
+            refined_text: None,
+            refined_status: None,
+            ph_count_source: None,
+            ph_count_draft: None,
+            ph_count_refined: None,
+            text_type: None,
+            refined_at: None,
         }
     }
 

@@ -34,6 +34,8 @@ export interface ProjectFile {
   wolf_rpg_font_size?: number | null
 }
 
+export type RefinedStatus = 'reviewed' | 'unchanged' | 'manual'
+
 export interface TranslationEntry {
   id: string
   project_id: string
@@ -43,6 +45,14 @@ export interface TranslationEntry {
   context: string | null
   file_path: string
   order_index: number
+  // Refine-pass fields — null before refine is run
+  refined_text: string | null
+  refined_status: RefinedStatus | null
+  ph_count_source: number | null
+  ph_count_draft: number | null
+  ph_count_refined: number | null
+  text_type: string | null
+  refined_at: number | null
 }
 
 // Payload of the "translation:progress" Tauri event

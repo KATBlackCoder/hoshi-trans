@@ -116,7 +116,9 @@ pub async fn get_entries(
     file_filter: Option<&str>,
 ) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
     let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
-        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index
+        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index,
+                refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
+                text_type, refined_at
          FROM entries
          WHERE project_id = ?
          AND (? IS NULL OR status = ?)
@@ -187,7 +189,12 @@ pub async fn get_translated_entries_ordered(
     project_id: &str,
 ) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
     let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
-        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index
+        "SELECT id, project_id,
+                source_text,
+                COALESCE(refined_text, translation) AS translation,
+                status, context, file_path, order_index,
+                refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
+                text_type, refined_at
          FROM entries
          WHERE project_id = ?
          AND status IN ('translated', 'reviewed', 'warning')
@@ -216,7 +223,9 @@ pub async fn get_entries_by_ids(
     }
     let placeholders = (0..ids.len()).map(|_| "?").collect::<Vec<_>>().join(", ");
     let sql = format!(
-        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index
+        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index,
+                refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
+                text_type, refined_at
          FROM entries WHERE id IN ({}) ORDER BY file_path, order_index",
         placeholders
     );
@@ -317,6 +326,87 @@ pub async fn upsert_glossary_term(
         }
     }
     Ok(())
+}
+
+/// Write refined output back to the entry after the review pass.
+pub async fn update_refined(
+    pool: &SqlitePool,
+    entry_id: &str,
+    refined_text: &str,
+    refined_status: &str,   // "reviewed" | "unchanged"
+    ph_count_source: i64,
+    ph_count_draft: i64,
+    ph_count_refined: i64,
+    text_type: &str,
+    refined_at: i64,
+) -> anyhow::Result<()> {
+    sqlx::query(
+        "UPDATE entries
+         SET refined_text = ?, refined_status = ?,
+             ph_count_source = ?, ph_count_draft = ?, ph_count_refined = ?,
+             text_type = ?, refined_at = ?
+         WHERE id = ?",
+    )
+    .bind(refined_text)
+    .bind(refined_status)
+    .bind(ph_count_source)
+    .bind(ph_count_draft)
+    .bind(ph_count_refined)
+    .bind(text_type)
+    .bind(refined_at)
+    .bind(entry_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// User manually edited refined_text — mark as manual.
+pub async fn update_refined_manual(
+    pool: &SqlitePool,
+    entry_id: &str,
+    refined_text: &str,
+) -> anyhow::Result<()> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+    sqlx::query(
+        "UPDATE entries SET refined_text = ?, refined_status = 'manual', refined_at = ? WHERE id = ?",
+    )
+    .bind(refined_text)
+    .bind(now)
+    .bind(entry_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Returns entries eligible for the refine pass: status is 'translated' or 'warning:...'.
+/// If `ids` is non-empty, limits to those specific IDs (and still checks status).
+pub async fn get_refinable_entries(
+    pool: &SqlitePool,
+    project_id: &str,
+    ids: &[String],
+) -> anyhow::Result<Vec<crate::models::TranslationEntry>> {
+    let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
+        "SELECT id, project_id, source_text, translation, status, context, file_path, order_index,
+                refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
+                text_type, refined_at
+         FROM entries
+         WHERE project_id = ?
+           AND (status = 'translated' OR status LIKE 'warning:%')
+           AND translation IS NOT NULL
+         ORDER BY file_path, order_index",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+
+    if ids.is_empty() {
+        return Ok(rows);
+    }
+    let id_set: std::collections::HashSet<&str> = ids.iter().map(|s| s.as_str()).collect();
+    Ok(rows.into_iter().filter(|e| id_set.contains(e.id.as_str())).collect())
 }
 
 pub async fn delete_glossary_term(pool: &SqlitePool, id: &str) -> anyhow::Result<()> {
@@ -421,6 +511,71 @@ mod glossary_tests {
 }
 
 #[cfg(test)]
+mod refine_tests {
+    use super::*;
+    use crate::db::init_pool;
+
+    #[tokio::test]
+    async fn test_update_refined_sets_reviewed_status() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index)
+             VALUES ('e1', 'p1', 'こんにちは', 'translated', 'f', 0)"
+        ).execute(&pool).await.unwrap();
+
+        update_refined(&pool, "e1", "Hello.", "reviewed", 0, 0, 0, "dialogue", 1_000_000).await.unwrap();
+
+        let row: (Option<String>, Option<String>, Option<i64>, Option<i64>) = sqlx::query_as(
+            "SELECT refined_text, refined_status, ph_count_source, ph_count_draft FROM entries WHERE id = 'e1'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0.as_deref(), Some("Hello."));
+        assert_eq!(row.1.as_deref(), Some("reviewed"));
+        assert_eq!(row.2, Some(0));
+        assert_eq!(row.3, Some(0));
+    }
+
+    #[tokio::test]
+    async fn test_get_refinable_entries_returns_translated() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', 'こんにちは', 'Hello', 'translated', 'f', 0)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index)
+             VALUES ('e2', 'p1', 'ありがとう', 'pending', 'f', 1)"
+        ).execute(&pool).await.unwrap();
+
+        let refinable = get_refinable_entries(&pool, "p1", &[] as &[String]).await.unwrap();
+        assert_eq!(refinable.len(), 1);
+        assert_eq!(refinable[0].id, "e1");
+    }
+
+    #[tokio::test]
+    async fn test_update_refined_manual() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', 'こんにちは', 'Hello', 'translated', 'f', 0)"
+        ).execute(&pool).await.unwrap();
+
+        update_refined_manual(&pool, "e1", "Hi there.").await.unwrap();
+
+        let row: (Option<String>, Option<String>) = sqlx::query_as(
+            "SELECT refined_text, refined_status FROM entries WHERE id = 'e1'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0.as_deref(), Some("Hi there."));
+        assert_eq!(row.1.as_deref(), Some("manual"));
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::init_pool;
@@ -473,6 +628,13 @@ mod tests {
             context: None,
             file_path: "data/Map001.json".into(),
             order_index: 0,
+            refined_text: None,
+            refined_status: None,
+            ph_count_source: None,
+            ph_count_draft: None,
+            ph_count_refined: None,
+            text_type: None,
+            refined_at: None,
         }];
 
         insert_entries_batch(&pool, &entries).await.unwrap();
@@ -567,6 +729,13 @@ mod tests {
             context: None,
             file_path: "data/Actors.json".into(),
             order_index: order,
+            refined_text: None,
+            refined_status: None,
+            ph_count_source: None,
+            ph_count_draft: None,
+            ph_count_refined: None,
+            text_type: None,
+            refined_at: None,
         };
 
         // First extraction

@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TranslationRow } from './TranslationRow'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
+import { useRefineBatch } from '@/hooks/useRefineBatch'
+import { useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Bug } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Bug, Wand2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { openPath } from '@tauri-apps/plugin-opener'
 import type { TranslationEntry } from '@/types'
@@ -18,6 +20,7 @@ const STATUS_FILTERS = [
   { label: 'All', value: undefined },
   { label: 'Pending', value: 'pending' },
   { label: 'Translated', value: 'translated' },
+  { label: 'Reviewed', value: 'reviewed' },
   { label: 'Warning', value: 'warning' },
   { label: 'Error', value: 'error' },
 ]
@@ -75,6 +78,9 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const [selectedModel, setSelectedModel] = useState<string>('')
   const model = selectedModel || availableModels[0] || ''
   const { progress, running, start, cancel } = useTranslationBatch()
+  const { progress: refineProgress, running: refining, start: startRefine, cancel: cancelRefine } = useRefineBatch()
+  // Default: same model as translation (user can pick a dedicated thinking model if available)
+  const effectiveRefineModel = model
   const [resetting, setResetting] = useState(false)
   const [lastResetCount, setLastResetCount] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -169,6 +175,17 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
       await openPath(path)
     },
   })
+
+  // Refresh table when refine batch completes
+  useEffect(() => {
+    if (!refining) refetch()
+  }, [refining])
+
+  function handleRefine() {
+    const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined
+    setSelectedIds(new Set())
+    startRefine(projectId, effectiveRefineModel, settings.targetLang, settings.ollamaHost, 1, ids)
+  }
 
   async function handleReset() {
     setResetting(true)
@@ -276,6 +293,42 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
           >
             {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             {running ? 'Translating…' : 'Translate'}
+          </Button>
+
+          {/* Refine controls */}
+          {refining && (
+            <div className="flex items-center gap-2 ml-1">
+              <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums">
+                {refineProgress?.done}<span className="opacity-40">/</span>{refineProgress?.total}
+              </span>
+              <Button variant="ghost" size="sm" onClick={cancelRefine} className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-destructive">
+                <X className="w-3 h-3 mr-1" />Cancel refine
+              </Button>
+            </div>
+          )}
+
+          {selectedIds.size > 0 && !running && !refining && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRefine}
+              disabled={!effectiveRefineModel}
+              className="h-7 gap-1.5 text-xs font-medium px-3 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              Refine {selectedIds.size} selected
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefine}
+            disabled={running || refining || !effectiveRefineModel}
+            className="h-7 gap-1.5 text-xs font-medium px-3 border-amber-500/30 text-amber-400/80 hover:bg-amber-500/10"
+          >
+            {refining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+            {refining ? 'Refining…' : 'Refine'}
           </Button>
         </div>
       </div>

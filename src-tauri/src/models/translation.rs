@@ -8,6 +8,14 @@ pub struct TranslationEntry {
     pub context: Option<String>,
     pub file_path: String,
     pub order_index: i64, // CRITICAL for injection ordering
+    // Refine-pass fields (all nullable — None before refine is run)
+    pub refined_text: Option<String>,
+    pub refined_status: Option<String>,
+    pub ph_count_source: Option<i64>,
+    pub ph_count_draft: Option<i64>,
+    pub ph_count_refined: Option<i64>,
+    pub text_type: Option<String>,
+    pub refined_at: Option<i64>,
 }
 
 /// Rust enum for app logic — serialized as snake_case strings for IPC
@@ -35,6 +43,28 @@ impl TranslationStatus {
     }
 }
 
+/// Status of the refine pass for an entry.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RefinedStatus {
+    /// Thinking model changed at least one character.
+    Reviewed,
+    /// Thinking model returned identical text — draft was already correct.
+    Unchanged,
+    /// User manually edited the refined_text.
+    Manual,
+}
+
+impl RefinedStatus {
+    pub fn as_db_str(&self) -> &'static str {
+        match self {
+            Self::Reviewed  => "reviewed",
+            Self::Unchanged => "unchanged",
+            Self::Manual    => "manual",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,5 +87,20 @@ mod tests {
     fn test_as_db_str() {
         assert_eq!(TranslationStatus::Pending.as_db_str(), "pending");
         assert_eq!(TranslationStatus::Error("x".into()).as_db_str(), "error:x");
+    }
+
+    #[test]
+    fn test_refined_status_reviewed_str() {
+        assert_eq!(RefinedStatus::Reviewed.as_db_str(), "reviewed");
+    }
+
+    #[test]
+    fn test_refined_status_unchanged_str() {
+        assert_eq!(RefinedStatus::Unchanged.as_db_str(), "unchanged");
+    }
+
+    #[test]
+    fn test_refined_status_manual_str() {
+        assert_eq!(RefinedStatus::Manual.as_db_str(), "manual");
     }
 }

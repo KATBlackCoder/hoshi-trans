@@ -222,6 +222,13 @@ mod tests {
             context: Some(ctx.into()),
             file_path: "data/System.json".into(),
             order_index: 0,
+            refined_text: None,
+            refined_status: None,
+            ph_count_source: None,
+            ph_count_draft: None,
+            ph_count_refined: None,
+            text_type: None,
+            refined_at: None,
         }
     }
 
