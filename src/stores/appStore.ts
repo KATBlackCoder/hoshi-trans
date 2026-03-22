@@ -49,12 +49,23 @@ interface AppStore {
   settings: Settings
   loadSettings: () => Promise<void>
   updateSettings: (patch: Partial<Settings>) => Promise<void>
+  batchStartedAt: number | null
+  batchLastDuration: number | null
+  setBatchStarted: () => void
+  setBatchFinished: () => void
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
   ollamaOnline: false,
   availableModels: [],
   setOllamaStatus: (online, models) => set({ ollamaOnline: online, availableModels: models }),
+  batchStartedAt: null,
+  batchLastDuration: null,
+  setBatchStarted: () => set({ batchStartedAt: Date.now() }),
+  setBatchFinished: () => set((s) => ({
+    batchLastDuration: s.batchStartedAt ? Date.now() - s.batchStartedAt : s.batchLastDuration,
+    batchStartedAt: null,
+  })),
 
   settings: DEFAULT_SETTINGS,
 

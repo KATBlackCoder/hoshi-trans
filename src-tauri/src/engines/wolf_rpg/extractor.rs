@@ -146,12 +146,35 @@ fn extract_mps_file(
     }
 }
 
+/// Returns true for Wolf RPG common event files that are engine/system internals.
+/// These files contain logic for the RPG system framework (menus, battle engine,
+/// shop, status screens) — never direct player-visible dialogue.
+/// Prefixes: X[共] (common internal), X[移] (map internal), X[戦] (battle internal).
+fn is_engine_internal_common(file_path: &str) -> bool {
+    let name = file_path.split('/').last().unwrap_or(file_path);
+    // Strip numeric prefix (e.g. "48_X[共]..." → "X[共]...")
+    let after_num = name
+        .find(|c: char| !c.is_ascii_digit())
+        .map(|i| name[i..].trim_start_matches('_'))
+        .unwrap_or(name);
+    after_num.starts_with("X[共]")
+        || after_num.starts_with("X[移]")
+        || after_num.starts_with("X[戦]")
+        || after_num.starts_with("X┣")
+        || after_num.starts_with("X┗")
+        || after_num.starts_with("X┃")
+        || after_num.starts_with("X◆")
+}
+
 fn extract_common_file(
     json: &serde_json::Value,
     project_id: &str,
     file_path: &str,
     entries: &mut Vec<TranslationEntry>,
 ) {
+    if is_engine_internal_common(file_path) {
+        return;
+    }
     if let Some(commands) = json["commands"].as_array() {
         extract_command_list(commands, project_id, file_path, "cmd", None, entries);
     }
@@ -462,6 +485,26 @@ mod tests {
         assert!(entries.iter().any(|e| e.source_text == "敵にダメージを与える"));
         // Numeric value not extracted
         assert!(!entries.iter().any(|e| e.source_text == "10"));
+    }
+
+    #[test]
+    fn test_skip_engine_internal_common() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("mps")).unwrap();
+        std::fs::create_dir_all(dir.path().join("db")).unwrap();
+        // Internal files — should be skipped
+        write_file(dir.path(), "common/48_X[共]基本ｼｽﾃﾑ自動初期化.json", r#"{"id":48,"name":"X[共]基本ｼｽﾃﾑ自動初期化","commands":[{"code":101,"codeStr":"Message","stringArgs":["内部メッセージ"],"index":0}]}"#);
+        write_file(dir.path(), "common/70_X[移]パラメータ増減.json", r#"{"id":70,"name":"X[移]パラメータ増減","commands":[{"code":101,"codeStr":"Message","stringArgs":["内部移動"],"index":0}]}"#);
+        write_file(dir.path(), "common/135_X[戦]パラメータ増減.json", r#"{"id":135,"name":"X[戦]パラメータ増減","commands":[{"code":101,"codeStr":"Message","stringArgs":["内部戦闘"],"index":0}]}"#);
+        // Game-specific — should be extracted
+        write_file(dir.path(), "common/212_相談コマンド.json", r#"{"id":212,"name":"相談コマンド","commands":[{"code":101,"codeStr":"Message","stringArgs":["ウルファール"],"index":0}]}"#);
+
+        let entries = extract_sync(dir.path(), "proj1").unwrap();
+        assert_eq!(entries.len(), 1, "Only game-specific common events should be extracted");
+        assert_eq!(entries[0].source_text, "ウルファール");
+        assert!(!entries.iter().any(|e| e.source_text == "内部メッセージ"));
+        assert!(!entries.iter().any(|e| e.source_text == "内部移動"));
+        assert!(!entries.iter().any(|e| e.source_text == "内部戦闘"));
     }
 
     #[test]

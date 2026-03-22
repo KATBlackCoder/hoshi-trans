@@ -2,10 +2,13 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useState, useCallback, useEffect } from 'react'
 import type { TranslationProgress } from '@/types'
+import { useAppStore } from '@/stores/appStore'
 
 export function useTranslationBatch() {
   const [progress, setProgress] = useState<TranslationProgress | null>(null)
   const [running, setRunning] = useState(false)
+  const setBatchStarted = useAppStore((s) => s.setBatchStarted)
+  const setBatchFinished = useAppStore((s) => s.setBatchFinished)
 
   // Re-subscribe if a batch was already running when this hook mounted
   // (e.g. the webview reloaded mid-batch)
@@ -46,6 +49,7 @@ export function useTranslationBatch() {
   ) => {
     setRunning(true)
     setProgress(null)
+    setBatchStarted()
 
     const unlisten = await listen<TranslationProgress>(
       'translation:progress',
@@ -67,6 +71,7 @@ export function useTranslationBatch() {
     } finally {
       unlisten()
       setRunning(false)
+      setBatchFinished()
     }
   }, [])
 

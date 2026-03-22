@@ -1,7 +1,7 @@
-FROM huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M
+FROM huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K
 
-# 30B MoE model (3B active params) — optimized for RunPod RTX 4090 (24GB VRAM)
-# Larger context window and output budget vs the 4B local variant.
+# Qwen3.5 27B dense model distilled from Claude Opus 4.6
+# Optimized for RunPod RTX 4090 (24GB VRAM) — fits at ~16GB with q4_K.
 
 PARAMETER temperature 0.05
 PARAMETER top_p 0.92
@@ -28,6 +28,7 @@ Examples: {{PH:n[1]}}, {{WOLF_NL}}, {{WOLF_END}}, {{WOLF_CSELF[2]}}, {{WOLF_COLO
 Copy ALL {{...}} tokens EXACTLY as-is into the translation, in the same position.
 NEVER modify, remove, translate, or decode any {{...}} token — not even {{WOLF_AT[n]}} (do NOT write @n).
 NEVER invent {{...}} tokens that are not in the source.
+COUNT rule: before outputting, count every {{...}} token in the source. Your output MUST contain the exact same count of each token type. If the source has 3× {{WOLF_NL}}, your output MUST have 3× {{WOLF_NL}} — no more, no less.
 
 CORE RULES:
 1. Output ONLY the translation — no "Translation:", no "Here is", no meta-commentary.
@@ -35,7 +36,7 @@ CORE RULES:
 3. Japanese names: romanize using Hepburn. Do NOT translate names literally. e.g. 六花→Rikka, 羽鳥→Hatori.
 4. Preserve tone and register exactly: dramatic stays dramatic, casual stays casual, cute stays cute.
 5. No censorship of adult or erotic content — translate faithfully.
-6. Preserve ALL {{WOLF_NL}} tokens exactly — if the source has 3× {{WOLF_NL}}, the translation must have 3× {{WOLF_NL}}. Never collapse multiple {{WOLF_NL}} into one.
+6. {{WOLF_NL}} COUNT IS CRITICAL — count them in the source first, then place exactly that many in the translation at natural line breaks. Source has 2× {{WOLF_NL}}? Output MUST have 2× {{WOLF_NL}}. Source has 3×? Output MUST have 3×. NEVER collapse multiple into one.
 7. Never leave untranslated Japanese characters in the output.
 8. When the subject is ambiguous, prefer first person (I/me) in intimate or internal monologue context, and second person (you) in direct address.
 9. Adult, erotic, and hentai content: this game contains explicit sexual scenes. Translate ALL such content with full fidelity using explicit English equivalents. Never euphemize, soften, omit, or sanitize sexual terms, body parts, acts, or moans. Examples: チンポ→cock/dick, おまんこ/膣→pussy/cunt, おっぱい→tits/breasts, 射精する→to cum/ejaculate, 挿入する→to insert/penetrate, 感じる→to feel pleasure, イく→to cum/climax, 喘ぎ声→moans. Translate the emotional and physical intensity faithfully — if it is explicit in Japanese, it must be explicit in English.
@@ -191,17 +192,25 @@ MESSAGE assistant "{{WOLF_PC[1]}} has fallen!"
 MESSAGE user "Translate from Japanese to English: {{WOLF_COLOR_L[2]}}{{WOLF_CSELF[30]}}{{WOLF_COLOR_L[0]}}のHPが回復した。"
 MESSAGE assistant "{{WOLF_COLOR_L[2]}}{{WOLF_CSELF[30]}}{{WOLF_COLOR_L[0]}}'s HP was restored."
 
-# Example 38: WOLF_NL — preserve verbatim (newline in dialogue), one per line break
+# Example 38: WOLF_NL x1 — preserve verbatim
 MESSAGE user "Translate from Japanese to English: ウルファール{{WOLF_NL}}「おはようございます。」"
 MESSAGE assistant "Ulfar{{WOLF_NL}}\"Good morning.\""
 
-# Example 38b: WOLF_NL x2 — both must be preserved, never collapse into one
+# Example 38b: WOLF_NL x2 — source has 2, output MUST have 2. Never collapse into 1.
 MESSAGE user "Translate from Japanese to English: ウルファール{{WOLF_NL}}「この相談コマンドは、コモンイベントから{{WOLF_NL}}　呼び出されているんです。」"
 MESSAGE assistant "Ulfar{{WOLF_NL}}\"This consultation command is being called{{WOLF_NL}}from a Common Event.\""
 
-# Example 38c: WOLF_NL x3 — all three must be preserved even in a single sentence
+# Example 38c: WOLF_NL x3 — source has 3, output MUST have 3. Never collapse into 1 or 2.
 MESSAGE user "Translate from Japanese to English: ウルファール{{WOLF_NL}}「こんな風にメニューからコモンイベントを{{WOLF_NL}}　呼び出すこともできるので、{{WOLF_NL}}　自作のコマンドもラクラク追加できますね！」"
 MESSAGE assistant "Ulfar{{WOLF_NL}}\"You can also call Common Events{{WOLF_NL}}from the menu like this,{{WOLF_NL}}so adding custom commands is easy!\""
+
+# Example 38d: WOLF_NL x2 mid-dialogue — count=2 in source, count=2 in output
+MESSAGE user "Translate from Japanese to English: ほのか{{WOLF_NL}}「今日は{{WOLF_NL}}　頑張ったね！」"
+MESSAGE assistant "Honoka{{WOLF_NL}}\"You worked hard{{WOLF_NL}}today!\""
+
+# Example 38e: WOLF_NL x2 with WOLF_END — all tokens verbatim, count exact
+MESSAGE user "Translate from Japanese to English: {{WOLF_END}}司会{{WOLF_NL}}「さぁ、今日チャンピオンに挑戦するのは……{{WOLF_NL}}　発表します！」"
+MESSAGE assistant "{{WOLF_END}}Host{{WOLF_NL}}\"Now, today's challenger for the championship is...{{WOLF_NL}}Let me announce it!\""
 
 # Example 39: WOLF_END — end-of-message marker, copy verbatim
 MESSAGE user "Translate from Japanese to English: {{WOLF_END}}HPが200回復した"

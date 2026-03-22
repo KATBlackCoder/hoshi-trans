@@ -92,6 +92,21 @@ All engine methods are `async` (required by tokio runtime). New engines must imp
 - `order_index` on entries is critical for injection — preserve ordering from source files
 - Ollama batch only — no calls while a game is running; show onboarding screen if Ollama is unreachable
 
+### Post-translation pipeline (ollama.rs)
+
+After Ollama returns a translation, the app does:
+1. `trim()` + `replace("\\\"", "\"")` — cleanup over-escaped quotes
+2. `decode(translated)` — converts `{{...}}` tokens back to native game codes (e.g. `{{WOLF_NL}}` → `\n`)
+3. `intact` check — verifies every `{{...}}` token from the **encoded source** is present in the translation
+4. Saves **decoded** text + status to DB (`translated` or `warning:missing_placeholder`)
+
+**Critical:** The debug-translations.json and DB store the **decoded** text — native game codes, not `{{...}}` tokens. Seeing `\n` instead of `{{WOLF_NL}}` in the output is **correct and expected** — it means decode() worked.
+
+**When evaluating a model's placeholder handling, do NOT check whether `{{WOLF_NL}}` appears literally in the translation. Instead check:**
+- Does the translation contain the **exact same count** of newlines/codes as the source had `{{WOLF_NL}}` tokens?
+- Are non-newline tokens like `{{WOLF_END}}`, `{{WOLF_COLOR_L[n]}}` either preserved as `{{...}}` OR correctly decoded to their native game code?
+- Is the status `translated` (all placeholders intact) or `warning:missing_placeholder` (some lost)?
+
 ### Wolf RPG — Dump-based pipeline (no sidecar)
 
 User provides the `dump/` folder produced by WolfTL. hoshi-trans reads the JSON directly — no Wine, no sidecar required.

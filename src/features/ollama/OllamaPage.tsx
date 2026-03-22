@@ -82,6 +82,7 @@ export function OllamaPage() {
   const [hostDraft, setHostDraft] = useState(settings.ollamaHost)
   const [saved, setSaved] = useState(false)
   const [runpodOpen, setRunpodOpen] = useState(false)
+  const [runpodModel, setRunpodModel] = useState<'30b' | '27b'>('27b')
 
   const isRunPod = settings.ollamaHost.includes('runpod.net')
 
@@ -228,28 +229,66 @@ export function OllamaPage() {
 
               {runpodOpen && (
                 <div className="px-3.5 pb-3.5 border-t border-border/20 flex flex-col gap-3 pt-3">
-                  <p className="text-[10.5px] text-muted-foreground/50 leading-relaxed">
-                    Use a cloud GPU with <code className="font-mono bg-muted/60 px-1 rounded text-[10px]">hoshi-translator</code> (30B MoE).
-                    Paste your pod URL in Host URL above.
-                  </p>
+
+                  {/* Model selector */}
+                  <div className="flex gap-1.5">
+                    {([
+                      { id: '27b', label: '27B Dense', sub: 'RTX 4090 · ~16GB' },
+                      { id: '30b', label: '30B MoE',   sub: 'RTX 4090 · 3B active' },
+                    ] as const).map(({ id, label, sub }) => (
+                      <button
+                        key={id}
+                        onClick={() => setRunpodModel(id)}
+                        className={`flex-1 flex flex-col items-center py-1.5 rounded border text-center transition-colors ${
+                          runpodModel === id
+                            ? 'border-primary/40 bg-primary/10 text-foreground'
+                            : 'border-border/30 bg-background/20 text-muted-foreground/40 hover:bg-muted/20'
+                        }`}
+                      >
+                        <span className="text-[11px] font-mono font-medium">{label}</span>
+                        <span className="text-[9px] text-muted-foreground/40 mt-0.5">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex flex-col gap-1">
                     <Label className="text-[9.5px] text-muted-foreground/40 uppercase tracking-wider">Pod URL format</Label>
                     <code className="text-[10.5px] font-mono text-muted-foreground/50 bg-muted/30 rounded px-2.5 py-1.5 border border-border/20">
                       https://&lt;POD_ID&gt;-11434.proxy.runpod.net
                     </code>
                   </div>
+
                   {isRunPod && (
                     <div className="flex flex-col gap-1">
                       <Label className="text-[9.5px] text-muted-foreground/40 uppercase tracking-wider">Current pod</Label>
                       <CopyableUrl url={settings.ollamaHost} />
                     </div>
                   )}
+
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-[9.5px] text-muted-foreground/40 uppercase tracking-wider">Container start command</Label>
-                      <CopyableUrl url={`bash -c "\napt update && apt install -y curl lshw zstd &&\ncurl -fsSL https://ollama.com/install.sh | sh &&\nOLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &\nsleep 60 &&\nollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&\ncurl -f -L -o /tmp/hoshi-translator-30b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile || exit 1 &&\nollama create hoshi-translator -f /tmp/hoshi-translator-30b.Modelfile || exit 1 &&\necho 'hoshi-translator 30B ready' && sleep infinity\n"`} hideCode />
+                      <CopyableUrl
+                        hideCode
+                        url={runpodModel === '27b'
+                          ? `bash -c "\napt update && apt install -y curl lshw zstd &&\ncurl -fsSL https://ollama.com/install.sh | sh &&\nOLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &\nsleep 60 &&\nollama pull huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K &&\ncurl -f -L -o /tmp/hoshi-translator-27b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-27b.Modelfile || exit 1 &&\nollama create hoshi-translator -f /tmp/hoshi-translator-27b.Modelfile || exit 1 &&\necho 'hoshi-translator 27B ready' && sleep infinity\n"`
+                          : `bash -c "\napt update && apt install -y curl lshw zstd &&\ncurl -fsSL https://ollama.com/install.sh | sh &&\nOLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &\nsleep 60 &&\nollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&\ncurl -f -L -o /tmp/hoshi-translator-30b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile || exit 1 &&\nollama create hoshi-translator -f /tmp/hoshi-translator-30b.Modelfile || exit 1 &&\necho 'hoshi-translator 30B ready' && sleep infinity\n"`
+                        }
+                      />
                     </div>
-                    <pre className="text-[9.5px] font-mono bg-muted/30 border border-border/20 rounded px-2.5 py-2 overflow-x-auto text-foreground/50 leading-relaxed whitespace-pre-wrap">{`bash -c "
+                    {runpodModel === '27b' ? (
+                      <pre className="text-[9.5px] font-mono bg-muted/30 border border-border/20 rounded px-2.5 py-2 overflow-x-auto text-foreground/50 leading-relaxed whitespace-pre-wrap">{`bash -c "
+apt update && apt install -y curl lshw zstd &&
+curl -fsSL https://ollama.com/install.sh | sh &&
+OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
+sleep 60 &&
+ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K &&
+curl -f -L -o /tmp/hoshi-translator-27b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-27b.Modelfile || exit 1 &&
+ollama create hoshi-translator -f /tmp/hoshi-translator-27b.Modelfile || exit 1 &&
+echo 'hoshi-translator 27B ready' && sleep infinity
+"`}</pre>
+                    ) : (
+                      <pre className="text-[9.5px] font-mono bg-muted/30 border border-border/20 rounded px-2.5 py-2 overflow-x-auto text-foreground/50 leading-relaxed whitespace-pre-wrap">{`bash -c "
 apt update && apt install -y curl lshw zstd &&
 curl -fsSL https://ollama.com/install.sh | sh &&
 OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
@@ -259,7 +298,9 @@ curl -f -L -o /tmp/hoshi-translator-30b.Modelfile https://raw.githubusercontent.
 ollama create hoshi-translator -f /tmp/hoshi-translator-30b.Modelfile || exit 1 &&
 echo 'hoshi-translator 30B ready' && sleep infinity
 "`}</pre>
+                    )}
                   </div>
+
                   <a
                     href="https://github.com/KATBlackCoder/hoshi-trans/blob/main/RUNPOD.md"
                     target="_blank"

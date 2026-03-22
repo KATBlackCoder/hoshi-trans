@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import React, { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2, Cpu } from 'lucide-react'
+import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2, Cpu, Timer } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
 type View = 'library' | 'translation' | 'settings' | 'glossary' | 'about' | 'ollama'
@@ -117,6 +117,50 @@ function WolfRpgFontPanel({
       <p className="text-[9px] text-muted-foreground/35 leading-relaxed">
         Try the game first before changing the font. Ideal size for Latin text: <span className="text-muted-foreground/55 font-medium">20–22</span>.
       </p>
+    </div>
+  )
+}
+
+function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`
+  if (m > 0) return `${m}m ${s.toString().padStart(2, '0')}s`
+  return `${s}s`
+}
+
+function TranslationTimer() {
+  const batchStartedAt = useAppStore((s) => s.batchStartedAt)
+  const batchLastDuration = useAppStore((s) => s.batchLastDuration)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    if (batchStartedAt === null) return
+    setElapsed(Date.now() - batchStartedAt)
+    const id = setInterval(() => setElapsed(Date.now() - batchStartedAt), 1000)
+    return () => clearInterval(id)
+  }, [batchStartedAt])
+
+  if (batchStartedAt === null && batchLastDuration === null) return null
+
+  const running = batchStartedAt !== null
+
+  return (
+    <div className="rounded-lg border border-sidebar-border/60 bg-sidebar-accent/10 px-2.5 py-2 flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+          Translation time
+        </span>
+        <Timer className={`w-3 h-3 ${running ? 'text-primary/70 animate-pulse' : 'text-muted-foreground/30'}`} />
+      </div>
+      <span className="text-[13px] font-mono tabular-nums text-sidebar-foreground/80 text-center">
+        {running ? formatDuration(elapsed) : formatDuration(batchLastDuration!)}
+      </span>
+      {!running && (
+        <span className="text-[9px] text-muted-foreground/35 text-center">last batch</span>
+      )}
     </div>
   )
 }
@@ -234,6 +278,7 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
             {activeProject.engine === 'wolf_rpg' && (
               <WolfRpgFontPanel project={activeProject} onUpdate={onProjectUpdated} />
             )}
+            <TranslationTimer />
           </div>
         )}
       </div>
