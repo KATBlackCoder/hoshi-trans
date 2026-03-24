@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Check, Loader2, Pencil, Sparkles, X } from 'lucide-react'
+import { Check, Loader2, Pencil, Sparkles, Wand2, X } from 'lucide-react'
 import type { TranslationEntry, TranslationStatus } from '@/types'
 
 function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dotCls: string; labelCls: string } {
@@ -28,10 +28,14 @@ interface Props {
   onToggleSelect?: () => void
   onTranslateSingle?: () => void
   translating?: boolean
+  onRefineSingle?: () => void
+  refining?: boolean
   selectionActive?: boolean
+  measureRef?: (el: Element | null) => void
+  'data-index'?: number
 }
 
-export function TranslationRow({ entry, onUpdated, style, selected, onToggleSelect, onTranslateSingle, translating, selectionActive }: Props) {
+export function TranslationRow({ entry, onUpdated, style, selected, onToggleSelect, onTranslateSingle, translating, onRefineSingle, refining, selectionActive, measureRef, 'data-index': dataIndex }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.translation ?? '')
 
@@ -51,6 +55,8 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
 
   return (
     <TableRow
+      ref={measureRef}
+      data-index={dataIndex}
       style={style}
       className={`group absolute top-0 left-0 w-full flex border-b border-white/7 ${strip} ${
         selected ? 'bg-primary/5 hover:bg-primary/8' : 'hover:bg-white/3'
@@ -100,13 +106,28 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
                   size="sm"
                   className="h-5 w-5 p-0 text-muted-foreground/50 hover:text-primary"
                   onClick={e => { e.stopPropagation(); onTranslateSingle?.() }}
-                  disabled={translating}
+                  disabled={translating || refining}
                   title="Translate this entry"
                 >
                   {translating
                     ? <Loader2 className="w-3 h-3 animate-spin" />
                     : <Sparkles className="w-3 h-3" />}
                 </Button>
+                {/* Per-row refine button — only for translated/warning entries */}
+                {(entry.status === 'translated' || (typeof entry.status === 'object' && 'warning' in entry.status) || (typeof entry.status === 'string' && entry.status.startsWith('warning'))) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 text-muted-foreground/50 hover:text-amber-400"
+                    onClick={e => { e.stopPropagation(); onRefineSingle?.() }}
+                    disabled={refining || translating}
+                    title="Refine this entry"
+                  >
+                    {refining
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : <Wand2 className="w-3 h-3" />}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

@@ -74,17 +74,19 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [concurrency, setConcurrency] = useState(4)
   const [limit, setLimit] = useState(0)
-  const { availableModels, settings } = useAppStore()
+  const { availableModels: allModels, settings } = useAppStore()
+  const availableModels = allModels.filter(m => m.includes('hoshi-translator'))
   const [selectedModel, setSelectedModel] = useState<string>('')
   const model = selectedModel || availableModels[0] || ''
   const { progress, running, start, cancel } = useTranslationBatch()
   const { progress: refineProgress, running: refining, start: startRefine, cancel: cancelRefine } = useRefineBatch()
-  // Default: same model as translation (user can pick a dedicated thinking model if available)
-  const effectiveRefineModel = model
+  const [selectedRefineModel, setSelectedRefineModel] = useState<string>('')
+  const refineModel = selectedRefineModel || availableModels[0] || ''
   const [resetting, setResetting] = useState(false)
   const [lastResetCount, setLastResetCount] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [translatingRowId, setTranslatingRowId] = useState<string | null>(null)
+  const [refiningRowId, setRefiningRowId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const { data: entries = [], refetch } = useQuery({
@@ -119,6 +121,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 80,
     overscan: 8,
+    measureElement: (el) => el.getBoundingClientRect().height,
   })
 
   function handleSort(col: SortKey) {
@@ -176,6 +179,13 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     },
   })
 
+  const debugReviewExport = useMutation({
+    mutationFn: async () => {
+      const path = await invoke<string>('export_debug_review_json', { projectId, outputDir })
+      await openPath(path)
+    },
+  })
+
   // Refresh table when refine batch completes
   useEffect(() => {
     if (!refining) refetch()
@@ -184,7 +194,14 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   function handleRefine() {
     const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined
     setSelectedIds(new Set())
-    startRefine(projectId, effectiveRefineModel, settings.targetLang, settings.ollamaHost, 1, ids)
+    startRefine(projectId, refineModel, settings.targetLang, settings.ollamaHost, 1, ids)
+  }
+
+  function handleRefineSingle(entry: TranslationEntry) {
+    if (refiningRowId || refining) return
+    setRefiningRowId(entry.id)
+    startRefine(projectId, refineModel, settings.targetLang, settings.ollamaHost, 1, [entry.id])
+      .finally(() => { setRefiningRowId(null); refetch() })
   }
 
   async function handleReset() {
@@ -235,10 +252,10 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
 
           {/* Model selector */}
           <Select value={model} onValueChange={(v) => setSelectedModel(v ?? '')} disabled={running}>
-            <SelectTrigger className="h-7 w-40 text-xs font-mono">
+            <SelectTrigger className="h-7 w-44 max-w-50 text-xs font-mono">
               <SelectValue placeholder="No model" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
               {availableModels.map(m => (
                 <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
               ))}
@@ -295,6 +312,18 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
             {running ? 'Translating…' : 'Translate'}
           </Button>
 
+          {/* Refine model selector */}
+          <Select value={refineModel} onValueChange={(v) => setSelectedRefineModel(v ?? '')} disabled={refining}>
+            <SelectTrigger className="h-7 w-44 max-w-50 text-xs font-mono border-amber-500/30">
+              <SelectValue placeholder="No model" />
+            </SelectTrigger>
+            <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
+              {availableModels.map(m => (
+                <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {/* Refine controls */}
           {refining && (
             <div className="flex items-center gap-2 ml-1">
@@ -312,7 +341,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
               size="sm"
               variant="outline"
               onClick={handleRefine}
-              disabled={!effectiveRefineModel}
+              disabled={!refineModel}
               className="h-7 gap-1.5 text-xs font-medium px-3 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
             >
               <Wand2 className="w-3.5 h-3.5" />
@@ -324,7 +353,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
             size="sm"
             variant="outline"
             onClick={handleRefine}
-            disabled={running || refining || !effectiveRefineModel}
+            disabled={running || refining || !refineModel}
             className="h-7 gap-1.5 text-xs font-medium px-3 border-amber-500/30 text-amber-400/80 hover:bg-amber-500/10"
           >
             {refining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
@@ -377,6 +406,18 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
         >
           {debugExport.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bug className="w-3 h-3" />}
           Debug JSON
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => debugReviewExport.mutate()}
+          disabled={debugReviewExport.isPending}
+          title="Export reviewed entries to JSON"
+          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-amber-400 gap-1"
+        >
+          {debugReviewExport.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bug className="w-3 h-3" />}
+          Debug Review
         </Button>
 
         <Button
@@ -454,8 +495,9 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
                     key={entry.id}
                     entry={entry}
                     onUpdated={refetch}
+                    data-index={virtualRow.index}
+                    measureRef={virtualizer.measureElement}
                     style={{
-                      height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                     selected={selectedIds.has(entry.id)}
@@ -463,6 +505,8 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
                     selectionActive={selectedIds.size > 0}
                     onTranslateSingle={() => handleTranslateSingle(entry)}
                     translating={translatingRowId === entry.id}
+                    onRefineSingle={() => handleRefineSingle(entry)}
+                    refining={refiningRowId === entry.id}
                   />
                 )
               })}

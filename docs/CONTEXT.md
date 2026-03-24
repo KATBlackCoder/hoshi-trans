@@ -87,9 +87,9 @@ hoshi-trans/
 │   │   ├── translation/              # Vue liste strings + édition
 │   │   ├── file-import/              # Sélection dossier + détection moteur
 │   │   ├── file-export/              # Export + ouverture output/
-│   │   ├── ollama/                   # OllamaPage : connexion, modèle, température, prompt, RunPod
+│   │   ├── ollama/                   # OllamaPage : connexion, 2 sélecteurs modèle (trans + refine), température, modèles disponibles
 │   │   ├── settings/                 # SettingsPage : préférences app (thème dark/light, couleur accent)
-│   │   ├── about/                    # AboutPage : infos app + liens donations (Ko-fi, GitHub Sponsors)
+│   │   ├── about/                    # AboutPage : infos app + Setup Guides (Local + RunPod) + liens donations
 │   │   ├── glossary/                 # Glossaire global + par projet
 │   │   └── project-library/          # Grille de tous les projets
 │   ├── hooks/
@@ -599,7 +599,7 @@ pub async fn refine_batch(
     cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
     refine_running: tauri::State<'_, RefineRunning>,
     project_id: String,
-    model: String,          // même modèle que traduction ou un modèle thinking dédié
+    model: String,          // modèle refine sélectionné indépendamment du modèle trans (ex: hoshi-translator-27b-rev:latest)
     target_lang: String,
     ollama_host: String,
     concurrency: u32,       // cappé à 4 (thinking model lent)
@@ -629,11 +629,48 @@ pub async fn refine_batch(
 **Commande manuelle :** `update_refined_manual(entry_id, refined_text)` — déclenché quand l'utilisateur édite manuellement un texte raffiné → `refined_status = "manual"`.
 
 **UI :**
-- Bouton **Refine** (amber) dans la toolbar de `TranslationView`, à côté de Translate
+- Sélecteur modèle trans + sélecteur modèle refine indépendants dans la toolbar de `TranslationView`
+- Bouton **Refine** (amber) dans la toolbar, à côté de Translate
 - Refine all ou Refine N selected (mêmes sélections que Translate)
+- Per-row refine button (icône `Wand2`) visible uniquement sur entrées `translated` / `warning:*`
 - Filtre status `Reviewed` dans la table
 - `TranslationRow` : `✦` pour reviewed (avec draft barré en dessous), `✓` pour unchanged, `✎` pour manual
 - Badge `⚠ N/M ph` si `ph_count_draft ≠ ph_count_source`
+
+---
+
+## 🗂️ Modelfiles hoshi-translator
+
+Les modèles hoshi-translator sont les **seuls modèles supportés** par l'app. Ils sont organisés en deux dossiers selon leur rôle :
+
+```
+src-tauri/modelfiles/
+  trans/   ← pipeline de traduction JP→EN/FR
+    hoshi-translator-4b-trans.Modelfile        # 4B instruct  (qwen3-abliterated:4b-instruct-2507-q4_K_M)
+    hoshi-translator-claude-trans.Modelfile # 4B Claude    (qwen3.5-abliterated:4b-Claude)
+    hoshi-translator-27b-trans.Modelfile    # 27B dense    (RunPod RTX 4090, ~16 GB)
+    hoshi-translator-30b-trans.Modelfile    # 30B MoE      (RunPod RTX 4090, ~20 GB)
+  rev/     ← review/critique second-pass
+    hoshi-translator-rev.Modelfile          # 4B Claude    (qwen3.5-abliterated:4b-Claude)
+    hoshi-translator-4b-rev.Modelfile # 4B instruct  (qwen3-abliterated:4b-instruct-2507-q4_K_M)
+    hoshi-translator-27b-rev.Modelfile      # 27B dense
+    hoshi-translator-30b-rev.Modelfile      # 30B MoE
+```
+
+**Différences `-trans` vs `-rev` :**
+
+| Paramètre | `-trans` | `-rev` |
+|-----------|----------|--------|
+| temperature | 0.05 | 0.1 |
+| num_predict | 512 (4b) / 3072 (27b/30b) | 768 (4b) / 3072 (27b/30b) |
+| thinking | bloqué sur 4b, autorisé 27b/30b | bloqué sur 4b, autorisé 27b/30b |
+| SYSTEM | traducteur JP→EN/FR, règles placeholder | critique structuré — vérifie placeholders, précision, fluidité, registre |
+| Base 27b | `huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K` | idem |
+| Base 30b | `huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M` | idem |
+
+**Convention de nommage Ollama :** `hoshi-translator[-NNb]-trans:latest` / `hoshi-translator[-NNb]-rev:latest`
+
+**Check bypass system prompt :** `model.includes('hoshi-translator')` → `system_prompt` envoyé vide (le SYSTEM est baked dans le Modelfile).
 
 ### Types TypeScript miroir (`src/types/index.ts`)
 
@@ -744,12 +781,19 @@ Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
 - [x] Glossaire (global + par projet + import/export)
 - [x] Batch translation re-connexion après rechargement webview
 - [x] Signature `| TL: hoshi-trans` dans les titres de jeux exportés
-- [x] Page Ollama (connexion, modèle, température, prompt, RunPod — layout 2 colonnes)
+- [x] Page Ollama (connexion, 2 sélecteurs modèle trans/refine, température, modèles disponibles — layout 2 colonnes)
 - [x] Page Settings (thème dark/light + couleur accent, persisté dans settings.json)
-- [x] Page About (description app + Ko-fi + GitHub Sponsors + liens)
-- [x] Refine pass (second-pass quality review avec n'importe quel modèle)
+- [x] Page About (description app + Setup Guides Local/RunPod + Ko-fi + GitHub Sponsors + liens)
+- [x] Refine pass (second-pass quality review)
   - [x] Migration 005 : 7 colonnes refine nullable sur `entries`
   - [x] `refine_batch` command + `RefineRunning` state + `cancel_refine` / `is_refine_running`
   - [x] `update_refined_manual` pour éditions utilisateur
   - [x] Export COALESCE : `refined_text` priorisé sur `translation` à l'injection
   - [x] UI : bouton Refine (amber), filtre Reviewed, `✦`/`✓`/`✎` badges, ⚠ placeholder count diff
+  - [x] Per-row refine button (visible sur entrées `translated`/`warning`)
+  - [x] Sélecteur modèle refine indépendant du sélecteur trans (pas d'auto-select)
+- [x] Modelfiles hoshi-translator séparés par rôle :
+  - [x] `src-tauri/modelfiles/trans/` — 4b, 27b, 30b, optimisés traduction
+  - [x] `src-tauri/modelfiles/rev/` — 4b, 27b, 30b, optimisés review/critique
+  - [x] `-trans` : thinking bloqué sur 4b, autorisé sur 27b/30b ; temperature 0.05
+  - [x] `-rev` : temperature 0.1, num_predict plus grand, SYSTEM critique structuré

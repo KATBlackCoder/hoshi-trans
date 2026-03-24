@@ -121,11 +121,17 @@ pub async fn get_entries(
                 text_type, refined_at
          FROM entries
          WHERE project_id = ?
-         AND (? IS NULL OR status = ?)
+         AND (? IS NULL OR
+              CASE ?
+                WHEN 'reviewed' THEN refined_status = 'reviewed'
+                WHEN 'warning'  THEN status LIKE 'warning%'
+                ELSE                 status = ?
+              END)
          AND (? IS NULL OR file_path = ?)
          ORDER BY file_path, order_index",
     )
     .bind(project_id)
+    .bind(status_filter)
     .bind(status_filter)
     .bind(status_filter)
     .bind(file_filter)

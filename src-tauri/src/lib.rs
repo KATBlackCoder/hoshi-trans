@@ -39,6 +39,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::debug_export::export_debug_json,
+            commands::debug_export::export_debug_review_json,
             commands::ollama::check_ollama,
             commands::ollama::list_models,
             commands::ollama::translate_batch,

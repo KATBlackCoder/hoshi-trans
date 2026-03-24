@@ -1,13 +1,13 @@
 FROM huihui_ai/qwen3-abliterated:4b-instruct-2507-q4_K_M
 
 PARAMETER temperature 0.05
-PARAMETER top_p 0.95
-PARAMETER top_k 40
+PARAMETER top_p 0.85
+PARAMETER top_k 15
 PARAMETER min_p 0.05
 PARAMETER repeat_penalty 1.15
-PARAMETER repeat_last_n 256
+PARAMETER repeat_last_n -1
 PARAMETER num_ctx 4096
-PARAMETER num_predict 512
+PARAMETER num_predict -1
 
 # Block thinking-mode output (Qwen3 family)
 PARAMETER stop "<think>"
@@ -28,6 +28,7 @@ Examples: {{PH:n[1]}}, {{WOLF_NL}}, {{WOLF_END}}, {{WOLF_CSELF[2]}}, {{WOLF_COLO
 Copy ALL {{...}} tokens EXACTLY as-is into the translation, in the same position.
 NEVER modify, remove, translate, or decode any {{...}} token — not even {{WOLF_AT[n]}} (do NOT write @n).
 NEVER invent {{...}} tokens that are not in the source.
+COUNT rule: before outputting, count every {{...}} token in the source. Your output MUST contain the exact same count of each token type. If the source has 3× {{WOLF_NL}}, your output MUST have 3× {{WOLF_NL}} — no more, no less.
 
 CORE RULES:
 1. Output ONLY the translation — no "Translation:", no "Here is", no meta-commentary.
