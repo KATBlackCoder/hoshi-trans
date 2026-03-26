@@ -68,62 +68,25 @@ function GuideChip({ label, sub, selected, onClick }: { label: string; sub: stri
 
 function SetupGuides() {
   const [runpodOpen, setRunpodOpen] = useState(false)
-  const [runpodModel, setRunpodModel] = useState<'27b' | '30b' | 'both'>('27b')
   const [localOpen, setLocalOpen] = useState(false)
   const [localModel, setLocalModel] = useState<'4b' | '27b' | '30b'>('4b')
 
   const localModelName = localModel === '4b' ? 'hoshi-translator' : `hoshi-translator-${localModel}`
 
-  const runpodCmd = runpodModel === '27b'
-    ? `bash -c "
-apt update && apt install -y curl lshw zstd &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K &&
-curl -f -L -o /tmp/hoshi-translator-27b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-27b-trans.Modelfile || exit 1 &&
-ollama create hoshi-translator-27b-trans -f /tmp/hoshi-translator-27b-trans.Modelfile || exit 1 &&
-curl -f -L -o /tmp/hoshi-translator-27b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-27b-rev.Modelfile || exit 1 &&
-ollama create hoshi-translator-27b-rev -f /tmp/hoshi-translator-27b-rev.Modelfile || exit 1 &&
-echo 'hoshi-translator 27B ready' && sleep infinity
-"`
-    : runpodModel === '30b'
-    ? `bash -c "
+  const runpodCmd = `bash -c "
 apt update && apt install -y curl lshw zstd &&
 curl -fsSL https://ollama.com/install.sh | sh &&
 OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
 sleep 60 &&
 ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&
+ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude &&
 curl -f -L -o /tmp/hoshi-translator-30b-trans.Modelfile \\
   https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile || exit 1 &&
 ollama create hoshi-translator-30b-trans -f /tmp/hoshi-translator-30b-trans.Modelfile || exit 1 &&
-curl -f -L -o /tmp/hoshi-translator-30b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-30b-rev.Modelfile || exit 1 &&
-ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfile || exit 1 &&
-echo 'hoshi-translator 30B ready' && sleep infinity
-"`
-    : `bash -c "
-apt update && apt install -y curl lshw zstd &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K &&
-ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&
-curl -f -L -o /tmp/hoshi-translator-27b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-27b-trans.Modelfile || exit 1 &&
-ollama create hoshi-translator-27b-trans -f /tmp/hoshi-translator-27b-trans.Modelfile || exit 1 &&
 curl -f -L -o /tmp/hoshi-translator-27b-rev.Modelfile \\
   https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-27b-rev.Modelfile || exit 1 &&
 ollama create hoshi-translator-27b-rev -f /tmp/hoshi-translator-27b-rev.Modelfile || exit 1 &&
-curl -f -L -o /tmp/hoshi-translator-30b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile || exit 1 &&
-ollama create hoshi-translator-30b-trans -f /tmp/hoshi-translator-30b-trans.Modelfile || exit 1 &&
-curl -f -L -o /tmp/hoshi-translator-30b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-30b-rev.Modelfile || exit 1 &&
-ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfile || exit 1 &&
-echo 'all 4 models ready' && sleep infinity
+echo 'hoshi-translator ready' && sleep infinity
 "`
 
   const localPullCmd = localModel === '4b'
@@ -244,14 +207,10 @@ ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfil
         {runpodOpen && (
           <div className="px-4 pb-5 border-t border-border/40 bg-background/20 flex flex-col gap-4 pt-4">
 
-            <div className="flex gap-1.5">
-              {([
-                { id: '27b' as const, label: '27B Dense', sub: 'RTX 4090 · ~16GB' },
-                { id: '30b' as const, label: '30B MoE',   sub: 'RTX 4090 · 3B active' },
-                { id: 'both' as const, label: 'Both',     sub: '27B + 30B' },
-              ]).map(({ id, label, sub }) => (
-                <GuideChip key={id} label={label} sub={sub} selected={runpodModel === id} onClick={() => setRunpodModel(id)} />
-              ))}
+            <div className="flex gap-2 text-[10.5px] text-muted-foreground/60 leading-relaxed">
+              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border/30 font-mono">30b-trans</span>
+              <span className="text-muted-foreground/30 self-center">+</span>
+              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border/30 font-mono">27b-rev</span>
             </div>
 
             <div className="flex flex-col gap-1.5">

@@ -1,4 +1,4 @@
-FROM huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K
+FROM huihui_ai/qwen3.5-abliterated:27b-Claude
 
 # Qwen3.5 27B dense model distilled from Claude Opus 4.6
 # Optimized for RunPod RTX 4090 (24GB VRAM) — fits at ~16GB with q4_K.

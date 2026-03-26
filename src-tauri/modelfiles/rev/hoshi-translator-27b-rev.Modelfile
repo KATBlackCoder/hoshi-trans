@@ -1,4 +1,4 @@
-FROM huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K
+FROM huihui_ai/qwen3.5-abliterated:27b-Claude
 
 # Qwen3.5 27B — hoshi-translator REVIEW model.
 # Receives a JP source + draft translation and improves it.

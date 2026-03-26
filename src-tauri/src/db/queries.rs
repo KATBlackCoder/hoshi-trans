@@ -147,12 +147,16 @@ pub async fn update_translation(
     translation: &str,
     status: &str,
 ) -> anyhow::Result<()> {
-    sqlx::query("UPDATE entries SET translation = ?, status = ? WHERE id = ?")
-        .bind(translation)
-        .bind(status)
-        .bind(entry_id)
-        .execute(pool)
-        .await?;
+    sqlx::query(
+        "UPDATE entries SET translation = ?, status = ?,
+         refined_text = NULL, refined_status = NULL, refined_at = NULL
+         WHERE id = ?",
+    )
+    .bind(translation)
+    .bind(status)
+    .bind(entry_id)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
