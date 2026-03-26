@@ -73,21 +73,7 @@ function SetupGuides() {
 
   const localModelName = localModel === '4b' ? 'hoshi-translator' : `hoshi-translator-${localModel}`
 
-  const runpodCmd = `bash -c "
-apt update && apt install -y curl lshw zstd &&
-curl -fsSL https://ollama.com/install.sh | sh &&
-OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 60 &&
-ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M &&
-ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude &&
-curl -f -L -o /tmp/hoshi-translator-30b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile || exit 1 &&
-ollama create hoshi-translator-30b-trans -f /tmp/hoshi-translator-30b-trans.Modelfile || exit 1 &&
-curl -f -L -o /tmp/hoshi-translator-27b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-27b-rev.Modelfile || exit 1 &&
-ollama create hoshi-translator-27b-rev -f /tmp/hoshi-translator-27b-rev.Modelfile || exit 1 &&
-echo 'hoshi-translator ready' && sleep infinity
-"`
+  const runpodCmd = `bash -c "apt update && apt install -y curl lshw zstd && curl -fsSL https://ollama.com/install.sh | sh && OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 & sleep 60 && ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M && ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude && curl -fL -o /tmp/30b-trans.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile && ollama create hoshi-translator-30b-trans -f /tmp/30b-trans.Modelfile && curl -fL -o /tmp/27b-rev.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-27b-rev.Modelfile && ollama create hoshi-translator-27b-rev -f /tmp/27b-rev.Modelfile && echo hoshi-translator-ready && sleep infinity"`
 
   const localPullCmd = localModel === '4b'
     ? `ollama pull huihui_ai/qwen3.5-abliterated:4b-Claude\nollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-q4_K_M`
