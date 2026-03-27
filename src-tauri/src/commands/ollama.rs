@@ -254,13 +254,16 @@ pub async fn translate_batch(
                 match ollama.generate(request).await {
                     Ok(response) => {
                         let translated = response.response.trim().replace("\\\"", "\"");
+                        // Count {{...}} tokens in raw model output (before decode).
+                        // This catches both missing tokens AND tokens the model decoded
+                        // early (e.g. returning \E instead of {{WOLF_END}}).
                         let trans_count = count_placeholders(&translated);
-                        let (decoded, intact) = if is_wolf {
+                        let (decoded, _) = if is_wolf {
                             wolf_ph::decode(&translated)
                         } else {
                             rpgmaker_ph::decode(&translated)
                         };
-                        if intact {
+                        if trans_count == source_count {
                             final_decoded = decoded;
                             final_status = "translated".to_string();
                             success = true;
