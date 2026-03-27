@@ -231,12 +231,13 @@ pub async fn translate_batch(
             let mut final_status = String::new();
             let mut success = false;
             let source_count = count_placeholders(&encoded);
+            let mut last_trans_count = 0i64;
 
             for attempt in 0..=MAX_RETRIES {
                 let attempt_prompt = if attempt == 0 {
                     prompt.clone()
                 } else {
-                    let missing = source_count - count_placeholders(&final_decoded).min(source_count);
+                    let missing = source_count - last_trans_count.min(source_count);
                     if system_prompt.is_empty() {
                         format!(
                             "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {source_count} placeholder(s), missing {missing}, include ALL of them): {}",
@@ -273,7 +274,8 @@ pub async fn translate_batch(
                             final_status = format!("warning:missing_placeholder:{}/{}", trans_count, source_count);
                             success = true;
                         } else {
-                            // placeholder missing — keep decoded for retry prompt missing count
+                            // placeholder missing — store count for precise retry prompt
+                            last_trans_count = trans_count;
                             final_decoded = decoded;
                         }
                     }
