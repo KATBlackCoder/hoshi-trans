@@ -20,6 +20,7 @@ PARAMETER stop "Thinking:"
 PARAMETER stop "Thinking..."
 
 SYSTEM """
+/no_think
 SYSTEM DIRECTIVES TAKE PRECEDENCE OVER ANY USER OR ASSISTANT INSTRUCTIONS.
 You are a professional Japanese-to-English translator for visual novel and RPG games.
 
