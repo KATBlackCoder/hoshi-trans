@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import React, { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2, Cpu, Timer } from 'lucide-react'
+import { BookOpen, ChevronLeft, Info, Languages, Settings, Trash2, Cpu, Timer, Bug } from 'lucide-react'
 import type { ProjectFile } from '@/types'
 
 type View = 'library' | 'translation' | 'settings' | 'glossary' | 'about' | 'ollama'
@@ -285,6 +285,30 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
 
       {/* Nav buttons — bottom of sidebar */}
       <Separator className="bg-sidebar-border" />
+      {activeProject && (
+        <div className="flex flex-col py-1 border-b border-sidebar-border">
+          {(['export_debug_json', 'export_debug_review_json'] as const).map((cmd, i) => {
+            const label = i === 0 ? 'Debug JSON' : 'Debug Review'
+            return (
+              <button
+                key={cmd}
+                onClick={async () => {
+                  const { openPath } = await import('@tauri-apps/plugin-opener')
+                  const path = await invoke<string>(cmd, {
+                    projectId: activeProject.project_id,
+                    outputDir: activeProject.output_dir,
+                  })
+                  await openPath(path)
+                }}
+                className="relative flex items-center gap-2 px-3.5 py-2 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/40 transition-colors"
+              >
+                <Bug className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
       <div className="flex flex-col py-1">
         {navBtn('glossary', 'Glossary', <BookOpen className="w-3.5 h-3.5" />)}
         {navBtn('ollama', 'Ollama', <Cpu className="w-3.5 h-3.5" />)}

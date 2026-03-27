@@ -11,7 +11,7 @@ import { useRefineBatch } from '@/hooks/useRefineBatch'
 import { useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Bug, Wand2, ShieldCheck } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Wand2, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { openPath } from '@tauri-apps/plugin-opener'
 import type { TranslationEntry } from '@/types'
@@ -172,19 +172,15 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     },
   })
 
-  const debugExport = useMutation({
-    mutationFn: async () => {
-      const path = await invoke<string>('export_debug_json', { projectId, outputDir })
-      await openPath(path)
-    },
-  })
-
-  const debugReviewExport = useMutation({
-    mutationFn: async () => {
-      const path = await invoke<string>('export_debug_review_json', { projectId, outputDir })
-      await openPath(path)
-    },
-  })
+  function handleRetranslateWarnings() {
+    const warningIds = entries
+      .filter(e => typeof e.status === 'string' && e.status.startsWith('warning'))
+      .map(e => e.id)
+    if (warningIds.length === 0) return
+    const lang = settings.targetLang === 'fr' ? 'French' : 'English'
+    const effectivePrompt = model.includes('hoshi-translator') ? '' : settings.systemPrompt.replace('{lang}', lang)
+    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, concurrency, limit, settings.temperature, warningIds)
+  }
 
   const analyzePh = useMutation({
     mutationFn: () => invoke<number>('analyze_placeholders', { projectId }),
@@ -416,25 +412,13 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => debugExport.mutate()}
-          disabled={debugExport.isPending}
-          title="Export translated entries to JSON"
-          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-foreground gap-1"
-        >
-          {debugExport.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bug className="w-3 h-3" />}
-          Debug JSON
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => debugReviewExport.mutate()}
-          disabled={debugReviewExport.isPending}
-          title="Export reviewed entries to JSON"
+          onClick={handleRetranslateWarnings}
+          disabled={running || refining || entries.filter(e => typeof e.status === 'string' && e.status.startsWith('warning')).length === 0}
+          title="Retranslate all warning entries"
           className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-amber-400 gap-1"
         >
-          {debugReviewExport.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bug className="w-3 h-3" />}
-          Debug Review
+          {running ? <Loader2 className="w-3 h-3 animate-spin" /> : <AlertTriangle className="w-3 h-3" />}
+          Retry warnings
         </Button>
 
         <Button
