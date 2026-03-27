@@ -11,7 +11,7 @@ import { useRefineBatch } from '@/hooks/useRefineBatch'
 import { useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Bug, Wand2 } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Bug, Wand2, ShieldCheck } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { openPath } from '@tauri-apps/plugin-opener'
 import type { TranslationEntry } from '@/types'
@@ -184,6 +184,11 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
       const path = await invoke<string>('export_debug_review_json', { projectId, outputDir })
       await openPath(path)
     },
+  })
+
+  const analyzePh = useMutation({
+    mutationFn: () => invoke<number>('analyze_placeholders', { projectId }),
+    onSuccess: () => refetch(),
   })
 
   // Refresh table when refine batch completes
@@ -394,6 +399,18 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
         >
           <RotateCcw className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
           Reset empty
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => analyzePh.mutate()}
+          disabled={analyzePh.isPending || running}
+          title="Re-analyze placeholder counts for all translated/warning entries"
+          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-amber-400 gap-1"
+        >
+          {analyzePh.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+          {analyzePh.isSuccess ? `${analyzePh.data} updated` : 'Check PH'}
         </Button>
 
         <Button

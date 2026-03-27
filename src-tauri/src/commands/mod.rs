@@ -1,3 +1,4 @@
+pub mod analyze;
 pub mod debug_export;
 pub mod entries;
 pub mod extract;

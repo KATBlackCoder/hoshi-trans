@@ -38,6 +38,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::analyze::analyze_placeholders,
             commands::debug_export::export_debug_json,
             commands::debug_export::export_debug_review_json,
             commands::ollama::check_ollama,
