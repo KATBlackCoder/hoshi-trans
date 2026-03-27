@@ -207,7 +207,7 @@ pub async fn get_translated_entries_ordered(
                 text_type, refined_at
          FROM entries
          WHERE project_id = ?
-         AND status IN ('translated', 'reviewed', 'warning')
+         AND (status = 'translated' OR status = 'reviewed' OR status LIKE 'warning%')
          ORDER BY file_path, order_index",
     )
     .bind(project_id)

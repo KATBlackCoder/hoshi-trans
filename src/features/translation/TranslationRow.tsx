@@ -6,6 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Check, Loader2, Pencil, Sparkles, Wand2, X } from 'lucide-react'
 import type { TranslationEntry, TranslationStatus } from '@/types'
 
+function parseWarningRatio(status: TranslationStatus): string | null {
+  if (typeof status !== 'string') return null
+  // "warning:missing_placeholder:1/3" → "1/3"
+  const parts = status.split(':')
+  if (parts[0] === 'warning' && parts[2]) return parts[2]
+  return null
+}
+
 function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dotCls: string; labelCls: string } {
   if (status === 'translated')
     return { label: 'translated', strip: 'status-strip-translated', dotCls: 'bg-emerald-500', labelCls: 'text-emerald-400' }
@@ -13,6 +21,10 @@ function getStatusMeta(status: TranslationStatus): { label: string; strip: strin
     return { label: 'reviewed', strip: 'status-strip-reviewed', dotCls: 'bg-blue-400', labelCls: 'text-blue-400' }
   if (status === 'skipped')
     return { label: 'skipped', strip: 'status-strip-skipped', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50' }
+  if (typeof status === 'string' && status.startsWith('warning')) {
+    const ratio = parseWarningRatio(status)
+    return { label: ratio ? `⚠ ${ratio}` : 'warning', strip: 'status-strip-warning', dotCls: 'bg-amber-400', labelCls: 'text-amber-400' }
+  }
   if (typeof status === 'object' && 'error' in status)
     return { label: 'error', strip: 'status-strip-error', dotCls: 'bg-red-500', labelCls: 'text-red-400' }
   if (typeof status === 'object' && 'warning' in status)

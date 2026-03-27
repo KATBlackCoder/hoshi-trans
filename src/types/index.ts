@@ -7,6 +7,7 @@ export type TranslationStatus =
   | 'translated'
   | 'reviewed'
   | 'skipped'
+  | string  // covers "warning:missing_placeholder:X/Y", "error:...", etc.
   | { error: string }
   | { warning: string }
 

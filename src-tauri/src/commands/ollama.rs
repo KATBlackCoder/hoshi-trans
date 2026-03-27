@@ -228,23 +228,23 @@ pub async fn translate_batch(
             const MAX_RETRIES: u32 = 2;
             let mut last_error: Option<String> = None;
             let mut final_decoded = String::new();
-            let mut final_status = "error:no_response";
+            let mut final_status = String::new();
             let mut success = false;
+            let source_count = count_placeholders(&encoded);
 
             for attempt in 0..=MAX_RETRIES {
                 let attempt_prompt = if attempt == 0 {
                     prompt.clone()
                 } else {
-                    // Retry prompt: explicit placeholder count reminder
-                    let ph_count = count_placeholders(&encoded);
+                    let missing = source_count - count_placeholders(&final_decoded).min(source_count);
                     if system_prompt.is_empty() {
                         format!(
-                            "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {ph_count} placeholder token(s), your output MUST contain all {ph_count}): {}",
+                            "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {source_count} placeholder(s), missing {missing}, include ALL of them): {}",
                             lang_name, encoded
                         )
                     } else {
                         format!(
-                            "{}\n\nTranslate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {ph_count} placeholder token(s), your output MUST contain all {ph_count}): {}",
+                            "{}\n\nTranslate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {source_count} placeholder(s), missing {missing}, include ALL of them): {}",
                             system_prompt, lang_name, encoded
                         )
                     }
@@ -254,6 +254,7 @@ pub async fn translate_batch(
                 match ollama.generate(request).await {
                     Ok(response) => {
                         let translated = response.response.trim().replace("\\\"", "\"");
+                        let trans_count = count_placeholders(&translated);
                         let (decoded, intact) = if is_wolf {
                             wolf_ph::decode(&translated)
                         } else {
@@ -261,16 +262,17 @@ pub async fn translate_batch(
                         };
                         if intact {
                             final_decoded = decoded;
-                            final_status = "translated";
+                            final_status = "translated".to_string();
                             success = true;
                             break;
                         } else if attempt == MAX_RETRIES {
-                            // Last attempt still failed — save with warning
                             final_decoded = decoded;
-                            final_status = "warning:missing_placeholder";
+                            final_status = format!("warning:missing_placeholder:{}/{}", trans_count, source_count);
                             success = true;
+                        } else {
+                            // placeholder missing — keep decoded for retry prompt missing count
+                            final_decoded = decoded;
                         }
-                        // else: placeholder missing, retry
                     }
                     Err(e) => {
                         last_error = Some(e.to_string());
@@ -279,7 +281,7 @@ pub async fn translate_batch(
             }
 
             if success {
-                let _ = queries::update_translation(&pool, &entry.id, &final_decoded, final_status).await;
+                let _ = queries::update_translation(&pool, &entry.id, &final_decoded, &final_status).await;
             } else {
                 let err = last_error.unwrap_or_else(|| "unknown".to_string());
                 let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", err)).await;
