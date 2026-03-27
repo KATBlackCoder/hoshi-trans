@@ -224,27 +224,65 @@ pub async fn translate_batch(
             };
             let ollama = ollama_from_url(&ollama_host);
             let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
-            let request = GenerationRequest::new(model.clone(), prompt).options(options);
 
-            match ollama.generate(request).await {
-                Ok(response) => {
-                    // LLMs sometimes over-escape quotes: \" → " cleanup
-                    let translated = response.response.trim().replace("\\\"", "\"");
-                    let (decoded, intact) = if is_wolf {
-                        wolf_ph::decode(&translated)
+            const MAX_RETRIES: u32 = 2;
+            let mut last_error: Option<String> = None;
+            let mut final_decoded = String::new();
+            let mut final_status = "error:no_response";
+            let mut success = false;
+
+            for attempt in 0..=MAX_RETRIES {
+                let attempt_prompt = if attempt == 0 {
+                    prompt.clone()
+                } else {
+                    // Retry prompt: explicit placeholder count reminder
+                    let ph_count = count_placeholders(&encoded);
+                    if system_prompt.is_empty() {
+                        format!(
+                            "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {ph_count} placeholder token(s), your output MUST contain all {ph_count}): {}",
+                            lang_name, encoded
+                        )
                     } else {
-                        rpgmaker_ph::decode(&translated)
-                    };
-                    let status = if intact {
-                        "translated"
-                    } else {
-                        "warning:missing_placeholder"
-                    };
-                    let _ = queries::update_translation(&pool, &entry.id, &decoded, status).await;
+                        format!(
+                            "{}\n\nTranslate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {ph_count} placeholder token(s), your output MUST contain all {ph_count}): {}",
+                            system_prompt, lang_name, encoded
+                        )
+                    }
+                };
+
+                let request = GenerationRequest::new(model.clone(), attempt_prompt).options(options.clone());
+                match ollama.generate(request).await {
+                    Ok(response) => {
+                        let translated = response.response.trim().replace("\\\"", "\"");
+                        let (decoded, intact) = if is_wolf {
+                            wolf_ph::decode(&translated)
+                        } else {
+                            rpgmaker_ph::decode(&translated)
+                        };
+                        if intact {
+                            final_decoded = decoded;
+                            final_status = "translated";
+                            success = true;
+                            break;
+                        } else if attempt == MAX_RETRIES {
+                            // Last attempt still failed — save with warning
+                            final_decoded = decoded;
+                            final_status = "warning:missing_placeholder";
+                            success = true;
+                        }
+                        // else: placeholder missing, retry
+                    }
+                    Err(e) => {
+                        last_error = Some(e.to_string());
+                    }
                 }
-                Err(e) => {
-                    let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", e)).await;
-                }
+            }
+
+            if success {
+                let _ = queries::update_translation(&pool, &entry.id, &final_decoded, final_status).await;
+            } else {
+                let err = last_error.unwrap_or_else(|| "unknown".to_string());
+                let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", err)).await;
             }
 
             let done = done_count.fetch_add(1, Ordering::Relaxed) + 1;
