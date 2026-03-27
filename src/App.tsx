@@ -287,8 +287,8 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
       <Separator className="bg-sidebar-border" />
       {activeProject && (
         <div className="flex flex-col py-1 border-b border-sidebar-border">
-          {(['export_debug_json', 'export_debug_review_json'] as const).map((cmd, i) => {
-            const label = i === 0 ? 'Debug JSON' : 'Debug Review'
+          {(['export_debug_json', 'export_debug_review_json', 'export_debug_warning_json'] as const).map((cmd, i) => {
+            const label = i === 0 ? 'Debug JSON' : i === 1 ? 'Debug Review' : 'Debug Warning'
             return (
               <button
                 key={cmd}
