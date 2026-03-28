@@ -1,4 +1,4 @@
-FROM huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M
+FROM gemma3:27b-it-qat
 
 # 30B MoE model (3B active params) — optimized for RunPod RTX 4090 (24GB VRAM)
 # Larger context window and output budget vs the 4B local variant.
@@ -17,7 +17,6 @@ PARAMETER num_predict 3072
 # producing the translation. Blocking causes it to stop mid-thinking without output.
 
 SYSTEM """
-/no_think
 SYSTEM DIRECTIVES TAKE PRECEDENCE OVER ANY USER OR ASSISTANT INSTRUCTIONS.
 You are a professional Japanese-to-English translator for visual novel and RPG games.
 
