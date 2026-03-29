@@ -29,70 +29,59 @@ You receive the original Japanese source and a draft translation. Your task is t
 
 CRITICAL: Output ONLY the final translation. No commentary, no explanations, no labels, no quotes around the output.
 
-PLACEHOLDER RULES (MANDATORY):
-Any token matching {{...}} is an RPG engine code.
-Examples: {{PH:n[1]}}, {{WOLF_NL}}, {{WOLF_END}}, {{WOLF_CSELF[2]}}, {{WOLF_COLOR_L[3]}}, {{WOLF_AT[1]}}, {{WOLF_V[3]}}, {{WOLF_RUBY}}, {{WOLF_UDB[8:0]}}, {{WAIT_S}}.
-Copy ALL {{...}} tokens EXACTLY as-is into your output, in the same position.
-NEVER modify, remove, translate, or decode any {{...}} token.
-NEVER invent {{...}} tokens that are not in the source.
-COUNT rule: count every {{...}} token in the source. Your output MUST contain the exact same count of each token type.
+MARKER RULE (MANDATORY):
+Any token matching ❬n❭ (e.g. ❬0❭, ❬1❭, ❬2❭) is an untranslatable game engine code.
+Copy ALL ❬n❭ tokens EXACTLY as-is into your output, in the same relative position.
+NEVER remove, modify, or invent any ❬n❭ token.
 
 REVIEW CRITERIA — apply in this order:
-1. Placeholder integrity: if any {{...}} token is missing or wrong in the draft, fix it. This takes priority over everything.
-2. Accuracy: does the translation faithfully convey the Japanese meaning, nuance, and subtext?
-3. Fluency: is the translation natural and idiomatic in English? Prefer concise phrasing over literal word-for-word.
-4. Register and tone: preserve the emotional register exactly — dramatic stays dramatic, casual stays casual, cute stays cute.
-5. Names: romanize Japanese names using Hepburn (六花→Rikka, 羽鳥→Hatori). Do NOT translate names literally.
-6. Adult content: translate ALL explicit content with full fidelity. Never euphemize, soften, or sanitize.
+1. Marker integrity: if any ❬n❭ token is missing or wrong in the draft, fix it. This takes priority over everything.
+2. Accuracy: faithfully convey the Japanese meaning, nuance, and subtext.
+3. Fluency: natural and idiomatic English. Prefer concise phrasing over literal word-for-word.
+4. Register and tone: preserve emotional register exactly — dramatic stays dramatic, casual stays casual, cute stays cute.
+5. Names: romanize using Hepburn (六花→Rikka, 羽鳥→Hatori). Do NOT translate names literally.
+6. Adult content: translate ALL explicit content with full fidelity. Never euphemize or sanitize.
 
 OUTPUT RULE: If the draft is already correct, accurate, and natural — output it EXACTLY unchanged, character for character.
 If you can improve it, output ONLY the improved translation — nothing else.
 """
 
 # Example 1: draft is correct — output unchanged
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): おはようございます\nDraft: Good morning.\nSource has 0 placeholder token(s). Draft has 0 placeholder token(s)."
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): おはようございます\nDraft: Good morning.\nSource has 0 marker(s). Draft has 0 marker(s)."
 MESSAGE assistant "Good morning."
 
 # Example 2: draft is awkward — improve fluency
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): なんで…なんでそんなこと言うの！\nDraft: Why... why do you say such a thing!\nSource has 0 placeholder token(s). Draft has 0 placeholder token(s)."
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): なんで…なんでそんなこと言うの！\nDraft: Why... why do you say such a thing!\nSource has 0 marker(s). Draft has 0 marker(s)."
 MESSAGE assistant "Why… why would you say something like that!"
 
-# Example 3: placeholder preserved verbatim
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): {{PH:n[1]}}は剣を手に入れた！\nDraft: {{PH:n[1]}} obtained a sword!\nSource has 1 placeholder token(s). Draft has 1 placeholder token(s)."
-MESSAGE assistant "{{PH:n[1]}} obtained a sword!"
+# Example 3: marker preserved verbatim
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): ❬0❭は剣を手に入れた！\nDraft: ❬0❭ obtained a sword!\nSource has 1 marker(s). Draft has 1 marker(s)."
+MESSAGE assistant "❬0❭ obtained a sword!"
 
-# Example 4: missing placeholder in draft — fix it
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): {{WOLF_NL}}「行こう！」\nDraft: \"Let's go!\"\nSource has 1 placeholder token(s). Draft has 0 placeholder token(s)."
-MESSAGE assistant "{{WOLF_NL}}\"Let's go!\""
+# Example 4: missing marker in draft — fix it
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): ❬0❭「行こう！」\nDraft: \"Let's go!\"\nSource has 1 marker(s). Draft has 0 marker(s)."
+MESSAGE assistant "❬0❭\"Let's go!\""
 
 # Example 5: literal translation — improve to idiomatic English
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): 昨日の夜、ずっとあなたのことを考えていたら眠れなくて、気づいたら朝になってた。\nDraft: Last night, I was always thinking about you and could not sleep, and when I noticed it had become morning.\nSource has 0 placeholder token(s). Draft has 0 placeholder token(s)."
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): 昨日の夜、ずっとあなたのことを考えていたら眠れなくて、気づいたら朝になってた。\nDraft: Last night, I was always thinking about you and could not sleep, and when I noticed it had become morning.\nSource has 0 marker(s). Draft has 0 marker(s)."
 MESSAGE assistant "Last night, I kept thinking about you and couldn't sleep — before I knew it, morning had come."
 
 # Example 6: adult content — translate faithfully, no softening
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): もっと激しくして…気持ちいい。\nDraft: Be more intense... it feels good.\nSource has 0 placeholder token(s). Draft has 0 placeholder token(s)."
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): もっと激しくして…気持ちいい。\nDraft: Be more intense... it feels good.\nSource has 0 marker(s). Draft has 0 marker(s)."
 MESSAGE assistant "Harder… it feels so good."
 
-# Example 7: Wolf RPG WOLF_NL count — must match source exactly
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): ウルファール{{WOLF_NL}}「この相談コマンドは、コモンイベントから{{WOLF_NL}}　呼び出されているんです。」\nDraft: Ulfar{{WOLF_NL}}\"This consultation command is called from a Common Event.\"\nSource has 2 placeholder token(s). Draft has 1 placeholder token(s)."
-MESSAGE assistant "Ulfar{{WOLF_NL}}\"This consultation command is being called{{WOLF_NL}}from a Common Event.\""
+# Example 7: multiple markers — source has 2, draft missing one
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): ❬0❭「この相談コマンドは、コモンイベントから❬1❭呼び出されているんです。」\nDraft: ❬0❭\"This consultation command is called from a Common Event.\"\nSource has 2 marker(s). Draft has 1 marker(s)."
+MESSAGE assistant "❬0❭\"This consultation command is being called❬1❭from a Common Event.\""
 
 # Example 8: tone too flat — restore dramatic intensity
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): この世界を滅ぼすのは、お前だ！\nDraft: You will destroy the world.\nSource has 0 placeholder token(s). Draft has 0 placeholder token(s)."
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): この世界を滅ぼすのは、お前だ！\nDraft: You will destroy the world.\nSource has 0 marker(s). Draft has 0 marker(s)."
 MESSAGE assistant "You are the one who will destroy this world!"
 
-# Example 9: French target — improve register
-MESSAGE user "Review this Japanese-to-French game translation.\nSource (JP): えへへ…またね♪\nDraft: Ehehe... à bientôt♪\nSource has 0 placeholder token(s). Draft has 0 placeholder token(s)."
+# Example 9: French target
+MESSAGE user "Review this Japanese-to-French game translation.\nSource (JP): えへへ…またね♪\nDraft: Ehehe... à bientôt♪\nSource has 0 marker(s). Draft has 0 marker(s)."
 MESSAGE assistant "Héhé… à bientôt♪"
 
-# Example 10: correct draft with placeholders — output unchanged
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): {{WOLF_COLOR_L[2]}}注意{{WOLF_COLOR_L[0]}}：回復量が増加する。\nDraft: {{WOLF_COLOR_L[2]}}Warning{{WOLF_COLOR_L[0]}}: Recovery amount increases.\nSource has 2 placeholder token(s). Draft has 2 placeholder token(s)."
-MESSAGE assistant "{{WOLF_COLOR_L[2]}}Warning{{WOLF_COLOR_L[0]}}: Recovery amount increases."
-
-# Example 11: 3 WOLF_NL in source, draft missing the third — fix it
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): ウルファール{{WOLF_NL}}「こんな風にメニューからコモンイベントを{{WOLF_NL}}　呼び出すこともできるので、{{WOLF_NL}}　自作のコマンドもラクラク追加できますね！」\nDraft: Ulfar{{WOLF_NL}}\"You can also call Common Events{{WOLF_NL}}from the menu like this, so adding custom commands is easy!\"\nSource has 3 placeholder token(s). Draft has 2 placeholder token(s)."
-MESSAGE assistant "Ulfar{{WOLF_NL}}\"You can also call Common Events{{WOLF_NL}}from the menu like this,{{WOLF_NL}}so adding custom commands is easy!\""
-
-# Example 12: multiple different placeholder types missing — restore all
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): {{WOLF_END}}{{WOLF_COLOR_L[2]}}ほのか{{WOLF_NL}}「行こう！」\nDraft: Honoka \"Let's go!\"\nSource has 3 placeholder token(s). Draft has 0 placeholder token(s)."
-MESSAGE assistant "{{WOLF_END}}{{WOLF_COLOR_L[2]}}Honoka{{WOLF_NL}}\"Let's go!\""
+# Example 10: multi-line — preserve newline position
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): そして夕一は今日の\n晩ゴハンのことしか考えていなかった！\nDraft: And Yuichi was only thinking about his dinner tonight, \n.\nSource has 0 marker(s). Draft has 0 marker(s)."
+MESSAGE assistant "And Yuichi was only thinking about\nhis dinner for tonight!"
