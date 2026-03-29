@@ -93,13 +93,22 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
     }
     let lines: Vec<String> = terms
         .iter()
-        .take(20)
         .map(|(src, tgt)| format!("- {} → {}", src, tgt))
         .collect();
     format!(
         "Glossary (always use these translations):\n{}\n\n",
         lines.join("\n")
     )
+}
+
+/// Returns only the glossary terms whose source_term appears literally in `text`.
+/// Preserves the original order from `terms`.
+fn filter_glossary_for_text(text: &str, terms: &[(String, String)]) -> Vec<(String, String)> {
+    terms
+        .iter()
+        .filter(|(src, _)| text.contains(src.as_str()))
+        .cloned()
+        .collect()
 }
 
 /// Translate pending entries with configurable concurrency and batch limit.
@@ -136,12 +145,7 @@ pub async fn translate_batch(
         .into_iter()
         .map(|t| (t.source_term, t.target_term))
         .collect();
-    let glossary_block = format_glossary_block(&term_pairs);
-    let system_prompt = if glossary_block.is_empty() {
-        system_prompt
-    } else {
-        format!("{}{}", glossary_block, system_prompt)
-    };
+    // NOTE: glossary_block is no longer built here — filtered per-entry inside the spawn closure
 
     let engine = queries::get_project_engine_by_id(pool.inner(), &project_id)
         .await
@@ -192,6 +196,7 @@ pub async fn translate_batch(
         let window = window.clone();
         let model = model.clone();
         let system_prompt = system_prompt.clone();
+        let term_pairs = term_pairs.clone();
         let target_lang = target_lang.clone();
         let ollama_host = ollama_host.clone();
         let done_count = done_count.clone();
@@ -204,49 +209,56 @@ pub async fn translate_batch(
                 return;
             }
 
-            let encoded = if is_wolf {
-                wolf_ph::encode(&entry.source_text)
+            // Single-pass: extract native codes → ❬n❭ markers
+            let (simplified, ph_map) = if is_wolf {
+                wolf_ph::extract_native(&entry.source_text)
             } else {
-                rpgmaker_ph::encode(&entry.source_text)
+                rpgmaker_ph::extract_native(&entry.source_text)
             };
-            // Map lang code to full name so the prompt matches the Modelfile few-shot format:
-            // "Translate from Japanese to English: {text}"
+            let marker_count = ph_map.len();
+
+            // Per-entry glossary: only terms present in this source text
+            let entry_glossary = filter_glossary_for_text(&entry.source_text, &term_pairs);
+            let gb = format_glossary_block(&entry_glossary);
+            let system_prompt = if gb.is_empty() {
+                system_prompt
+            } else {
+                format!("{}{}", gb, system_prompt)
+            };
+
             let lang_name = match target_lang.as_str() {
                 "fr" => "French",
                 _ => "English",
             };
             let prompt = if system_prompt.is_empty() {
-                // hoshi-translator: SYSTEM baked in Modelfile — match few-shot format exactly
-                format!("Translate from Japanese to {}: {}", lang_name, encoded)
+                format!("Translate from Japanese to {}: {}", lang_name, simplified)
             } else {
-                // Generic model: prepend settings system prompt
-                format!("{}\n\nTranslate from Japanese to {}: {}", system_prompt, lang_name, encoded)
+                format!("{}\n\nTranslate from Japanese to {}: {}", system_prompt, lang_name, simplified)
             };
             let ollama = ollama_from_url(&ollama_host);
             let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
 
             const MAX_RETRIES: u32 = 2;
             let mut last_error: Option<String> = None;
-            let mut final_decoded = String::new();
+            let mut final_result = String::new();
             let mut final_status = String::new();
             let mut success = false;
-            let source_count = count_placeholders(&encoded);
-            let mut last_trans_count = 0i64;
+            let mut last_found: usize = 0;
 
             for attempt in 0..=MAX_RETRIES {
                 let attempt_prompt = if attempt == 0 {
                     prompt.clone()
                 } else {
-                    let missing = source_count - last_trans_count.min(source_count);
+                    let missing = marker_count - last_found.min(marker_count);
                     if system_prompt.is_empty() {
                         format!(
-                            "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {source_count} placeholder(s), missing {missing}, include ALL of them): {}",
-                            lang_name, encoded
+                            "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — {missing} marker(s) missing, copy ALL ❬n❭ exactly): {}",
+                            lang_name, simplified
                         )
                     } else {
                         format!(
-                            "{}\n\nTranslate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — source has {source_count} placeholder(s), missing {missing}, include ALL of them): {}",
-                            system_prompt, lang_name, encoded
+                            "{}\n\nTranslate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — {missing} marker(s) missing, copy ALL ❬n❭ exactly): {}",
+                            system_prompt, lang_name, simplified
                         )
                     }
                 };
@@ -255,28 +267,27 @@ pub async fn translate_batch(
                 match ollama.generate(request).await {
                     Ok(response) => {
                         let translated = response.response.trim().replace("\\\"", "\"");
-                        // Count {{...}} tokens in raw model output (before decode).
-                        // This catches both missing tokens AND tokens the model decoded
-                        // early (e.g. returning \E instead of {{WOLF_END}}).
-                        let trans_count = count_placeholders(&translated);
-                        let (decoded, _) = if is_wolf {
-                            wolf_ph::decode(&translated)
+                        let (reinjected, intact) = if is_wolf {
+                            wolf_ph::reinject_native(&translated, &ph_map)
                         } else {
-                            rpgmaker_ph::decode(&translated)
+                            rpgmaker_ph::reinject_native(&translated, &ph_map)
                         };
-                        if trans_count == source_count {
-                            final_decoded = decoded;
+                        if intact {
+                            final_result = reinjected;
                             final_status = "translated".to_string();
                             success = true;
                             break;
                         } else if attempt == MAX_RETRIES {
-                            final_decoded = decoded;
-                            final_status = format!("warning:missing_placeholder:{}/{}", trans_count, source_count);
+                            let found = (0..marker_count)
+                                .filter(|i| translated.contains(&format!("❬{}❭", i)))
+                                .count();
+                            final_result = reinjected;
+                            final_status = format!("warning:missing_placeholder:{}/{}", found, marker_count);
                             success = true;
                         } else {
-                            // placeholder missing — store count for precise retry prompt
-                            last_trans_count = trans_count;
-                            final_decoded = decoded;
+                            last_found = (0..marker_count)
+                                .filter(|i| translated.contains(&format!("❬{}❭", i)))
+                                .count();
                         }
                     }
                     Err(e) => {
@@ -286,7 +297,7 @@ pub async fn translate_batch(
             }
 
             if success {
-                let _ = queries::update_translation(&pool, &entry.id, &final_decoded, &final_status).await;
+                let _ = queries::update_translation(&pool, &entry.id, &final_result, &final_status).await;
             } else {
                 let err = last_error.unwrap_or_else(|| "unknown".to_string());
                 let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", err)).await;
@@ -327,14 +338,6 @@ pub async fn translate_batch(
     let _ = window.emit("translation:complete", ());
 
     Ok(())
-}
-
-/// Count the number of `{{...}}` placeholder tokens in a string.
-/// Used to compare placeholder counts between source, draft, and refined text.
-pub fn count_placeholders(text: &str) -> i64 {
-    static PH_RE: std::sync::LazyLock<regex::Regex> =
-        std::sync::LazyLock::new(|| regex::Regex::new(r"\{\{[^}]+\}\}").unwrap());
-    PH_RE.find_iter(text).count() as i64
 }
 
 /// Infer the semantic type of a string from its file path.
@@ -469,28 +472,30 @@ pub async fn refine_batch(
                 None => return,
             };
 
-            // Encode both source and draft so the model reasons in {{...}} form
-            let encoded_source = if is_wolf {
-                wolf_ph::encode(&entry.source_text)
+            // Extract native codes → ❬n❭ for both source and draft
+            let (simplified_src, src_map) = if is_wolf {
+                wolf_ph::extract_native(&entry.source_text)
             } else {
-                rpgmaker_ph::encode(&entry.source_text)
+                rpgmaker_ph::extract_native(&entry.source_text)
             };
-            let encoded_draft = if is_wolf {
-                wolf_ph::encode(&draft)
+            let (simplified_trl, _) = if is_wolf {
+                wolf_ph::extract_native(&draft)
             } else {
-                rpgmaker_ph::encode(&draft)
+                rpgmaker_ph::extract_native(&draft)
             };
 
-            let ph_count_source = count_placeholders(&encoded_source);
-            let ph_count_draft = count_placeholders(&encoded_draft);
+            let ph_count_source = src_map.len() as i64;
+            let ph_count_draft = (0..src_map.len())
+                .filter(|i| simplified_trl.contains(&format!("❬{}❭", i)))
+                .count() as i64;
 
             let lang_name = match target_lang.as_str() {
                 "fr" => "French",
                 _ => "English",
             };
             let prompt = build_review_prompt(
-                &encoded_source,
-                &encoded_draft,
+                &simplified_src,
+                &simplified_trl,
                 ph_count_source,
                 ph_count_draft,
                 lang_name,
@@ -504,12 +509,14 @@ pub async fn refine_batch(
                 Ok(response) => {
                     let raw = response.response.trim().replace("\\\"", "\"");
                     let (decoded_refined, _intact) = if is_wolf {
-                        wolf_ph::decode(&raw)
+                        wolf_ph::reinject_native(&raw, &src_map)
                     } else {
-                        rpgmaker_ph::decode(&raw)
+                        rpgmaker_ph::reinject_native(&raw, &src_map)
                     };
 
-                    let ph_count_refined = count_placeholders(&raw);
+                    let ph_count_refined = (0..src_map.len())
+                        .filter(|i| raw.contains(&format!("❬{}❭", i)))
+                        .count() as i64;
 
                     let refined_status = if decoded_refined.trim() == draft.trim() {
                         "unchanged"
@@ -570,18 +577,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_count_placeholders_zero() {
-        assert_eq!(count_placeholders("Hello world"), 0);
+    fn test_filter_glossary_present_terms() {
+        let terms = vec![
+            ("六花".to_string(), "Rikka".to_string()),
+            ("羽鳥".to_string(), "Hatori".to_string()),
+            ("魔法".to_string(), "magic".to_string()),
+        ];
+        let result = filter_glossary_for_text("六花が魔法を使った。", &terms);
+        assert_eq!(result, vec![
+            ("六花".to_string(), "Rikka".to_string()),
+            ("魔法".to_string(), "magic".to_string()),
+        ]);
     }
 
     #[test]
-    fn test_count_placeholders_one() {
-        assert_eq!(count_placeholders("{{WOLF_NL}}"), 1);
+    fn test_filter_glossary_no_match() {
+        let terms = vec![("羽鳥".to_string(), "Hatori".to_string())];
+        let result = filter_glossary_for_text("おはようございます。", &terms);
+        assert!(result.is_empty());
     }
 
     #[test]
-    fn test_count_placeholders_multiple() {
-        assert_eq!(count_placeholders("{{WOLF_AT[1]}}{{WOLF_NL}}\"{{WOLF_CSELF[8]}}\" obtained."), 3);
+    fn test_filter_glossary_empty_terms() {
+        let result = filter_glossary_for_text("六花が魔法を使った。", &[]);
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -618,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_build_review_prompt_includes_placeholder_counts() {
-        let prompt = build_review_prompt("{{PH:n[1]}}は戦士", "{{PH:n[1]}} is a warrior", 1, 1, "English");
+        let prompt = build_review_prompt("❬0❭は戦士", "❬0❭ is a warrior", 1, 1, "English");
         assert!(prompt.contains("1"));
     }
 
