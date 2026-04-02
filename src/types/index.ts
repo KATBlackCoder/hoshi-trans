@@ -54,6 +54,9 @@ export interface TranslationEntry {
   ph_count_refined: number | null
   text_type: string | null
   refined_at: number | null
+  translated_at: number | null
+  prompt_tokens: number | null
+  output_tokens: number | null
 }
 
 // Payload of the "translation:progress" Tauri event

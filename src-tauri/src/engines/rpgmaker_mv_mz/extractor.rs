@@ -1,4 +1,4 @@
-use crate::engines::rpgmaker_mv_mz::{placeholders, skip};
+use crate::engines::rpgmaker_mv_mz::skip;
 use crate::models::TranslationEntry;
 use uuid::Uuid;
 
@@ -229,11 +229,10 @@ fn add_entry(
     if skip::should_skip(text) {
         return;
     }
-    let encoded = placeholders::encode(text);
     entries.push(TranslationEntry {
         id: Uuid::new_v4().to_string(),
         project_id: project_id.to_string(),
-        source_text: encoded,
+        source_text: text.to_string(),
         translation: None,
         status: "pending".to_string(),
         context,
@@ -246,6 +245,9 @@ fn add_entry(
         ph_count_refined: None,
         text_type: None,
         refined_at: None,
+        translated_at: None,
+        prompt_tokens: None,
+        output_tokens: None,
     });
 }
 

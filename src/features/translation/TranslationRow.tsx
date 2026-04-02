@@ -53,6 +53,9 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
 
   const filename = entry.file_path.split('/').pop() ?? entry.file_path
   const { label, strip, dotCls, labelCls } = getStatusMeta(entry.status)
+  const translatedAtStr = entry.translated_at
+    ? new Date(entry.translated_at * 1000).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+    : null
 
   async function save() {
     await invoke('update_translation', { entryId: entry.id, translation: draft })
@@ -96,6 +99,14 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
             </p>
             <span className="text-[10px] text-muted-foreground/40 font-mono mt-1 block">
               {filename} <span className="opacity-50">#{entry.order_index}</span>
+              {translatedAtStr && (
+                <span className="ml-2 opacity-50">{translatedAtStr}</span>
+              )}
+              {entry.output_tokens != null && (
+                <span className="ml-2 opacity-50" title={entry.prompt_tokens != null ? `prompt: ${entry.prompt_tokens} tokens` : undefined}>
+                  {entry.output_tokens}tok
+                </span>
+              )}
             </span>
           </div>
         </div>

@@ -1,4 +1,3 @@
-use crate::engines::wolf_rpg::placeholders;
 use crate::models::TranslationEntry;
 use std::collections::HashMap;
 use std::path::Path;
@@ -37,8 +36,7 @@ pub fn inject_sync(
         if let Some(ref t) = entry.translation {
             if !t.is_empty() {
                 let ctx = entry.context.clone().unwrap_or_default();
-                let (decoded, _) = placeholders::decode(t);
-                index.insert((entry.file_path.clone(), entry.order_index, ctx), decoded);
+                index.insert((entry.file_path.clone(), entry.order_index, ctx), t.clone());
             }
         }
     }
@@ -267,6 +265,9 @@ mod tests {
             ph_count_refined: None,
             text_type: None,
             refined_at: None,
+            translated_at: None,
+            prompt_tokens: None,
+            output_tokens: None,
         }
     }
 

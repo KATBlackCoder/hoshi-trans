@@ -118,7 +118,7 @@ pub async fn get_entries(
     let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
         "SELECT id, project_id, source_text, translation, status, context, file_path, order_index,
                 refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
-                text_type, refined_at
+                text_type, refined_at, translated_at, prompt_tokens, output_tokens
          FROM entries
          WHERE project_id = ?
          AND (? IS NULL OR
@@ -146,14 +146,20 @@ pub async fn update_translation(
     entry_id: &str,
     translation: &str,
     status: &str,
+    prompt_tokens: Option<i64>,
+    output_tokens: Option<i64>,
 ) -> anyhow::Result<()> {
     sqlx::query(
         "UPDATE entries SET translation = ?, status = ?,
-         refined_text = NULL, refined_status = NULL, refined_at = NULL
+         refined_text = NULL, refined_status = NULL, refined_at = NULL,
+         translated_at = unixepoch(),
+         prompt_tokens = ?, output_tokens = ?
          WHERE id = ?",
     )
     .bind(translation)
     .bind(status)
+    .bind(prompt_tokens)
+    .bind(output_tokens)
     .bind(entry_id)
     .execute(pool)
     .await?;
@@ -235,7 +241,7 @@ pub async fn get_entries_by_ids(
     let sql = format!(
         "SELECT id, project_id, source_text, translation, status, context, file_path, order_index,
                 refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
-                text_type, refined_at
+                text_type, refined_at, translated_at, prompt_tokens, output_tokens
          FROM entries WHERE id IN ({}) ORDER BY file_path, order_index",
         placeholders
     );
@@ -401,7 +407,7 @@ pub async fn get_refinable_entries(
     let rows: Vec<crate::models::TranslationEntry> = sqlx::query_as(
         "SELECT id, project_id, source_text, translation, status, context, file_path, order_index,
                 refined_text, refined_status, ph_count_source, ph_count_draft, ph_count_refined,
-                text_type, refined_at
+                text_type, refined_at, translated_at, prompt_tokens, output_tokens
          FROM entries
          WHERE project_id = ?
            AND (status = 'translated' OR status LIKE 'warning:%')
@@ -645,6 +651,9 @@ mod tests {
             ph_count_refined: None,
             text_type: None,
             refined_at: None,
+            translated_at: None,
+            prompt_tokens: None,
+            output_tokens: None,
         }];
 
         insert_entries_batch(&pool, &entries).await.unwrap();
@@ -746,6 +755,9 @@ mod tests {
             ph_count_refined: None,
             text_type: None,
             refined_at: None,
+            translated_at: None,
+            prompt_tokens: None,
+            output_tokens: None,
         };
 
         // First extraction

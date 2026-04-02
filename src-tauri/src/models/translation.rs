@@ -16,6 +16,9 @@ pub struct TranslationEntry {
     pub ph_count_refined: Option<i64>,
     pub text_type: Option<String>,
     pub refined_at: Option<i64>,
+    pub translated_at: Option<i64>,
+    pub prompt_tokens: Option<i64>,
+    pub output_tokens: Option<i64>,
 }
 
 /// Rust enum for app logic — serialized as snake_case strings for IPC

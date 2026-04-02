@@ -24,7 +24,7 @@ pub async fn update_translation(
     entry_id: String,
     translation: String,
 ) -> Result<(), String> {
-    queries::update_translation(pool.inner(), &entry_id, &translation, "translated")
+    queries::update_translation(pool.inner(), &entry_id, &translation, "translated", None, None)
         .await
         .map_err(|e| e.to_string())
 }

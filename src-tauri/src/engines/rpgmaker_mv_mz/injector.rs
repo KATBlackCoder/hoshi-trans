@@ -1,4 +1,3 @@
-use crate::engines::rpgmaker_mv_mz::placeholders;
 use crate::models::TranslationEntry;
 use std::collections::HashMap;
 use std::path::Path;
@@ -92,9 +91,8 @@ pub fn inject_map_translations(json: &mut serde_json::Value, translations: &[(&s
                             match code {
                                 401 | 405 => {
                                     if let Some(t) = trans_iter.next() {
-                                        let (decoded, _) = placeholders::decode(t.1);
                                         cmd["parameters"][0] =
-                                            serde_json::Value::String(decoded);
+                                            serde_json::Value::String(t.1.to_string());
                                     }
                                 }
                                 102 => {
@@ -106,9 +104,8 @@ pub fn inject_map_translations(json: &mut serde_json::Value, translations: &[(&s
                                         let mut translated_choices = Vec::with_capacity(choices);
                                         for _ in 0..choices {
                                             if let Some(t) = trans_iter.next() {
-                                                let (decoded, _) = placeholders::decode(t.1);
                                                 translated_choices
-                                                    .push(serde_json::Value::String(decoded));
+                                                    .push(serde_json::Value::String(t.1.to_string()));
                                             }
                                         }
                                         if !translated_choices.is_empty() {
@@ -153,7 +150,6 @@ pub fn inject_system_translations(
             Some(t) if !t.is_empty() => t,
             _ => continue,
         };
-        let (decoded, _) = placeholders::decode(translation);
         let ctx = match entry.context.as_deref() {
             Some(c) => c,
             None => continue,
@@ -161,7 +157,7 @@ pub fn inject_system_translations(
 
         if let Some(key) = ctx.strip_prefix("terms.messages.") {
             // Object field — inject directly by key
-            json["terms"]["messages"][key] = serde_json::Value::String(decoded);
+            json["terms"]["messages"][key] = serde_json::Value::String(translation.to_string());
         } else if let Some(bracket) = ctx.rfind('[') {
             // Array field — context is "FIELD[i]", parse field name and index
             let field = &ctx[..bracket];
@@ -178,7 +174,7 @@ pub fn inject_system_translations(
                     "elements"       => &mut json["elements"][idx],
                     _ => continue,
                 };
-                *target = serde_json::Value::String(decoded);
+                *target = serde_json::Value::String(translation.to_string());
             }
         }
     }
@@ -198,8 +194,7 @@ pub fn inject_database_translations(json: &mut serde_json::Value, translations: 
             ] {
                 if item[field].as_str().is_some() {
                     if let Some(t) = trans_iter.next() {
-                        let (decoded, _) = placeholders::decode(t.1);
-                        item[*field] = serde_json::Value::String(decoded);
+                        item[*field] = serde_json::Value::String(t.1.to_string());
                     }
                 }
             }
@@ -229,6 +224,9 @@ mod tests {
             ph_count_refined: None,
             text_type: None,
             refined_at: None,
+            translated_at: None,
+            prompt_tokens: None,
+            output_tokens: None,
         }
     }
 
@@ -311,7 +309,8 @@ mod tests {
     }
 
     #[test]
-    fn test_inject_map_decodes_placeholders() {
+    fn test_inject_map_uses_translation_as_is() {
+        // Translation stored in DB is already native — injector writes it verbatim
         let mut json = serde_json::json!({
             "events": [{
                 "pages": [{
@@ -322,7 +321,7 @@ mod tests {
             }]
         });
 
-        let translations = vec![("dummy", "Hello {{PH:N[1]}}!")];
+        let translations = vec![("dummy", r"Hello \N[1]!")];
         inject_map_translations(&mut json, &translations);
 
         assert_eq!(

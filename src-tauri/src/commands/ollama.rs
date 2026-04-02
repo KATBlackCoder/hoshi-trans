@@ -244,6 +244,8 @@ pub async fn translate_batch(
             let mut final_status = String::new();
             let mut success = false;
             let mut last_found: usize = 0;
+            let mut final_prompt_tokens: Option<i64> = None;
+            let mut final_output_tokens: Option<i64> = None;
 
             for attempt in 0..=MAX_RETRIES {
                 let attempt_prompt = if attempt == 0 {
@@ -267,6 +269,8 @@ pub async fn translate_batch(
                 match ollama.generate(request).await {
                     Ok(response) => {
                         let translated = response.response.trim().replace("\\\"", "\"");
+                        final_prompt_tokens = response.prompt_eval_count.map(|n| n as i64);
+                        final_output_tokens = response.eval_count.map(|n| n as i64);
                         let (reinjected, intact) = if is_wolf {
                             wolf_ph::reinject_native(&translated, &ph_map)
                         } else {
@@ -297,7 +301,7 @@ pub async fn translate_batch(
             }
 
             if success {
-                let _ = queries::update_translation(&pool, &entry.id, &final_result, &final_status).await;
+                let _ = queries::update_translation(&pool, &entry.id, &final_result, &final_status, final_prompt_tokens, final_output_tokens).await;
             } else {
                 let err = last_error.unwrap_or_else(|| "unknown".to_string());
                 let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", err)).await;
