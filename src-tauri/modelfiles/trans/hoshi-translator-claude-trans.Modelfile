@@ -83,8 +83,8 @@ MESSAGE user "Translate from Japanese to English: 戦闘不能"
 MESSAGE assistant "KO'd"
 
 # Multi-line — preserve newline position in output
-MESSAGE user "Translate from Japanese to English: そして夕一は今日の\n晩ゴハンのことしか考えていなかった！"
-MESSAGE assistant "And Yuichi was only thinking about\nhis dinner for tonight!"
+MESSAGE user "Translate from Japanese to English: そして夕一は今日の❬0❭晩ゴハンのことしか考えていなかった！"
+MESSAGE assistant "And Yuichi was only thinking about❬0❭his dinner for tonight!"
 
 # French
 MESSAGE user "Translate from Japanese to French: ❬0❭は剣を手に入れた！"

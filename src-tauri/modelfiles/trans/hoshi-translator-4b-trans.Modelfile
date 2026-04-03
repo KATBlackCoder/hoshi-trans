@@ -108,5 +108,5 @@ MESSAGE user "Translate from Japanese to English: そう……か。"
 MESSAGE assistant "I see……"
 
 # Newline preserved
-MESSAGE user "Translate from Japanese to English: そして夕一は今日の\n晩ゴハンのことしか考えていなかった！"
-MESSAGE assistant "And Yuichi was only thinking about\nhis dinner for tonight!"
+MESSAGE user "Translate from Japanese to English: そして夕一は今日の❬0❭晩ゴハンのことしか考えていなかった！"
+MESSAGE assistant "And Yuichi was only thinking about❬0❭his dinner for tonight!"

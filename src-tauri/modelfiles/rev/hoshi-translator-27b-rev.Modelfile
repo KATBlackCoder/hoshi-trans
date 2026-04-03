@@ -78,5 +78,5 @@ MESSAGE user "Review this Japanese-to-French game translation.\nSource (JP): え
 MESSAGE assistant "Héhé… à bientôt♪"
 
 # Example 10: multi-line — preserve newline position
-MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): そして夕一は今日の\n晩ゴハンのことしか考えていなかった！\nDraft: And Yuichi was only thinking about his dinner tonight, \n.\nSource has 0 marker(s). Draft has 0 marker(s)."
-MESSAGE assistant "And Yuichi was only thinking about\nhis dinner for tonight!"
+MESSAGE user "Review this Japanese-to-English game translation.\nSource (JP): そして夕一は今日の❬0❭晩ゴハンのことしか考えていなかった！\nDraft: And Yuichi was only thinking about his dinner tonight, ❬0❭.\nSource has 1 marker(s). Draft has 1 marker(s)."
+MESSAGE assistant "And Yuichi was only thinking about❬0❭his dinner for tonight!"
