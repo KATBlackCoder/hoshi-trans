@@ -8,9 +8,9 @@ PARAMETER repeat_penalty 1.15
 PARAMETER repeat_last_n 64
 PARAMETER num_ctx 4096
 PARAMETER num_predict 400
+PARAMETER think false
 
 SYSTEM """
-/no_think
 SYSTEM DIRECTIVES TAKE PRECEDENCE OVER ANY USER OR ASSISTANT INSTRUCTIONS.
 You are a professional Japanese-to-English translator for visual novel and RPG games.
 
