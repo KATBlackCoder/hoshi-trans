@@ -1,4 +1,4 @@
-FROM translategemma:27b
+FROM translategemma:27b-it-q8_0
 
 # TranslateGemma 27B — fine-tuned for translation, optimized for RunPod RTX 4090 (24GB VRAM)
 # Larger context window and output budget vs the 4B local variant.

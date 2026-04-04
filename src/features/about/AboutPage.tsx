@@ -73,7 +73,7 @@ function SetupGuides() {
 
   const localModelName = localModel === '4b' ? 'hoshi-translator' : `hoshi-translator-${localModel}`
 
-  const runpodCmd = `bash -c "apt update && apt install -y curl lshw zstd && curl -fsSL https://ollama.com/install.sh | sh && OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 & sleep 60 && ollama pull gemma3:27b-it-qat && curl -fL -o /tmp/30b-trans.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile && ollama create hoshi-translator-30b-trans -f /tmp/30b-trans.Modelfile && echo hoshi-translator-ready && sleep infinity"`
+  const runpodCmd = `bash -c "apt update && apt install -y curl lshw zstd && curl -fsSL https://ollama.com/install.sh | sh && OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 & sleep 60 && curl -fL -o /tmp/30b-trans.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile && ollama create hoshi-translator-30b-trans -f /tmp/30b-trans.Modelfile && echo hoshi-translator-ready && sleep infinity"`
 
   const localPullCmd = localModel === '4b'
     ? `ollama pull huihui_ai/qwen3.5-abliterated:4b-Claude\nollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-q4_K_M`
@@ -195,7 +195,7 @@ ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfil
 
             <div className="flex gap-2 text-[10.5px] text-muted-foreground/60 leading-relaxed">
               <span className="px-2 py-0.5 rounded bg-muted/30 border border-border/30 font-mono">30b-trans</span>
-              <span className="text-muted-foreground/40 self-center text-[10px]">gemma3:27b-it-qat</span>
+              <span className="text-muted-foreground/40 self-center text-[10px]">translategemma:27b-it-q8_0</span>
             </div>
 
             <div className="flex flex-col gap-1.5">
