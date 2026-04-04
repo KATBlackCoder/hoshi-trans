@@ -103,16 +103,18 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
 }
 
 const TRANSLATEGEMMA_HEADER: &str = "You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:";
+const MAX_RETRIES: u32 = 2;
 
 fn build_translate_prompt(glossary_block: &str, text: &str, is_retry: bool, attempt: u32, missing: usize) -> String {
-    let body = if is_retry {
+    let header = if is_retry {
         format!(
-            "RETRY {attempt} — {missing} marker(s) missing, copy ALL ❬n❭ exactly:\n{text}"
+            "{}\nRETRY {attempt}/{MAX_RETRIES} — {missing} ❬n❭ marker(s) missing. Copy ALL ❬n❭ tokens exactly as-is.",
+            TRANSLATEGEMMA_HEADER
         )
     } else {
-        text.to_string()
+        TRANSLATEGEMMA_HEADER.to_string()
     };
-    format!("{}\n\n\n{}{}", TRANSLATEGEMMA_HEADER, glossary_block, body)
+    format!("{}\n\n\n{}{}", header, glossary_block, text)
 }
 
 /// Returns only the glossary terms whose source_term appears literally in `text`.
@@ -249,7 +251,7 @@ pub async fn translate_batch(
             let ollama = ollama_from_url(&ollama_host);
             let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
 
-            const MAX_RETRIES: u32 = 2;
+
             let mut last_error: Option<String> = None;
             let mut final_result = String::new();
             let mut final_status = String::new();
