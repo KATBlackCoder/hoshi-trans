@@ -103,7 +103,7 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
                 <span className="ml-2 opacity-50">{translatedAtStr}</span>
               )}
               {(entry.prompt_tokens != null || entry.output_tokens != null) && (
-                <span className="ml-2 opacity-0 group-hover:opacity-50 transition-opacity">
+                <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400/60">
                   {entry.prompt_tokens != null && <>in:{entry.prompt_tokens} </>}
                   {entry.output_tokens != null && <>out:{entry.output_tokens}</>}
                 </span>

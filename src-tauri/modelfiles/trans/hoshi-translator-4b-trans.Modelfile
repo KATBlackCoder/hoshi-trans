@@ -68,7 +68,7 @@ MESSAGE assistant "Go to ❬0❭ right now!"
 
 # Ruby codes — markers wrap the whole code, just preserve them
 MESSAGE user "Translate from Japanese to English: ❬0❭❬1❭っぱい思い出を❬2❭はんすうしている！"
-MESSAGE assistant "❬0❭❬1❭ sweet-and-sour memories ❬2❭are coming back to mind!"
+MESSAGE assistant "Ulfar is lost in ❬0❭❬1❭bittersweet memories.❬2❭"
 
 # Name romanization
 MESSAGE user "Translate from Japanese to English: 六花は羽鳥に微笑んだ。"
