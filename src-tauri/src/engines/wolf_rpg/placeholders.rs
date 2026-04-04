@@ -26,6 +26,9 @@ static RE_M:          LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\m\[(-?\d
 // Ruby: \r[base,reading] — must be extracted before the no-param \r literal
 static RE_RUBY:       LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\r\[[^\]]*\]").unwrap());
 
+// No-parameter codes that must be ordered by text position (extracted before short parametric)
+static RE_NO_PARAM:   LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\E|\\A-|<C>|\\>|<R>|<<|>>").unwrap());
+
 // Short-prefix parametric (\C before \c to avoid partial match)
 static RE_COLOR_U:    LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\C\[(\d+)\]").unwrap());
 static RE_COLOR_L:    LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\c\[(\d+)\]").unwrap());
@@ -100,8 +103,9 @@ pub fn extract_native(text: &str) -> (String, Vec<String>) {
     s = replace_regex(&s, &RE_M,         &mut map);
 
     // 3. Short-prefix parametric (\C before \c to avoid partial match)
-    s = replace_regex(&s, &RE_RUBY,    &mut map); // \r[base,reading] before no-param \r
-    s = replace_regex(&s, &RE_COLOR_U, &mut map);
+    s = replace_regex(&s, &RE_RUBY,     &mut map); // \r[base,reading] before no-param \r
+    s = replace_regex(&s, &RE_NO_PARAM, &mut map); // \E etc. — before color codes to preserve text order
+    s = replace_regex(&s, &RE_COLOR_U,  &mut map);
     s = replace_regex(&s, &RE_COLOR_L, &mut map);
     s = replace_regex(&s, &RE_FONT,    &mut map);
     s = replace_regex(&s, &RE_AX,      &mut map);
@@ -113,17 +117,10 @@ pub fn extract_native(text: &str) -> (String, Vec<String>) {
     s = replace_regex(&s, &RE_AT,      &mut map);
     s = replace_regex(&s, &RE_PC,      &mut map);
 
-    // 4. No-parameter codes — plain literal replace
-    s = replace_literal(&s, r"\E",  &mut map);
-    s = replace_literal(&s, r"\A-", &mut map);
-    s = replace_literal(&s, r"\r",  &mut map);  // ruby start (escape sequence, not char)
+    // 4. Remaining no-parameter codes — plain literal replace
+    s = replace_literal(&s, r"\r",  &mut map);  // bare \r (after RE_RUBY took \r[...])
     s = replace_literal(&s, "\r",   &mut map);  // actual CR character
     s = replace_literal(&s, "\n",   &mut map);  // actual newline character
-    s = replace_literal(&s, "<C>",  &mut map);
-    s = replace_literal(&s, r"\>",  &mut map);
-    s = replace_literal(&s, "<R>",  &mut map);
-    s = replace_literal(&s, "<<",   &mut map);
-    s = replace_literal(&s, ">>",   &mut map);
 
     (s, map)
 }
@@ -233,6 +230,14 @@ mod tests {
         let (s, map) = extract_native(r"\EHPが200回復した");
         assert_eq!(s, "❬0❭HPが200回復した");
         assert_eq!(map, vec![r"\E"]);
+    }
+
+    #[test]
+    fn test_extract_wolf_end_before_color() {
+        // \E appears before \c[2] in source — must get lower index (text-position order)
+        let (s, map) = extract_native(r"\E\c[2]ほのか");
+        assert_eq!(s, "❬0❭❬1❭ほのか");
+        assert_eq!(map, vec![r"\E", r"\c[2]"]);
     }
 
     // ── reinject_native tests ─────────────────────────────────────────────────

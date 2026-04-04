@@ -1,4 +1,3 @@
-use crate::commands::ollama::count_placeholders;
 use crate::db::queries;
 use crate::engines::{rpgmaker_mv_mz::placeholders as rpgmaker_ph, wolf_rpg::placeholders as wolf_ph};
 use sqlx::SqlitePool;
@@ -31,20 +30,19 @@ pub async fn analyze_placeholders(
             _ => continue,
         };
 
-        let encoded_source = if is_wolf {
-            wolf_ph::encode(&entry.source_text)
+        let (_, source_map) = if is_wolf {
+            wolf_ph::extract_native(&entry.source_text)
         } else {
-            rpgmaker_ph::encode(&entry.source_text)
+            rpgmaker_ph::extract_native(&entry.source_text)
+        };
+        let (_, trans_map) = if is_wolf {
+            wolf_ph::extract_native(&translation)
+        } else {
+            rpgmaker_ph::extract_native(&translation)
         };
 
-        let encoded_translation = if is_wolf {
-            wolf_ph::encode(&translation)
-        } else {
-            rpgmaker_ph::encode(&translation)
-        };
-
-        let source_count = count_placeholders(&encoded_source);
-        let trans_count = count_placeholders(&encoded_translation);
+        let source_count = source_map.len();
+        let trans_count = trans_map.len();
 
         let new_status = if source_count == trans_count {
             "translated".to_string()

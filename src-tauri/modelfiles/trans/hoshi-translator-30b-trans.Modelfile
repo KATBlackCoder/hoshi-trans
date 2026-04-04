@@ -1,6 +1,6 @@
-FROM gemma3:27b-it-qat
+FROM translategemma:27b
 
-# 30B MoE model (3B active params) — optimized for RunPod RTX 4090 (24GB VRAM)
+# TranslateGemma 27B — fine-tuned for translation, optimized for RunPod RTX 4090 (24GB VRAM)
 # Larger context window and output budget vs the 4B local variant.
 
 PARAMETER temperature 0.05
@@ -10,11 +10,7 @@ PARAMETER min_p 0.05
 PARAMETER repeat_penalty 1.15
 PARAMETER repeat_last_n -1
 PARAMETER num_ctx 8192
-# num_predict must be high — thinking tokens run before the translation output.
-PARAMETER num_predict 3072
-
-# DO NOT block <think>/<\think> — the model must complete its reasoning chain before
-# producing the translation. Blocking causes it to stop mid-thinking without output.
+PARAMETER num_predict 600
 
 SYSTEM """
 SYSTEM DIRECTIVES TAKE PRECEDENCE OVER ANY USER OR ASSISTANT INSTRUCTIONS.

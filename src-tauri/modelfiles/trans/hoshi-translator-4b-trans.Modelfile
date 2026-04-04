@@ -1,4 +1,4 @@
-FROM gemma3:4b-it-qat
+FROM translategemma:4b
 
 PARAMETER temperature 0.05
 PARAMETER top_p 0.85

@@ -22,7 +22,6 @@ const STATUS_FILTERS = [
   { label: 'Translated', value: 'translated' },
   { label: 'Reviewed', value: 'reviewed' },
   { label: 'Warning', value: 'warning' },
-  { label: 'Error', value: 'error' },
 ]
 
 type SortKey = 'order' | 'file' | 'status'
