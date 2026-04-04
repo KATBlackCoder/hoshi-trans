@@ -103,18 +103,9 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
 }
 
 const TRANSLATEGEMMA_HEADER: &str = "You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:";
-const MAX_RETRIES: u32 = 2;
 
-fn build_translate_prompt(glossary_block: &str, text: &str, is_retry: bool, attempt: u32, missing: usize) -> String {
-    let header = if is_retry {
-        format!(
-            "{}\nRETRY {attempt}/{MAX_RETRIES} — {missing} ❬n❭ marker(s) missing. Copy ALL ❬n❭ tokens exactly as-is.",
-            TRANSLATEGEMMA_HEADER
-        )
-    } else {
-        TRANSLATEGEMMA_HEADER.to_string()
-    };
-    format!("{}\n\n\n{}{}", header, glossary_block, text)
+fn build_translate_prompt(glossary_block: &str, text: &str) -> String {
+    format!("{}\n\n\n{}{}", TRANSLATEGEMMA_HEADER, glossary_block, text)
 }
 
 /// Returns only the glossary terms whose source_term appears literally in `text`.
@@ -236,7 +227,7 @@ pub async fn translate_batch(
             let entry_glossary = filter_glossary_for_text(&entry.source_text, &term_pairs);
             let gb = format_glossary_block(&entry_glossary);
 
-            let prompt = build_translate_prompt(&gb, &simplified, false, 0, 0);
+            let prompt = build_translate_prompt(&gb, &simplified);
 
             // Log prompt for debug export
             prompt_log.lock().unwrap().push(serde_json::json!({
@@ -256,50 +247,33 @@ pub async fn translate_batch(
             let mut final_result = String::new();
             let mut final_status = String::new();
             let mut success = false;
-            let mut last_found: usize = 0;
             let mut final_prompt_tokens: Option<i64> = None;
             let mut final_output_tokens: Option<i64> = None;
 
-            for attempt in 0..=MAX_RETRIES {
-                let attempt_prompt = if attempt == 0 {
-                    prompt.clone()
-                } else {
-                    let missing = marker_count - last_found.min(marker_count);
-                    build_translate_prompt(&gb, &simplified, true, attempt, missing)
-                };
-
-                let request = GenerationRequest::new(model.clone(), attempt_prompt).options(options.clone());
-                match ollama.generate(request).await {
-                    Ok(response) => {
-                        let translated = response.response.trim().replace("\\\"", "\"");
-                        final_prompt_tokens = response.prompt_eval_count.map(|n| n as i64);
-                        final_output_tokens = response.eval_count.map(|n| n as i64);
-                        let (reinjected, intact) = if is_wolf {
-                            wolf_ph::reinject_native(&translated, &ph_map)
-                        } else {
-                            rpgmaker_ph::reinject_native(&translated, &ph_map)
-                        };
-                        if intact {
-                            final_result = reinjected;
-                            final_status = "translated".to_string();
-                            success = true;
-                            break;
-                        } else if attempt == MAX_RETRIES {
-                            let found = (0..marker_count)
-                                .filter(|i| translated.contains(&format!("❬{}❭", i)))
-                                .count();
-                            final_result = reinjected;
-                            final_status = format!("warning:missing_placeholder:{}/{}", found, marker_count);
-                            success = true;
-                        } else {
-                            last_found = (0..marker_count)
-                                .filter(|i| translated.contains(&format!("❬{}❭", i)))
-                                .count();
-                        }
-                    }
-                    Err(e) => {
-                        last_error = Some(e.to_string());
-                    }
+            let request = GenerationRequest::new(model.clone(), prompt).options(options.clone());
+            match ollama.generate(request).await {
+                Ok(response) => {
+                    let translated = response.response.trim().replace("\\\"", "\"");
+                    final_prompt_tokens = response.prompt_eval_count.map(|n| n as i64);
+                    final_output_tokens = response.eval_count.map(|n| n as i64);
+                    let (reinjected, intact) = if is_wolf {
+                        wolf_ph::reinject_native(&translated, &ph_map)
+                    } else {
+                        rpgmaker_ph::reinject_native(&translated, &ph_map)
+                    };
+                    let found = (0..marker_count)
+                        .filter(|i| translated.contains(&format!("❬{}❭", i)))
+                        .count();
+                    final_result = reinjected;
+                    final_status = if intact {
+                        "translated".to_string()
+                    } else {
+                        format!("warning:missing_placeholder:{}/{}", found, marker_count)
+                    };
+                    success = true;
+                }
+                Err(e) => {
+                    last_error = Some(e.to_string());
                 }
             }
 
