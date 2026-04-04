@@ -143,24 +143,14 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   function handleTranslateSingle(entry: TranslationEntry) {
     if (translatingRowId || running) return
     setTranslatingRowId(entry.id)
-    const lang = settings.targetLang === 'fr' ? 'French' : 'English'
-    const effectivePrompt = model.includes('hoshi-translator')
-      ? ''
-      : settings.systemPrompt.replace('{lang}', lang)
-    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, 1, 0, settings.temperature, [entry.id])
+    start(projectId, model, settings.ollamaHost, 1, 0, settings.temperature, [entry.id])
       .finally(() => { setTranslatingRowId(null); refetch() })
   }
 
   function handleStart() {
-    const lang = settings.targetLang === 'fr' ? 'French' : 'English'
-    // hoshi-translator has its own baked SYSTEM directive — sending a second
-    // system prompt in the user message confuses the model, so we send empty.
-    const effectivePrompt = model.includes('hoshi-translator')
-      ? ''
-      : settings.systemPrompt.replace('{lang}', lang)
     const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined
     setSelectedIds(new Set())
-    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, concurrency, limit, settings.temperature, ids)
+    start(projectId, model, settings.ollamaHost, concurrency, limit, settings.temperature, ids)
   }
 
   const exportTranslated = useMutation({
@@ -176,9 +166,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
       .filter(e => typeof e.status === 'string' && e.status.startsWith('warning'))
       .map(e => e.id)
     if (warningIds.length === 0) return
-    const lang = settings.targetLang === 'fr' ? 'French' : 'English'
-    const effectivePrompt = model.includes('hoshi-translator') ? '' : settings.systemPrompt.replace('{lang}', lang)
-    start(projectId, model, settings.targetLang, effectivePrompt, settings.ollamaHost, concurrency, limit, settings.temperature, warningIds)
+    start(projectId, model, settings.ollamaHost, concurrency, limit, settings.temperature, warningIds)
   }
 
   const analyzePh = useMutation({

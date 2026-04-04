@@ -99,10 +99,20 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
         .iter()
         .map(|(src, tgt)| format!("- {} → {}", src, tgt))
         .collect();
-    format!(
-        "Glossary (always use these translations):\n{}\n\n",
-        lines.join("\n")
-    )
+    format!("Glossary:\n{}\n\n", lines.join("\n"))
+}
+
+const TRANSLATEGEMMA_HEADER: &str = "You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:";
+
+fn build_translate_prompt(glossary_block: &str, text: &str, is_retry: bool, attempt: u32, missing: usize) -> String {
+    let body = if is_retry {
+        format!(
+            "RETRY {attempt} — {missing} marker(s) missing, copy ALL ❬n❭ exactly:\n{text}"
+        )
+    } else {
+        text.to_string()
+    };
+    format!("{}\n\n\n{}{}", TRANSLATEGEMMA_HEADER, glossary_block, body)
 }
 
 /// Returns only the glossary terms whose source_term appears literally in `text`.
@@ -129,8 +139,6 @@ pub async fn translate_batch(
     prompt_log: tauri::State<'_, PromptLog>,
     project_id: String,
     model: String,
-    target_lang: String,
-    system_prompt: String,
     ollama_host: String,
     concurrency: u32,
     limit: u32,
@@ -143,8 +151,8 @@ pub async fn translate_batch(
     batch_running.inner().0.store(true, Ordering::Relaxed);
     prompt_log.inner().0.lock().unwrap().clear();
 
-    // Fetch glossary (global + project-specific for target_lang) and prepend to system_prompt
-    let glossary_terms = queries::get_glossary_for_translation(pool.inner(), &project_id, &target_lang)
+    // Fetch glossary (global + project-specific) for this project
+    let glossary_terms = queries::get_glossary_for_translation(pool.inner(), &project_id, "en")
         .await
         .unwrap_or_default();
     let term_pairs: Vec<(String, String)> = glossary_terms
@@ -201,9 +209,7 @@ pub async fn translate_batch(
         let cancel = cancel.clone();
         let window = window.clone();
         let model = model.clone();
-        let system_prompt = system_prompt.clone();
         let term_pairs = term_pairs.clone();
-        let target_lang = target_lang.clone();
         let ollama_host = ollama_host.clone();
         let done_count = done_count.clone();
         let temperature = temperature;
@@ -227,21 +233,8 @@ pub async fn translate_batch(
             // Per-entry glossary: only terms present in this source text
             let entry_glossary = filter_glossary_for_text(&entry.source_text, &term_pairs);
             let gb = format_glossary_block(&entry_glossary);
-            let system_prompt = if gb.is_empty() {
-                system_prompt
-            } else {
-                format!("{}{}", gb, system_prompt)
-            };
 
-            let lang_name = match target_lang.as_str() {
-                "fr" => "French",
-                _ => "English",
-            };
-            let prompt = if system_prompt.is_empty() {
-                format!("Translate from Japanese to {}: {}", lang_name, simplified)
-            } else {
-                format!("{}\n\nTranslate from Japanese to {}: {}", system_prompt, lang_name, simplified)
-            };
+            let prompt = build_translate_prompt(&gb, &simplified, false, 0, 0);
 
             // Log prompt for debug export
             prompt_log.lock().unwrap().push(serde_json::json!({
@@ -270,17 +263,7 @@ pub async fn translate_batch(
                     prompt.clone()
                 } else {
                     let missing = marker_count - last_found.min(marker_count);
-                    if system_prompt.is_empty() {
-                        format!(
-                            "Translate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — {missing} marker(s) missing, copy ALL ❬n❭ exactly): {}",
-                            lang_name, simplified
-                        )
-                    } else {
-                        format!(
-                            "{}\n\nTranslate from Japanese to {} (RETRY {attempt}/{MAX_RETRIES} — {missing} marker(s) missing, copy ALL ❬n❭ exactly): {}",
-                            system_prompt, lang_name, simplified
-                        )
-                    }
+                    build_translate_prompt(&gb, &simplified, true, attempt, missing)
                 };
 
                 let request = GenerationRequest::new(model.clone(), attempt_prompt).options(options.clone());

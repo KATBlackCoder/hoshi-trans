@@ -39,8 +39,6 @@ export function useTranslationBatch() {
   const start = useCallback(async (
     projectId: string,
     model: string,
-    targetLang: string,
-    systemPrompt: string,
     ollamaHost: string,
     concurrency: number = 4,
     limit: number = 0,
@@ -60,8 +58,6 @@ export function useTranslationBatch() {
       await invoke('translate_batch', {
         projectId,
         model,
-        targetLang,
-        systemPrompt,
         ollamaHost,
         concurrency,
         limit,
