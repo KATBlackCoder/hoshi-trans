@@ -287,17 +287,17 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
       <Separator className="bg-sidebar-border" />
       {activeProject && (
         <div className="flex flex-col py-1 border-b border-sidebar-border">
-          {(['export_debug_json', 'export_debug_review_json', 'export_debug_warning_json'] as const).map((cmd, i) => {
-            const label = i === 0 ? 'Debug JSON' : i === 1 ? 'Debug Review' : 'Debug Warning'
+          {(['export_debug_json', 'export_debug_review_json', 'export_debug_warning_json', 'export_debug_prompts_json'] as const).map((cmd, i) => {
+            const label = i === 0 ? 'Debug JSON' : i === 1 ? 'Debug Review' : i === 2 ? 'Debug Warning' : 'Debug Prompts'
             return (
               <button
                 key={cmd}
                 onClick={async () => {
                   const { openPath } = await import('@tauri-apps/plugin-opener')
-                  const path = await invoke<string>(cmd, {
-                    projectId: activeProject.project_id,
-                    outputDir: activeProject.output_dir,
-                  })
+                  const args = cmd === 'export_debug_prompts_json'
+                    ? { outputDir: activeProject.output_dir }
+                    : { projectId: activeProject.project_id, outputDir: activeProject.output_dir }
+                  const path = await invoke<string>(cmd, args)
                   await openPath(path)
                 }}
                 className="relative flex items-center gap-2 px-3.5 py-2 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/40 transition-colors"

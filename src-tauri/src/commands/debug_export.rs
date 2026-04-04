@@ -1,3 +1,4 @@
+use crate::commands::ollama::PromptLog;
 use crate::db::queries;
 use sqlx::SqlitePool;
 
@@ -94,5 +95,18 @@ pub async fn export_debug_json(
     std::fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
     std::fs::write(&out_path, &out).map_err(|e| e.to_string())?;
 
+    Ok(out_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn export_debug_prompts_json(
+    prompt_log: tauri::State<'_, PromptLog>,
+    output_dir: String,
+) -> Result<String, String> {
+    let entries = prompt_log.inner().0.lock().unwrap().clone();
+    let out = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
+    let out_path = std::path::Path::new(&output_dir).join("debug-prompts.json");
+    std::fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
+    std::fs::write(&out_path, &out).map_err(|e| e.to_string())?;
     Ok(out_path.to_string_lossy().to_string())
 }

@@ -1,1 +1,1 @@
-export { DebugExportButton, ExportButton } from './ExportButton'
+export { DebugExportButton, DebugPromptsButton, ExportButton } from './ExportButton'

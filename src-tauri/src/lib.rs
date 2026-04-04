@@ -4,9 +4,10 @@ mod engines;
 mod models;
 
 pub use commands::ollama::BatchRunning;
+pub use commands::ollama::PromptLog;
 pub use commands::ollama::RefineRunning;
 use sqlx::SqlitePool;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -35,6 +36,7 @@ pub fn run() {
             app.manage(Arc::new(AtomicBool::new(false))); // cancel flag
             app.manage(BatchRunning(Arc::new(AtomicBool::new(false)))); // batch running flag
             app.manage(RefineRunning(Arc::new(AtomicBool::new(false)))); // refine running flag
+            app.manage(PromptLog(Arc::new(Mutex::new(Vec::new())))); // prompt debug buffer
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -42,6 +44,7 @@ pub fn run() {
             commands::debug_export::export_debug_json,
             commands::debug_export::export_debug_review_json,
             commands::debug_export::export_debug_warning_json,
+            commands::debug_export::export_debug_prompts_json,
             commands::ollama::check_ollama,
             commands::ollama::list_models,
             commands::ollama::translate_batch,

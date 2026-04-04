@@ -4,9 +4,13 @@ use ollama_rs::{generation::completion::request::GenerationRequest, Ollama};
 use sqlx::SqlitePool;
 use std::sync::{
     atomic::{AtomicBool, AtomicU32, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use tauri::Emitter;
+
+/// Shared buffer that accumulates prompt logs during a translation batch.
+/// Cleared at the start of each new batch.
+pub struct PromptLog(pub Arc<Mutex<Vec<serde_json::Value>>>);
 
 /// Parse a URL like "http://host:port" or "https://host.proxy.runpod.net" into (host_with_scheme, port).
 /// For HTTPS URLs without an explicit port, uses 443 (required for RunPod proxy URLs).
@@ -122,6 +126,7 @@ pub async fn translate_batch(
     pool: tauri::State<'_, SqlitePool>,
     cancel_flag: tauri::State<'_, Arc<AtomicBool>>,
     batch_running: tauri::State<'_, BatchRunning>,
+    prompt_log: tauri::State<'_, PromptLog>,
     project_id: String,
     model: String,
     target_lang: String,
@@ -136,6 +141,7 @@ pub async fn translate_batch(
 
     cancel_flag.store(false, Ordering::Relaxed);
     batch_running.inner().0.store(true, Ordering::Relaxed);
+    prompt_log.inner().0.lock().unwrap().clear();
 
     // Fetch glossary (global + project-specific for target_lang) and prepend to system_prompt
     let glossary_terms = queries::get_glossary_for_translation(pool.inner(), &project_id, &target_lang)
@@ -201,6 +207,7 @@ pub async fn translate_batch(
         let ollama_host = ollama_host.clone();
         let done_count = done_count.clone();
         let temperature = temperature;
+        let prompt_log = prompt_log.inner().0.clone();
 
         join_set.spawn(async move {
             let _permit = permit; // released when this task ends
@@ -235,6 +242,17 @@ pub async fn translate_batch(
             } else {
                 format!("{}\n\nTranslate from Japanese to {}: {}", system_prompt, lang_name, simplified)
             };
+
+            // Log prompt for debug export
+            prompt_log.lock().unwrap().push(serde_json::json!({
+                "entry_id": entry.id,
+                "file": entry.file_path,
+                "order": entry.order_index,
+                "source": entry.source_text,
+                "simplified": simplified,
+                "prompt": prompt,
+            }));
+
             let ollama = ollama_from_url(&ollama_host);
             let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
 
