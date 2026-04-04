@@ -99,13 +99,17 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
         .iter()
         .map(|(src, tgt)| format!("- {} → {}", src, tgt))
         .collect();
-    format!("Glossary:\n{}\n\n", lines.join("\n"))
+    format!("Reference glossary (use these translations, do not include in output):\n{}", lines.join("\n"))
 }
 
 const TRANSLATEGEMMA_HEADER: &str = "You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:";
 
 fn build_translate_prompt(glossary_block: &str, text: &str) -> String {
-    format!("{}\n\n\n{}{}", TRANSLATEGEMMA_HEADER, glossary_block, text)
+    if glossary_block.is_empty() {
+        format!("{}\n\n\n{}", TRANSLATEGEMMA_HEADER, text)
+    } else {
+        format!("{}\n{}\n\n\n{}", TRANSLATEGEMMA_HEADER, glossary_block, text)
+    }
 }
 
 /// Returns only the glossary terms whose source_term appears literally in `text`.
