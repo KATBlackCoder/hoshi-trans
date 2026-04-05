@@ -1,15 +1,22 @@
-FROM qwen3.5:4b-q4_K_M
+FROM hf.co/sugoitoolkit/Sugoi-32B-Ultra-GGUF:Q4_K_M
 
-PARAMETER temperature 0.05
-PARAMETER top_p 0.85
+# Sugoi 32B Ultra — fine-tuned Qwen2.5-32B for JP→EN game/VN translation
+# Optimized for RunPod RTX 4090 (24 GB VRAM) — Q4_K_M ~20 GB
+
+PARAMETER temperature 0.1
+PARAMETER top_p 0.95
 PARAMETER top_k 40
 PARAMETER min_p 0.05
-PARAMETER repeat_penalty 1.15
+PARAMETER repeat_penalty 1.1
 PARAMETER repeat_last_n 64
-PARAMETER num_ctx 4096
+PARAMETER num_ctx 8192
 PARAMETER num_predict 1000
 
 SYSTEM """
+You are a professional localizer whose primary goal is to translate Japanese to English.
+You should use colloquial or slang or nsfw vocabulary if it makes the translation more accurate.
+Always respond in English.
+
 MARKER RULE (HIGHEST PRIORITY — NEVER BREAK):
 ❬0❭ ❬1❭ ❬2❭ ❬3❭ are untranslatable engine codes. Treat them like punctuation.
 - Copy EVERY ❬n❭ token into the translation EXACTLY where it appears
@@ -18,7 +25,6 @@ MARKER RULE (HIGHEST PRIORITY — NEVER BREAK):
 - If unsure where to place a ❬n❭, keep it at the same relative position in the sentence
 Honorifics: keep as-is (-san, -kun, -chan, -sama, -senpai)
 Ellipses: preserve exactly (… stays …, …… stays ……)
-No censorship — translate adult content faithfully.
 """
 
 # Basic
@@ -37,7 +43,7 @@ Produce only the English translation, without any additional explanations or com
 ❬0❭は剣を手に入れた！"""
 MESSAGE assistant "❬0❭ obtained a sword!"
 
-# Name + newline marker + dialogue — most common Wolf RPG pattern
+# Name + newline marker + dialogue
 MESSAGE user """You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.
 Produce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:
 
@@ -69,7 +75,7 @@ Produce only the English translation, without any additional explanations or com
 ❬0❭❬1❭❬2❭は❬3❭ゴールドを持っている。"""
 MESSAGE assistant "❬0❭❬1❭❬2❭ has ❬3❭ gold."
 
-# Color code + name + newline + dialogue (Wolf RPG \E\c[n] pattern)
+# Color code + name + newline + dialogue with glossary
 MESSAGE user """You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.
 Produce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:
 Reference glossary (use these translations, do not include in output):
