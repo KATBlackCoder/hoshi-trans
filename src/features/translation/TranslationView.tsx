@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TranslationRow } from './TranslationRow'
+import { FileStatsPanel } from './FileStatsPanel'
 import { useTranslationBatch } from '@/hooks/useTranslationBatch'
 import { useRefineBatch } from '@/hooks/useRefineBatch'
 import { useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Wand2, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Wand2, ShieldCheck, AlertTriangle, LayoutList, BarChart2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { openPath } from '@tauri-apps/plugin-opener'
 import type { TranslationEntry } from '@/types'
@@ -82,6 +83,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const { progress: refineProgress, running: refining, start: startRefine, cancel: cancelRefine } = useRefineBatch()
   const [selectedRefineModel, setSelectedRefineModel] = useState<string>('')
   const refineModel = selectedRefineModel || availableModels[0] || ''
+  const [viewMode, setViewMode] = useState<'list' | 'files'>('list')
   const [resetting, setResetting] = useState(false)
   const [lastResetCount, setLastResetCount] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -206,6 +208,11 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     setRefiningRowId(entry.id)
     startRefine(projectId, refineModel, settings.targetLang, settings.ollamaHost, 1, [entry.id])
       .finally(() => { setRefiningRowId(null); refetch() })
+  }
+
+  function handleFileClick(filePath: string) {
+    setFileFilter(filePath)
+    setViewMode('list')
   }
 
   async function handleReset() {
@@ -410,6 +417,31 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
           </Select>
         )}
 
+        <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
+          <button
+            onClick={() => setViewMode('list')}
+            title="List view"
+            className={`w-7 h-7 flex items-center justify-center transition-colors ${
+              viewMode === 'list'
+                ? 'bg-secondary text-secondary-foreground'
+                : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
+            }`}
+          >
+            <LayoutList className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setViewMode('files')}
+            title="Files view"
+            className={`w-7 h-7 flex items-center justify-center transition-colors border-l border-border/40 ${
+              viewMode === 'files'
+                ? 'bg-secondary text-secondary-foreground'
+                : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
         <div className="flex-1" />
 
         {lastResetCount !== null && (
@@ -481,8 +513,10 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
         </div>
       </div>
 
-      {/* Virtualized table */}
-      {filtered.length === 0 ? (
+      {/* Virtualized table / file stats */}
+      {viewMode === 'files' ? (
+        <FileStatsPanel projectId={projectId} onFileClick={handleFileClick} />
+      ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-2 text-center">
           <p className="text-sm font-medium">{search ? 'No results' : 'No entries'}</p>
           <p className="text-xs text-muted-foreground">
