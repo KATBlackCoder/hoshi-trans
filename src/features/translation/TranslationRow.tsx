@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
@@ -51,6 +51,15 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.translation ?? '')
 
+  useEffect(() => {
+    if (!editing) {
+      const text = entry.refined_text && entry.refined_status !== 'unchanged'
+        ? entry.refined_text
+        : (entry.translation ?? '')
+      setDraft(text)
+    }
+  }, [entry.translation, entry.refined_text, entry.refined_status, editing])
+
   const filename = entry.file_path.split('/').pop() ?? entry.file_path
   const { label, strip, dotCls, labelCls } = getStatusMeta(entry.status)
   const translatedAtStr = entry.translated_at
@@ -58,13 +67,20 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
     : null
 
   async function save() {
-    await invoke('update_translation', { entryId: entry.id, translation: draft })
+    if (entry.refined_text && entry.refined_status !== 'unchanged') {
+      await invoke('update_refined_manual', { entryId: entry.id, refinedText: draft })
+    } else {
+      await invoke('update_translation', { entryId: entry.id, translation: draft })
+    }
     setEditing(false)
     onUpdated()
   }
 
   function discard() {
-    setDraft(entry.translation ?? '')
+    const text = entry.refined_text && entry.refined_status !== 'unchanged'
+      ? entry.refined_text
+      : (entry.translation ?? '')
+    setDraft(text)
     setEditing(false)
   }
 
@@ -191,7 +207,11 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
               </div>
             </div>
           ) : (
-            <div className="text-xs leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/70 font-mono">
+            <div
+              className="text-xs leading-relaxed whitespace-pre-wrap wrap-break-word text-foreground/70 font-mono cursor-text hover:text-foreground/90 transition-colors"
+              onClick={() => setEditing(true)}
+              title="Click to edit"
+            >
               {entry.refined_text && entry.refined_status !== 'unchanged' ? (
                 <>
                   <span className="text-amber-400/70 mr-1 text-[9px]">
