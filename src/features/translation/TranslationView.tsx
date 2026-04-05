@@ -68,6 +68,7 @@ interface Props {
 
 export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Props) {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [fileFilter, setFileFilter] = useState<string | undefined>()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('order')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
@@ -89,14 +90,29 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const { data: entries = [], refetch } = useQuery({
-    queryKey: ['entries', projectId, statusFilter],
+    queryKey: ['entries', projectId, statusFilter, fileFilter],
     queryFn: () =>
       invoke<TranslationEntry[]>('get_entries', {
         projectId,
         statusFilter: statusFilter ?? null,
-        fileFilter: null,
+        fileFilter: fileFilter ?? null,
       }),
   })
+
+  const { data: uniqueFiles = [] } = useQuery({
+    queryKey: ['file_paths', projectId],
+    queryFn: () =>
+      invoke<TranslationEntry[]>('get_entries', {
+        projectId,
+        statusFilter: null,
+        fileFilter: null,
+      }).then(all => [...new Set(all.map(e => e.file_path))].sort()),
+    staleTime: 30_000,
+  })
+
+  useEffect(() => {
+    setFileFilter(undefined)
+  }, [projectId])
 
   const progressPct = progress ? Math.round((progress.done / progress.total) * 100) : 0
   const pendingCount = entries.filter(e => e.status === 'pending').length
@@ -221,6 +237,17 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
             )}
             {search && (
               <><span className="opacity-30">·</span><span className="text-primary/70 tabular-nums">{filtered.length} found</span></>
+            )}
+            {fileFilter && (
+              <>
+                <span className="opacity-30">·</span>
+                <span className="text-primary/70 font-mono truncate max-w-24">
+                  {fileFilter.split('/').pop()}
+                </span>
+                <button onClick={() => setFileFilter(undefined)} className="text-muted-foreground/40 hover:text-foreground">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -363,6 +390,25 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
             >{f.label}</button>
           ))}
         </div>
+
+        {uniqueFiles.length > 1 && (
+          <Select value={fileFilter ?? '__all__'} onValueChange={(v) => setFileFilter(!v || v === '__all__' ? undefined : v)}>
+            <SelectTrigger className="h-7 w-48 text-xs font-mono border-border/40">
+              <SelectValue placeholder="All files" />
+            </SelectTrigger>
+            <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width) max-h-64">
+              <SelectItem value="__all__" className="text-xs font-mono">All files</SelectItem>
+              {uniqueFiles.map(f => {
+                const short = f.split('/').pop() ?? f
+                return (
+                  <SelectItem key={f} value={f} className="text-xs font-mono" title={f}>
+                    {short}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+        )}
 
         <div className="flex-1" />
 
