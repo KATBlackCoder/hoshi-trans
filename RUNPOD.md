@@ -37,10 +37,10 @@ Fine-tuned Qwen2.5-14B for JP→EN game/VN translation. Requires 24 GB VRAM.
 
 ```bash
 bash -c "
-apt update && apt install -y curl &&
+apt update && apt install -y curl lshw zstd &&
 curl -fsSL https://ollama.com/install.sh | sh &&
 OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 30 &&
+sleep 60 &&
 curl -f -L -o /tmp/hoshi-translator-14b-trans.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-14b-trans.Modelfile || exit 1 &&
 ollama create hoshi-translator-14b-trans -f /tmp/hoshi-translator-14b-trans.Modelfile || exit 1 &&
 echo 'hoshi-translator-14b-trans ready' &&
@@ -56,10 +56,10 @@ Fine-tuned Qwen2.5-32B for JP→EN game/VN translation. Best quality. Requires 2
 
 ```bash
 bash -c "
-apt update && apt install -y curl &&
+apt update && apt install -y curl lshw zstd &&
 curl -fsSL https://ollama.com/install.sh | sh &&
 OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 &
-sleep 30 &&
+sleep 60 &&
 curl -f -L -o /tmp/hoshi-translator-32b-trans.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-32b-trans.Modelfile || exit 1 &&
 ollama create hoshi-translator-32b-trans -f /tmp/hoshi-translator-32b-trans.Modelfile || exit 1 &&
 echo 'hoshi-translator-32b-trans ready' &&

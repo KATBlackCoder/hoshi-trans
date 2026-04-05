@@ -433,6 +433,28 @@ pub async fn delete_glossary_term(pool: &SqlitePool, id: &str) -> anyhow::Result
     Ok(())
 }
 
+pub async fn get_file_stats(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<Vec<crate::models::FileStats>> {
+    let rows: Vec<crate::models::FileStats> = sqlx::query_as(
+        "SELECT
+           file_path,
+           COUNT(*) AS total,
+           SUM(CASE WHEN status = 'translated' OR status = 'reviewed' THEN 1 ELSE 0 END) AS translated,
+           SUM(CASE WHEN status LIKE 'warning%' THEN 1 ELSE 0 END) AS warning,
+           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending
+         FROM entries
+         WHERE project_id = ?
+         GROUP BY file_path
+         ORDER BY file_path",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
 #[cfg(test)]
 mod glossary_tests {
     use super::*;
@@ -771,5 +793,34 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(count.0, 1, "re-extraction must not create duplicates");
+    }
+
+    #[tokio::test]
+    async fn test_get_file_stats() {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        create_project(&pool, "p1", "/g", "rpgmaker_mv_mz", "T", "en", None).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES
+             ('e1','p1','A','translated','data/Map001.json',0),
+             ('e2','p1','B','pending','data/Map001.json',1),
+             ('e3','p1','C','warning:missing_placeholder:1/2','data/Actors.json',0),
+             ('e4','p1','D','translated','data/Actors.json',1)"
+        ).execute(&pool).await.unwrap();
+
+        let stats = get_file_stats(&pool, "p1").await.unwrap();
+        assert_eq!(stats.len(), 2);
+
+        let map001 = stats.iter().find(|s| s.file_path == "data/Map001.json").unwrap();
+        assert_eq!(map001.total, 2);
+        assert_eq!(map001.translated, 1);
+        assert_eq!(map001.warning, 0);
+        assert_eq!(map001.pending, 1);
+
+        let actors = stats.iter().find(|s| s.file_path == "data/Actors.json").unwrap();
+        assert_eq!(actors.total, 2);
+        assert_eq!(actors.translated, 1);
+        assert_eq!(actors.warning, 1);
+        assert_eq!(actors.pending, 0);
     }
 }

@@ -53,6 +53,16 @@ pub async fn update_refined_manual(
 }
 
 #[tauri::command]
+pub async fn get_file_stats(
+    pool: tauri::State<'_, SqlitePool>,
+    project_id: String,
+) -> Result<Vec<crate::models::FileStats>, String> {
+    crate::db::queries::get_file_stats(pool.inner(), &project_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn update_status(
     pool: tauri::State<'_, SqlitePool>,
     entry_id: String,

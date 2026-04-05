@@ -66,6 +66,14 @@ export interface TranslationProgress {
   entry_id: string
 }
 
+export interface FileStats {
+  file_path: string
+  total: number
+  translated: number
+  warning: number
+  pending: number
+}
+
 export interface GlossaryTerm {
   id: string
   project_id: string | null  // null = global

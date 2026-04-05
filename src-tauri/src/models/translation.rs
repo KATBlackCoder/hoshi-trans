@@ -21,6 +21,15 @@ pub struct TranslationEntry {
     pub output_tokens: Option<i64>,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct FileStats {
+    pub file_path: String,
+    pub total: i64,
+    pub translated: i64,
+    pub warning: i64,
+    pub pending: i64,
+}
+
 /// Rust enum for app logic — serialized as snake_case strings for IPC
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]

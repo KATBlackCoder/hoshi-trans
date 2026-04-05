@@ -1,0 +1,1570 @@
+[
+  {
+    "id": "031d4351-0401-43c9-a76a-edc10d1b959c",
+    "project_id": null,
+    "source_term": "HP全回復",
+    "target_term": "Full HP Recovery",
+    "target_lang": "en"
+  },
+  {
+    "id": "71c384f5-99ab-4d6c-9207-854c4ccee19e",
+    "project_id": null,
+    "source_term": "MP全回復",
+    "target_term": "Full MP Recovery",
+    "target_lang": "en"
+  },
+  {
+    "id": "fc175a9a-0999-4fed-9c69-96a90fc188d2",
+    "project_id": null,
+    "source_term": "いいえ",
+    "target_term": "No",
+    "target_lang": "en"
+  },
+  {
+    "id": "996f0a39-64bc-4656-871e-36243cfda68b",
+    "project_id": null,
+    "source_term": "いぶき",
+    "target_term": "Ibuki",
+    "target_lang": "en"
+  },
+  {
+    "id": "4fdaa18f-f12f-47b4-be66-8a497b326835",
+    "project_id": null,
+    "source_term": "はい",
+    "target_term": "Yes",
+    "target_lang": "en"
+  },
+  {
+    "id": "828893d5-3054-42e6-9e71-111e06e9eca5",
+    "project_id": null,
+    "source_term": "はづき",
+    "target_term": "Hazuki",
+    "target_lang": "en"
+  },
+  {
+    "id": "a27ee15c-4a8e-4e35-957e-1e52da811b4b",
+    "project_id": null,
+    "source_term": "ほのか",
+    "target_term": "Honoka",
+    "target_lang": "en"
+  },
+  {
+    "id": "788ede23-589b-495a-aa06-9b8235a05124",
+    "project_id": null,
+    "source_term": "アイテム",
+    "target_term": "Item",
+    "target_lang": "en"
+  },
+  {
+    "id": "646d91e9-ef04-4972-9b32-e0c5110c27a6",
+    "project_id": null,
+    "source_term": "イベント",
+    "target_term": "Event",
+    "target_lang": "en"
+  },
+  {
+    "id": "d28ded86-29f6-4935-9682-798885331bef",
+    "project_id": null,
+    "source_term": "インベントリ",
+    "target_term": "Inventory",
+    "target_lang": "en"
+  },
+  {
+    "id": "8f3c248a-6dc9-47f0-995d-7a29cc22f01a",
+    "project_id": null,
+    "source_term": "ウルファール",
+    "target_term": "Ulfar",
+    "target_lang": "en"
+  },
+  {
+    "id": "24180e43-6630-4672-836e-ba30fa6a1678",
+    "project_id": null,
+    "source_term": "エリア",
+    "target_term": "Area",
+    "target_lang": "en"
+  },
+  {
+    "id": "2aae5306-9191-4541-834e-d2d5c6a9ef20",
+    "project_id": null,
+    "source_term": "エリクサー",
+    "target_term": "Elixir",
+    "target_lang": "en"
+  },
+  {
+    "id": "84eaab79-290b-420c-8716-56be73a4132a",
+    "project_id": null,
+    "source_term": "エンディング",
+    "target_term": "Ending",
+    "target_lang": "en"
+  },
+  {
+    "id": "a0d80d66-8c5f-410a-a987-d1bbb281d5e5",
+    "project_id": null,
+    "source_term": "カットシーン",
+    "target_term": "Cutscene",
+    "target_lang": "en"
+  },
+  {
+    "id": "54b5b751-432d-484f-b1b9-00575cd26c2b",
+    "project_id": null,
+    "source_term": "キャラクター",
+    "target_term": "Character",
+    "target_lang": "en"
+  },
+  {
+    "id": "ab0aca57-e5e1-4069-8d3c-a1672108fc4a",
+    "project_id": null,
+    "source_term": "キャンセル",
+    "target_term": "Cancel",
+    "target_lang": "en"
+  },
+  {
+    "id": "730a843e-fe81-4b25-a813-dfb91ac1245e",
+    "project_id": null,
+    "source_term": "クエスト",
+    "target_term": "Quest",
+    "target_lang": "en"
+  },
+  {
+    "id": "47ac4647-ddc9-4d3d-8fd9-73d7fa0d7d95",
+    "project_id": null,
+    "source_term": "クリア",
+    "target_term": "Clear",
+    "target_lang": "en"
+  },
+  {
+    "id": "e76b382b-8062-4ad5-a20b-5ff157bbf29c",
+    "project_id": null,
+    "source_term": "クリティカル",
+    "target_term": "Critical",
+    "target_lang": "en"
+  },
+  {
+    "id": "113874bc-32ae-494c-9327-0f60c5fb73fb",
+    "project_id": null,
+    "source_term": "グッドエンド",
+    "target_term": "Good Ending",
+    "target_lang": "en"
+  },
+  {
+    "id": "c8cfd677-50e7-4347-b476-3aafada5b5c2",
+    "project_id": null,
+    "source_term": "ゲームオーバー",
+    "target_term": "Game Over",
+    "target_lang": "en"
+  },
+  {
+    "id": "31f94189-9503-4d4c-a23e-ecac257e513d",
+    "project_id": null,
+    "source_term": "コイン",
+    "target_term": "Coin",
+    "target_lang": "en"
+  },
+  {
+    "id": "5eabbaf7-7d7a-4713-b7f3-49008bde79a7",
+    "project_id": null,
+    "source_term": "コマンド",
+    "target_term": "Command",
+    "target_lang": "en"
+  },
+  {
+    "id": "a672f7fe-aa36-42c2-b5de-36e5496ba4ff",
+    "project_id": null,
+    "source_term": "コンボ",
+    "target_term": "Combo",
+    "target_lang": "en"
+  },
+  {
+    "id": "9d656d6f-3a4d-4ab8-80f2-ac6f308efef3",
+    "project_id": null,
+    "source_term": "ゴールド",
+    "target_term": "Gold",
+    "target_lang": "en"
+  },
+  {
+    "id": "d1b8eb5d-0de8-48ef-b246-56c1be9dfd97",
+    "project_id": null,
+    "source_term": "ショップ",
+    "target_term": "Shop",
+    "target_lang": "en"
+  },
+  {
+    "id": "d48ff29a-75de-4728-b6f2-8fe4aaeb2575",
+    "project_id": null,
+    "source_term": "シーン",
+    "target_term": "Scene",
+    "target_lang": "en"
+  },
+  {
+    "id": "f8e87815-e548-4d11-89a7-4a810d8f7d6a",
+    "project_id": null,
+    "source_term": "スキル",
+    "target_term": "Skill",
+    "target_lang": "en"
+  },
+  {
+    "id": "a3387225-3fe1-4e15-9391-e79c23c174d6",
+    "project_id": null,
+    "source_term": "ステータス",
+    "target_term": "Status",
+    "target_lang": "en"
+  },
+  {
+    "id": "806db0ab-3e1f-4032-b0db-1154a1828bca",
+    "project_id": null,
+    "source_term": "セーブポイント",
+    "target_term": "Save Point",
+    "target_lang": "en"
+  },
+  {
+    "id": "433bb994-902b-4872-a841-8927555c175a",
+    "project_id": null,
+    "source_term": "タイムリミット",
+    "target_term": "Time Limit",
+    "target_lang": "en"
+  },
+  {
+    "id": "e6088d90-dc76-4d70-a7be-3372a287e8ff",
+    "project_id": null,
+    "source_term": "ターン",
+    "target_term": "Turn",
+    "target_lang": "en"
+  },
+  {
+    "id": "b453fc39-1081-4d17-8572-a47be8819941",
+    "project_id": null,
+    "source_term": "ダメージ",
+    "target_term": "Damage",
+    "target_lang": "en"
+  },
+  {
+    "id": "e1c6c977-c922-4260-8e6e-593632b1d394",
+    "project_id": null,
+    "source_term": "ダンジョン",
+    "target_term": "Dungeon",
+    "target_lang": "en"
+  },
+  {
+    "id": "0a0e87ff-db76-4066-b9f1-0e0491d336da",
+    "project_id": null,
+    "source_term": "チェックポイント",
+    "target_term": "Checkpoint",
+    "target_lang": "en"
+  },
+  {
+    "id": "64e10bce-a250-4795-8f3d-d7241c93eeeb",
+    "project_id": null,
+    "source_term": "テレポート",
+    "target_term": "Teleport",
+    "target_lang": "en"
+  },
+  {
+    "id": "8ce37fe5-df5f-4996-8533-4fcb40983af2",
+    "project_id": null,
+    "source_term": "デバフ",
+    "target_term": "Debuff",
+    "target_lang": "en"
+  },
+  {
+    "id": "0059c206-9553-471e-b56e-3676241d4823",
+    "project_id": null,
+    "source_term": "ハッピーエンド",
+    "target_term": "Happy Ending",
+    "target_lang": "en"
+  },
+  {
+    "id": "44c70ebb-dfa4-4568-83b5-e1a37e3d8765",
+    "project_id": null,
+    "source_term": "バッドエンド",
+    "target_term": "Bad Ending",
+    "target_lang": "en"
+  },
+  {
+    "id": "4ab37686-4d2b-4685-b491-b4438412778d",
+    "project_id": null,
+    "source_term": "バフ",
+    "target_term": "Buff",
+    "target_lang": "en"
+  },
+  {
+    "id": "4bfcc8cc-6eb2-44ab-ab21-878832156fb3",
+    "project_id": null,
+    "source_term": "パーティー",
+    "target_term": "Party",
+    "target_lang": "en"
+  },
+  {
+    "id": "78af3878-d6d8-4743-92cd-ad852eec7b44",
+    "project_id": null,
+    "source_term": "フィールド",
+    "target_term": "Field",
+    "target_lang": "en"
+  },
+  {
+    "id": "f319237a-9ede-42c0-9abe-7f263b347f11",
+    "project_id": null,
+    "source_term": "ボス",
+    "target_term": "Boss",
+    "target_lang": "en"
+  },
+  {
+    "id": "a1c650b5-5971-4cb5-a1be-1e3657f0c7f6",
+    "project_id": null,
+    "source_term": "ポーション",
+    "target_term": "Potion",
+    "target_lang": "en"
+  },
+  {
+    "id": "bbb3dced-a71f-41ca-ad57-97105b2105c6",
+    "project_id": null,
+    "source_term": "ミッション",
+    "target_term": "Mission",
+    "target_lang": "en"
+  },
+  {
+    "id": "c61939df-60c7-451f-8f89-d569df9733cf",
+    "project_id": null,
+    "source_term": "メニュー",
+    "target_term": "Menu",
+    "target_lang": "en"
+  },
+  {
+    "id": "c209aa47-37d0-4acf-8e02-d1a9514e868c",
+    "project_id": null,
+    "source_term": "レベル",
+    "target_term": "Level",
+    "target_lang": "en"
+  },
+  {
+    "id": "6b77c3fd-1bdf-44d9-8f5e-9edcc9710b8a",
+    "project_id": null,
+    "source_term": "レベルアップ",
+    "target_term": "Level Up",
+    "target_lang": "en"
+  },
+  {
+    "id": "dd2f3a16-861f-4c05-99d3-36976469a5a9",
+    "project_id": null,
+    "source_term": "ロード",
+    "target_term": "Load",
+    "target_lang": "en"
+  },
+  {
+    "id": "0ac3ccb6-4a4c-4698-89fe-12dc500c1ced",
+    "project_id": null,
+    "source_term": "ワープ",
+    "target_term": "Warp",
+    "target_lang": "en"
+  },
+  {
+    "id": "8e379ec5-b58e-4d9b-9045-a2b94b6fc4f6",
+    "project_id": null,
+    "source_term": "上る",
+    "target_term": "Go Up",
+    "target_lang": "en"
+  },
+  {
+    "id": "5ac36096-57da-4ff7-9aa4-91a9a1fce9f9",
+    "project_id": null,
+    "source_term": "上昇",
+    "target_term": "Increase",
+    "target_lang": "en"
+  },
+  {
+    "id": "57f394b5-57f4-4fc3-8aa8-ac173bebf214",
+    "project_id": null,
+    "source_term": "上限",
+    "target_term": "Upper Limit",
+    "target_lang": "en"
+  },
+  {
+    "id": "5224dae6-4fb7-445f-ad9b-105b5395e3fa",
+    "project_id": null,
+    "source_term": "下る",
+    "target_term": "Go Down",
+    "target_lang": "en"
+  },
+  {
+    "id": "090ec64c-0175-4f89-9921-02dff82d0ff0",
+    "project_id": null,
+    "source_term": "下降",
+    "target_term": "Decrease",
+    "target_lang": "en"
+  },
+  {
+    "id": "ea5562f6-5e37-473e-8928-30bdfeb2ba8c",
+    "project_id": null,
+    "source_term": "下限",
+    "target_term": "Lower Limit",
+    "target_lang": "en"
+  },
+  {
+    "id": "2918ff17-8764-4c62-8d9e-05b953d5d71a",
+    "project_id": null,
+    "source_term": "休む",
+    "target_term": "Rest",
+    "target_lang": "en"
+  },
+  {
+    "id": "62c86a2c-3a8b-4ebf-9c5a-4647f72623fc",
+    "project_id": null,
+    "source_term": "会話",
+    "target_term": "Conversation",
+    "target_lang": "en"
+  },
+  {
+    "id": "1aae8e9b-4089-431f-8f82-a4d8ee94851d",
+    "project_id": null,
+    "source_term": "体力",
+    "target_term": "Stamina",
+    "target_lang": "en"
+  },
+  {
+    "id": "8f94d997-b54e-4e1d-a92b-340ed9e0c0bf",
+    "project_id": null,
+    "source_term": "使用",
+    "target_term": "Use",
+    "target_lang": "en"
+  },
+  {
+    "id": "5ef7713f-ae0f-4ade-bffd-995b3447ed1b",
+    "project_id": null,
+    "source_term": "価格",
+    "target_term": "Price",
+    "target_lang": "en"
+  },
+  {
+    "id": "a1ce5fa4-8de3-42e0-9af1-16966f1e9626",
+    "project_id": null,
+    "source_term": "保存",
+    "target_term": "Save",
+    "target_lang": "en"
+  },
+  {
+    "id": "d6313989-ab57-4a71-84b1-7a6d93d1bc23",
+    "project_id": null,
+    "source_term": "倒した",
+    "target_term": "Defeated",
+    "target_lang": "en"
+  },
+  {
+    "id": "00b64560-7efd-4b0d-81f8-b47d6286b7fb",
+    "project_id": null,
+    "source_term": "倒す",
+    "target_term": "Defeat",
+    "target_lang": "en"
+  },
+  {
+    "id": "7f82a922-201b-4422-9004-0b8a12e5b7aa",
+    "project_id": null,
+    "source_term": "倒れる",
+    "target_term": "Fall",
+    "target_lang": "en"
+  },
+  {
+    "id": "9dd3cf73-562b-4f6f-adf0-7a2247a63983",
+    "project_id": null,
+    "source_term": "光",
+    "target_term": "Light",
+    "target_lang": "en"
+  },
+  {
+    "id": "5d70a8f3-8a02-476d-b5af-4e56b464ca54",
+    "project_id": null,
+    "source_term": "全体",
+    "target_term": "All",
+    "target_lang": "en"
+  },
+  {
+    "id": "2bc476f2-a217-434a-9bd4-bf5f0f2a7001",
+    "project_id": null,
+    "source_term": "全体攻撃",
+    "target_term": "Area Attack",
+    "target_lang": "en"
+  },
+  {
+    "id": "0b13b356-2efa-4ceb-ad56-7276fecb2810",
+    "project_id": null,
+    "source_term": "全回復",
+    "target_term": "Full Recovery",
+    "target_lang": "en"
+  },
+  {
+    "id": "c91995d6-9b50-4490-89f9-c95cca509c70",
+    "project_id": null,
+    "source_term": "全快",
+    "target_term": "Fully Recovered",
+    "target_lang": "en"
+  },
+  {
+    "id": "fa07dec5-8432-4b01-9c77-8a9fd91b53e0",
+    "project_id": null,
+    "source_term": "全快する",
+    "target_term": "Fully Recover",
+    "target_lang": "en"
+  },
+  {
+    "id": "cca1c6b9-5dbe-43c7-ac06-30b648ffd06a",
+    "project_id": null,
+    "source_term": "制限時間",
+    "target_term": "Time Limit",
+    "target_lang": "en"
+  },
+  {
+    "id": "c8147e23-eef3-4dfe-9f7d-74b1bd2c4f43",
+    "project_id": null,
+    "source_term": "効果",
+    "target_term": "Effect",
+    "target_lang": "en"
+  },
+  {
+    "id": "f94bd37a-5c37-4d90-9d6f-0a680c7cf04e",
+    "project_id": null,
+    "source_term": "勝った",
+    "target_term": "Won",
+    "target_lang": "en"
+  },
+  {
+    "id": "2055c141-1021-4f47-9713-63fb1c59d88f",
+    "project_id": null,
+    "source_term": "勝利",
+    "target_term": "Victory",
+    "target_lang": "en"
+  },
+  {
+    "id": "72feafb3-3b43-4db2-aea9-ea64902927c0",
+    "project_id": null,
+    "source_term": "勝利した",
+    "target_term": "Won",
+    "target_lang": "en"
+  },
+  {
+    "id": "cc7e5399-1c65-4154-af0b-dd494d0ba2ee",
+    "project_id": null,
+    "source_term": "単体",
+    "target_term": "Single",
+    "target_lang": "en"
+  },
+  {
+    "id": "765d30bc-450d-4265-8704-85571af8dde0",
+    "project_id": null,
+    "source_term": "反射",
+    "target_term": "Reflect",
+    "target_lang": "en"
+  },
+  {
+    "id": "f36b5c6a-29dc-4c69-a933-9704a0963a11",
+    "project_id": null,
+    "source_term": "名前",
+    "target_term": "Name",
+    "target_lang": "en"
+  },
+  {
+    "id": "edf3eb2e-7ea6-4352-b192-77b8e1c1695f",
+    "project_id": null,
+    "source_term": "吸収",
+    "target_term": "Absorb",
+    "target_lang": "en"
+  },
+  {
+    "id": "bc9b26ea-b364-496f-bd33-b59a39ea4675",
+    "project_id": null,
+    "source_term": "呪い",
+    "target_term": "Curse",
+    "target_lang": "en"
+  },
+  {
+    "id": "23f774b8-4739-47da-bcf6-3879602dfe41",
+    "project_id": null,
+    "source_term": "命中率",
+    "target_term": "Hit Rate",
+    "target_lang": "en"
+  },
+  {
+    "id": "edd2023a-6ad9-4fe8-b8eb-a575bd8b9f4d",
+    "project_id": null,
+    "source_term": "回復",
+    "target_term": "Recover",
+    "target_lang": "en"
+  },
+  {
+    "id": "046f37f7-5f62-4400-a2b5-4a4834cea641",
+    "project_id": null,
+    "source_term": "回復した",
+    "target_term": "Recovered",
+    "target_lang": "en"
+  },
+  {
+    "id": "5519bec6-577e-47e5-ab67-bbf85ab7a9b1",
+    "project_id": null,
+    "source_term": "回復する",
+    "target_term": "Restore",
+    "target_lang": "en"
+  },
+  {
+    "id": "6a5bf60b-8fc3-458d-83ff-1f5c4e6ecee2",
+    "project_id": null,
+    "source_term": "回復アイテム",
+    "target_term": "Recovery Item",
+    "target_lang": "en"
+  },
+  {
+    "id": "e7b47558-be67-4a34-ae78-d2f0736035e0",
+    "project_id": null,
+    "source_term": "回復中",
+    "target_term": "Recovering",
+    "target_lang": "en"
+  },
+  {
+    "id": "3268905b-ea04-4132-b055-b79914d58b04",
+    "project_id": null,
+    "source_term": "回復完了",
+    "target_term": "Recovery Complete",
+    "target_lang": "en"
+  },
+  {
+    "id": "4964295b-529e-4720-ae47-7eef37233b54",
+    "project_id": null,
+    "source_term": "回復量",
+    "target_term": "Heal Amount",
+    "target_lang": "en"
+  },
+  {
+    "id": "50a24a08-b0e6-4b55-bd51-45e873296c1d",
+    "project_id": null,
+    "source_term": "回復魔法",
+    "target_term": "Healing Magic",
+    "target_lang": "en"
+  },
+  {
+    "id": "b143f43a-0f17-45f8-a8b8-0a5612f72a62",
+    "project_id": null,
+    "source_term": "回答",
+    "target_term": "Answer",
+    "target_lang": "en"
+  },
+  {
+    "id": "6c5ed8ab-5192-42e4-8022-2e4a812f8cb5",
+    "project_id": null,
+    "source_term": "回避率",
+    "target_term": "Evasion Rate",
+    "target_lang": "en"
+  },
+  {
+    "id": "f4b09d27-fd20-4111-8c9a-15bcc39b35c6",
+    "project_id": null,
+    "source_term": "土",
+    "target_term": "Earth",
+    "target_lang": "en"
+  },
+  {
+    "id": "331997e9-9d35-4051-ada0-89b19a35edc4",
+    "project_id": null,
+    "source_term": "城",
+    "target_term": "Castle",
+    "target_lang": "en"
+  },
+  {
+    "id": "2b57261b-feff-4771-9dac-957f4cf5e332",
+    "project_id": null,
+    "source_term": "報酬",
+    "target_term": "Reward",
+    "target_lang": "en"
+  },
+  {
+    "id": "0dc755b3-bb5b-40ca-a179-de4afcfbc7eb",
+    "project_id": null,
+    "source_term": "場所",
+    "target_term": "Location",
+    "target_lang": "en"
+  },
+  {
+    "id": "a13ef12f-77ee-4e52-bc01-aa92d72905e0",
+    "project_id": null,
+    "source_term": "売却",
+    "target_term": "Sell",
+    "target_lang": "en"
+  },
+  {
+    "id": "58b4313f-f26c-47f2-a117-3d1ee890d7d4",
+    "project_id": null,
+    "source_term": "奥義",
+    "target_term": "Ultimate Technique",
+    "target_lang": "en"
+  },
+  {
+    "id": "91309958-b1b1-49f7-9d98-b712de9e7b4d",
+    "project_id": null,
+    "source_term": "完了",
+    "target_term": "Complete",
+    "target_lang": "en"
+  },
+  {
+    "id": "d5df5cd8-a846-44ee-a4d9-5cc5a3a28165",
+    "project_id": null,
+    "source_term": "宝箱",
+    "target_term": "Treasure Chest",
+    "target_lang": "en"
+  },
+  {
+    "id": "818f8cec-60a1-46ca-8a8e-42ba5410fcdd",
+    "project_id": null,
+    "source_term": "宿屋",
+    "target_term": "Inn",
+    "target_lang": "en"
+  },
+  {
+    "id": "541f9f6f-ad6b-4a7d-b3fd-570492b8da46",
+    "project_id": null,
+    "source_term": "宿泊",
+    "target_term": "Stay",
+    "target_lang": "en"
+  },
+  {
+    "id": "6b4d9a0b-734a-4701-9456-cdfcc3665167",
+    "project_id": null,
+    "source_term": "対話",
+    "target_term": "Dialogue",
+    "target_lang": "en"
+  },
+  {
+    "id": "fb3037fd-e456-493b-b89c-765b338e360d",
+    "project_id": null,
+    "source_term": "属性",
+    "target_term": "Element",
+    "target_lang": "en"
+  },
+  {
+    "id": "43acd654-32ce-4b60-807c-ada1b93d5f3a",
+    "project_id": null,
+    "source_term": "弱体化",
+    "target_term": "Weaken",
+    "target_lang": "en"
+  },
+  {
+    "id": "3111eb0f-3c4b-4f68-9f5f-f916ea1b97c3",
+    "project_id": null,
+    "source_term": "弱体化する",
+    "target_term": "Weaken",
+    "target_lang": "en"
+  },
+  {
+    "id": "b00153dd-29d7-49f9-b3c8-9a5e0a429591",
+    "project_id": null,
+    "source_term": "弱点",
+    "target_term": "Weakness",
+    "target_lang": "en"
+  },
+  {
+    "id": "3044e7d8-3a68-42da-a966-1492f97ea9a6",
+    "project_id": null,
+    "source_term": "強化",
+    "target_term": "Enhance",
+    "target_lang": "en"
+  },
+  {
+    "id": "ce9cca62-0bb4-44ed-b44c-58a7d3990a99",
+    "project_id": null,
+    "source_term": "強化する",
+    "target_term": "Strengthen",
+    "target_lang": "en"
+  },
+  {
+    "id": "aea18152-b6d4-40aa-83cc-abbeb34457f8",
+    "project_id": null,
+    "source_term": "待機",
+    "target_term": "Wait",
+    "target_lang": "en"
+  },
+  {
+    "id": "3b90783a-ea9b-4be6-b284-488e41815eef",
+    "project_id": null,
+    "source_term": "復活",
+    "target_term": "Resurrect",
+    "target_lang": "en"
+  },
+  {
+    "id": "f8f0c3ef-7b9d-41c1-98b2-2966fb9b8d12",
+    "project_id": null,
+    "source_term": "必殺",
+    "target_term": "Finisher",
+    "target_lang": "en"
+  },
+  {
+    "id": "3a94dcd9-b870-4d4d-b43b-a89ab999982d",
+    "project_id": null,
+    "source_term": "必殺技",
+    "target_term": "Special Move",
+    "target_lang": "en"
+  },
+  {
+    "id": "70d46022-2a62-412e-8f78-1ef48c6f1acd",
+    "project_id": null,
+    "source_term": "戦い",
+    "target_term": "Fight",
+    "target_lang": "en"
+  },
+  {
+    "id": "d14d79d2-9d1d-423c-a20f-052c4379d522",
+    "project_id": null,
+    "source_term": "戦う",
+    "target_term": "Fight",
+    "target_lang": "en"
+  },
+  {
+    "id": "4870136e-d694-4456-8a2e-9377d2702738",
+    "project_id": null,
+    "source_term": "戦闘",
+    "target_term": "Battle",
+    "target_lang": "en"
+  },
+  {
+    "id": "53c844a4-a82a-44eb-bd77-b9da89a5fc74",
+    "project_id": null,
+    "source_term": "戦闘不能",
+    "target_term": "KO'd",
+    "target_lang": "en"
+  },
+  {
+    "id": "926aa627-d891-4dfb-ab27-4b29d93903c8",
+    "project_id": null,
+    "source_term": "戦闘終了",
+    "target_term": "Battle End",
+    "target_lang": "en"
+  },
+  {
+    "id": "1e400fd8-9611-4e09-92c9-9192799c2306",
+    "project_id": null,
+    "source_term": "戦闘開始",
+    "target_term": "Battle Start",
+    "target_lang": "en"
+  },
+  {
+    "id": "48923e24-359b-4ada-a81a-188aab799cc8",
+    "project_id": null,
+    "source_term": "戻る",
+    "target_term": "Back",
+    "target_lang": "en"
+  },
+  {
+    "id": "f5850f81-e0ac-4381-87c8-0ba5ec1c9b83",
+    "project_id": null,
+    "source_term": "所持数",
+    "target_term": "Quantity",
+    "target_lang": "en"
+  },
+  {
+    "id": "eb95b4a9-35d6-44e7-bc5c-17090d9063f1",
+    "project_id": null,
+    "source_term": "所持金",
+    "target_term": "Money",
+    "target_lang": "en"
+  },
+  {
+    "id": "51b2eea2-3b37-43c1-b8fd-e93a500a90e0",
+    "project_id": null,
+    "source_term": "扉",
+    "target_term": "Door",
+    "target_lang": "en"
+  },
+  {
+    "id": "89925c72-f46d-4f13-a69b-ab1a8704e8ff",
+    "project_id": null,
+    "source_term": "攻撃",
+    "target_term": "Attack",
+    "target_lang": "en"
+  },
+  {
+    "id": "ff65089b-e844-430e-91d5-c0dbb41af001",
+    "project_id": null,
+    "source_term": "攻撃魔法",
+    "target_term": "Attack Magic",
+    "target_lang": "en"
+  },
+  {
+    "id": "235f0d94-3a30-446a-b4a9-83f446a09c5f",
+    "project_id": null,
+    "source_term": "敗北",
+    "target_term": "Defeat",
+    "target_lang": "en"
+  },
+  {
+    "id": "f1df1ca6-059f-4149-ab7e-d57ab58f6efc",
+    "project_id": null,
+    "source_term": "教会",
+    "target_term": "Church",
+    "target_lang": "en"
+  },
+  {
+    "id": "4b2582d0-0772-4091-8035-8c465ce0ae1f",
+    "project_id": null,
+    "source_term": "敵",
+    "target_term": "Enemy",
+    "target_lang": "en"
+  },
+  {
+    "id": "a9e06252-2a45-4cb7-a787-640d8be63cec",
+    "project_id": null,
+    "source_term": "時間切れ",
+    "target_term": "Time Up",
+    "target_lang": "en"
+  },
+  {
+    "id": "dbe8dfb0-f577-4e4e-ba01-55f192efb1ae",
+    "project_id": null,
+    "source_term": "最大",
+    "target_term": "Maximum",
+    "target_lang": "en"
+  },
+  {
+    "id": "4fe22485-71fa-4e9d-a277-ca011622abb2",
+    "project_id": null,
+    "source_term": "最大HP",
+    "target_term": "Max HP",
+    "target_lang": "en"
+  },
+  {
+    "id": "90234abd-49dc-431e-9d48-fd75cc5cf810",
+    "project_id": null,
+    "source_term": "最大MP",
+    "target_term": "Max MP",
+    "target_lang": "en"
+  },
+  {
+    "id": "6d0d9f5e-3576-4bf5-8354-b1a40ea69bad",
+    "project_id": null,
+    "source_term": "最大値",
+    "target_term": "Max Value",
+    "target_lang": "en"
+  },
+  {
+    "id": "35ac666b-3894-4820-b5f3-e532a385dcb2",
+    "project_id": null,
+    "source_term": "最小",
+    "target_term": "Minimum",
+    "target_lang": "en"
+  },
+  {
+    "id": "d35882d2-efbd-4fd6-b8b6-f17faebcb7a1",
+    "project_id": null,
+    "source_term": "最小値",
+    "target_term": "Min Value",
+    "target_lang": "en"
+  },
+  {
+    "id": "3e443161-70ae-49ac-9cdb-85a5cb401b87",
+    "project_id": null,
+    "source_term": "未達成",
+    "target_term": "Not Achieved",
+    "target_lang": "en"
+  },
+  {
+    "id": "2d0d492f-5806-4fbf-984e-89aa358223b5",
+    "project_id": null,
+    "source_term": "村",
+    "target_term": "Village",
+    "target_lang": "en"
+  },
+  {
+    "id": "43da6cf2-600f-42ad-acb4-4e5197d81141",
+    "project_id": null,
+    "source_term": "次へ",
+    "target_term": "Next",
+    "target_lang": "en"
+  },
+  {
+    "id": "6f2ecf2e-cc33-4c78-a60a-e61b1e77b8d2",
+    "project_id": null,
+    "source_term": "武器",
+    "target_term": "Weapon",
+    "target_lang": "en"
+  },
+  {
+    "id": "6e33d212-08ac-468e-9e93-36478c190c97",
+    "project_id": null,
+    "source_term": "死",
+    "target_term": "Death",
+    "target_lang": "en"
+  },
+  {
+    "id": "db2cbd41-e511-4644-a59b-a93647b9b7a4",
+    "project_id": null,
+    "source_term": "死亡",
+    "target_term": "Death",
+    "target_lang": "en"
+  },
+  {
+    "id": "db050277-583d-4fd0-b771-338774890818",
+    "project_id": null,
+    "source_term": "残り",
+    "target_term": "Remaining",
+    "target_lang": "en"
+  },
+  {
+    "id": "7bc7e654-45c4-448b-8359-e418ec8f66ef",
+    "project_id": null,
+    "source_term": "残りHP",
+    "target_term": "Remaining HP",
+    "target_lang": "en"
+  },
+  {
+    "id": "2b8e0100-62aa-4f3d-bb66-bc174f2e5fce",
+    "project_id": null,
+    "source_term": "残りMP",
+    "target_term": "Remaining MP",
+    "target_lang": "en"
+  },
+  {
+    "id": "1b155ac4-27eb-4c46-ad3c-eae94a2a0d77",
+    "project_id": null,
+    "source_term": "残り時間",
+    "target_term": "Time Remaining",
+    "target_lang": "en"
+  },
+  {
+    "id": "31e04e46-98dc-4252-8a2f-2e5af163773a",
+    "project_id": null,
+    "source_term": "毒",
+    "target_term": "Poison",
+    "target_lang": "en"
+  },
+  {
+    "id": "1afae98e-dade-4aa6-8a0d-3c47ee5829cc",
+    "project_id": null,
+    "source_term": "水",
+    "target_term": "Water",
+    "target_lang": "en"
+  },
+  {
+    "id": "64f4bfa7-2627-413d-93bf-d06b006b3f2d",
+    "project_id": null,
+    "source_term": "氷",
+    "target_term": "Ice",
+    "target_lang": "en"
+  },
+  {
+    "id": "3ebea40f-62e9-41f3-82cb-a722eeb83814",
+    "project_id": null,
+    "source_term": "決定",
+    "target_term": "OK",
+    "target_lang": "en"
+  },
+  {
+    "id": "581a7e50-80cf-45c1-b373-a648329189af",
+    "project_id": null,
+    "source_term": "治す",
+    "target_term": "Cure",
+    "target_lang": "en"
+  },
+  {
+    "id": "d187ed1b-9632-4156-9ddd-bf3a0f13a19d",
+    "project_id": null,
+    "source_term": "治療",
+    "target_term": "Treatment",
+    "target_lang": "en"
+  },
+  {
+    "id": "4873efd8-4803-4155-aaa9-5320292548f0",
+    "project_id": null,
+    "source_term": "治療する",
+    "target_term": "Treat",
+    "target_lang": "en"
+  },
+  {
+    "id": "11532328-fce3-45b3-b87b-1e5949dc0304",
+    "project_id": null,
+    "source_term": "治癒",
+    "target_term": "Healing",
+    "target_lang": "en"
+  },
+  {
+    "id": "c3e388e6-7dfa-4b6c-9b80-d3f0e5dc5069",
+    "project_id": null,
+    "source_term": "治癒する",
+    "target_term": "Heal",
+    "target_lang": "en"
+  },
+  {
+    "id": "855f726a-f58a-40f3-a7f8-0a839e6863c4",
+    "project_id": null,
+    "source_term": "消費MP",
+    "target_term": "MP Cost",
+    "target_lang": "en"
+  },
+  {
+    "id": "98c6ec67-4fcc-42a0-8176-d8d2b2491427",
+    "project_id": null,
+    "source_term": "混乱",
+    "target_term": "Confusion",
+    "target_lang": "en"
+  },
+  {
+    "id": "6ce0c70a-eef0-4c72-b24f-4983761a494c",
+    "project_id": null,
+    "source_term": "満タン",
+    "target_term": "Full",
+    "target_lang": "en"
+  },
+  {
+    "id": "a6c70b67-6de8-4f78-9c0f-554c9c35f12b",
+    "project_id": null,
+    "source_term": "火",
+    "target_term": "Fire",
+    "target_lang": "en"
+  },
+  {
+    "id": "c6659972-d194-42b0-b890-b361c384e990",
+    "project_id": null,
+    "source_term": "無効",
+    "target_term": "Immune",
+    "target_lang": "en"
+  },
+  {
+    "id": "32cd96d7-fd6a-4c7c-8ac8-803a32e8a3ed",
+    "project_id": null,
+    "source_term": "無属性",
+    "target_term": "Non-Elemental",
+    "target_lang": "en"
+  },
+  {
+    "id": "e7695a9e-3503-48e6-b22d-96f6f67aa3ee",
+    "project_id": null,
+    "source_term": "状態異常",
+    "target_term": "Status Ailment",
+    "target_lang": "en"
+  },
+  {
+    "id": "502e693a-7fdd-4f6a-a94d-6ccd75591841",
+    "project_id": null,
+    "source_term": "状態異常を治す",
+    "target_term": "Cure Status Ailment",
+    "target_lang": "en"
+  },
+  {
+    "id": "e0f6b8e3-e147-4670-a4a8-0cebc9ddbd66",
+    "project_id": null,
+    "source_term": "獲得",
+    "target_term": "Obtained",
+    "target_lang": "en"
+  },
+  {
+    "id": "6728e8d2-5655-437d-a305-6bba5b0644b1",
+    "project_id": null,
+    "source_term": "獲得ゴールド",
+    "target_term": "Gold Obtained",
+    "target_lang": "en"
+  },
+  {
+    "id": "6c5796bc-b5f2-42ff-b83b-c98adc95df8b",
+    "project_id": null,
+    "source_term": "獲得経験値",
+    "target_term": "Experience Gained",
+    "target_lang": "en"
+  },
+  {
+    "id": "acf1f8e1-6d43-4602-8c24-97fe26cbe392",
+    "project_id": null,
+    "source_term": "現在",
+    "target_term": "Current",
+    "target_lang": "en"
+  },
+  {
+    "id": "1dc03524-d474-4626-8093-f662917a5df6",
+    "project_id": null,
+    "source_term": "現在HP",
+    "target_term": "Current HP",
+    "target_lang": "en"
+  },
+  {
+    "id": "b57a7468-478c-4ba1-a7d6-2148888623ec",
+    "project_id": null,
+    "source_term": "現在MP",
+    "target_term": "Current MP",
+    "target_lang": "en"
+  },
+  {
+    "id": "9fcf1fc1-639a-4fa9-b893-f4d4c94bdb80",
+    "project_id": null,
+    "source_term": "現在値",
+    "target_term": "Current Value",
+    "target_lang": "en"
+  },
+  {
+    "id": "3f384858-1523-4f18-8ec0-dff43db1a2ed",
+    "project_id": null,
+    "source_term": "生き返る",
+    "target_term": "Come Back to Life",
+    "target_lang": "en"
+  },
+  {
+    "id": "a8bb6662-ba9a-450b-bd3e-e4aa5ddf37fd",
+    "project_id": null,
+    "source_term": "町",
+    "target_term": "Town",
+    "target_lang": "en"
+  },
+  {
+    "id": "942de7b6-851c-4143-b927-8b6406728376",
+    "project_id": null,
+    "source_term": "真エンド",
+    "target_term": "True Ending",
+    "target_lang": "en"
+  },
+  {
+    "id": "47795d52-9642-4dd1-a42c-907c5e62cbff",
+    "project_id": null,
+    "source_term": "睡眠",
+    "target_term": "Sleep",
+    "target_lang": "en"
+  },
+  {
+    "id": "b477922e-fed3-468c-a119-3840572ab777",
+    "project_id": null,
+    "source_term": "石化",
+    "target_term": "Petrify",
+    "target_lang": "en"
+  },
+  {
+    "id": "9f592bf2-9caa-463b-a0da-839c2b4969a2",
+    "project_id": null,
+    "source_term": "確認",
+    "target_term": "Confirm",
+    "target_lang": "en"
+  },
+  {
+    "id": "fd104dc1-92a5-4a81-97a1-ac0e7714e8ad",
+    "project_id": null,
+    "source_term": "移動",
+    "target_term": "Move",
+    "target_lang": "en"
+  },
+  {
+    "id": "0d43bcc2-d4c6-45ef-a7d9-21d78c0c9f18",
+    "project_id": null,
+    "source_term": "移動先",
+    "target_term": "Destination",
+    "target_lang": "en"
+  },
+  {
+    "id": "fdcd0c62-e760-4fa5-9841-9e6f4602079b",
+    "project_id": null,
+    "source_term": "空",
+    "target_term": "Empty",
+    "target_lang": "en"
+  },
+  {
+    "id": "887b5dd9-489c-4f96-b72b-782bcd507815",
+    "project_id": null,
+    "source_term": "範囲",
+    "target_term": "Range",
+    "target_lang": "en"
+  },
+  {
+    "id": "d754deb4-ef46-4dd9-85f0-d015a16bbe1a",
+    "project_id": null,
+    "source_term": "精神力",
+    "target_term": "Spirit",
+    "target_lang": "en"
+  },
+  {
+    "id": "d6e5e8cc-50ee-4a2a-baba-83b2bd44b236",
+    "project_id": null,
+    "source_term": "素早さ",
+    "target_term": "Speed",
+    "target_lang": "en"
+  },
+  {
+    "id": "f01c09bd-610c-4f30-9ad7-f5858341a8fa",
+    "project_id": null,
+    "source_term": "終了",
+    "target_term": "Exit",
+    "target_lang": "en"
+  },
+  {
+    "id": "e2b16df2-725b-4331-b55b-874f35173770",
+    "project_id": null,
+    "source_term": "経験値",
+    "target_term": "Experience",
+    "target_lang": "en"
+  },
+  {
+    "id": "f2cbb337-5d16-4c86-957f-b43c634ebb17",
+    "project_id": null,
+    "source_term": "続ける",
+    "target_term": "Continue",
+    "target_lang": "en"
+  },
+  {
+    "id": "fe7d3c21-4330-4073-a792-4947d36771ab",
+    "project_id": null,
+    "source_term": "耐性",
+    "target_term": "Resistance",
+    "target_lang": "en"
+  },
+  {
+    "id": "64f190b0-1cd0-404c-9224-5f68650c900d",
+    "project_id": null,
+    "source_term": "薬草",
+    "target_term": "Herb",
+    "target_lang": "en"
+  },
+  {
+    "id": "b2acc25e-580f-4eb6-ac1b-176c17a53555",
+    "project_id": null,
+    "source_term": "蘇生",
+    "target_term": "Revive",
+    "target_lang": "en"
+  },
+  {
+    "id": "8732c53b-2a4f-4787-8c8c-8677332aa679",
+    "project_id": null,
+    "source_term": "行動",
+    "target_term": "Action",
+    "target_lang": "en"
+  },
+  {
+    "id": "c1e13b5a-8e32-4d96-812a-c33ff2662668",
+    "project_id": null,
+    "source_term": "装備",
+    "target_term": "Equipment",
+    "target_lang": "en"
+  },
+  {
+    "id": "ba99ef05-05e4-4719-8407-62d044dc429c",
+    "project_id": null,
+    "source_term": "補助魔法",
+    "target_term": "Support Magic",
+    "target_lang": "en"
+  },
+  {
+    "id": "6e4d455f-be3f-49c8-bf24-18eb1ff93736",
+    "project_id": null,
+    "source_term": "設定",
+    "target_term": "Settings",
+    "target_lang": "en"
+  },
+  {
+    "id": "f274e330-619a-4ab9-b63a-50873f214f2e",
+    "project_id": null,
+    "source_term": "話す",
+    "target_term": "Talk",
+    "target_lang": "en"
+  },
+  {
+    "id": "f13a0982-1b09-4187-9bc0-0ce2112566cf",
+    "project_id": null,
+    "source_term": "説明",
+    "target_term": "Description",
+    "target_lang": "en"
+  },
+  {
+    "id": "f6d4501d-226a-4ff9-b9d5-3cbebea11ef8",
+    "project_id": null,
+    "source_term": "負けた",
+    "target_term": "Lost",
+    "target_lang": "en"
+  },
+  {
+    "id": "e2b46a76-4e32-4c71-9b31-f2c8772622c9",
+    "project_id": null,
+    "source_term": "負ける",
+    "target_term": "Lose",
+    "target_lang": "en"
+  },
+  {
+    "id": "fdc78b87-d3e8-45e2-b7b0-f58b647fbacc",
+    "project_id": null,
+    "source_term": "質問",
+    "target_term": "Question",
+    "target_lang": "en"
+  },
+  {
+    "id": "09f44829-fa06-4404-94b0-52644aaf5d32",
+    "project_id": null,
+    "source_term": "購入",
+    "target_term": "Buy",
+    "target_lang": "en"
+  },
+  {
+    "id": "7b1e0413-e378-46cc-bb2f-b79995ae227b",
+    "project_id": null,
+    "source_term": "逃げる",
+    "target_term": "Escape",
+    "target_lang": "en"
+  },
+  {
+    "id": "0e411e68-f835-43dd-9a08-6ae4d6e70291",
+    "project_id": null,
+    "source_term": "逃走",
+    "target_term": "Escape",
+    "target_lang": "en"
+  },
+  {
+    "id": "a37ce542-d9a9-4104-b4d5-d8a71def462d",
+    "project_id": null,
+    "source_term": "逃走失敗",
+    "target_term": "Escape Failed",
+    "target_lang": "en"
+  },
+  {
+    "id": "9ed40800-0472-4d5b-9b1d-9494f8bc57a2",
+    "project_id": null,
+    "source_term": "逃走成功",
+    "target_term": "Escape Successful",
+    "target_lang": "en"
+  },
+  {
+    "id": "8c8e31f5-4cdf-4b6a-8b10-e939a5e874e3",
+    "project_id": null,
+    "source_term": "連続",
+    "target_term": "Consecutive",
+    "target_lang": "en"
+  },
+  {
+    "id": "fac2a235-4afb-4bdb-9fda-ee80ef4f05fa",
+    "project_id": null,
+    "source_term": "連続攻撃",
+    "target_term": "Combo Attack",
+    "target_lang": "en"
+  },
+  {
+    "id": "eb2967dd-7079-4861-afda-f1ce80f9ac46",
+    "project_id": null,
+    "source_term": "進行中",
+    "target_term": "In Progress",
+    "target_lang": "en"
+  },
+  {
+    "id": "cef7ef6a-1c44-4981-970d-24fd48ece12d",
+    "project_id": null,
+    "source_term": "運",
+    "target_term": "Luck",
+    "target_lang": "en"
+  },
+  {
+    "id": "8746f642-4b3f-4918-b82f-dce545445f43",
+    "project_id": null,
+    "source_term": "達成",
+    "target_term": "Achieved",
+    "target_lang": "en"
+  },
+  {
+    "id": "ee5b31a5-3c94-4364-895e-8768f7db08d3",
+    "project_id": null,
+    "source_term": "達成条件",
+    "target_term": "Objective",
+    "target_lang": "en"
+  },
+  {
+    "id": "3486ba29-00cb-44b0-91c7-41dfa865ecff",
+    "project_id": null,
+    "source_term": "選択",
+    "target_term": "Select",
+    "target_lang": "en"
+  },
+  {
+    "id": "7032b1de-e74e-4097-a05b-cfed8708995d",
+    "project_id": null,
+    "source_term": "選択肢",
+    "target_term": "Choice",
+    "target_lang": "en"
+  },
+  {
+    "id": "1fd3689f-2a4d-40a5-b478-73f030706ca8",
+    "project_id": null,
+    "source_term": "鍵",
+    "target_term": "Key",
+    "target_lang": "en"
+  },
+  {
+    "id": "f9f1b831-0eb1-4889-8f25-1f4f936a8daf",
+    "project_id": null,
+    "source_term": "鍵穴",
+    "target_term": "Keyhole",
+    "target_lang": "en"
+  },
+  {
+    "id": "bd27d361-593d-456e-9d21-e5e211ddf32d",
+    "project_id": null,
+    "source_term": "閉じる",
+    "target_term": "Close",
+    "target_lang": "en"
+  },
+  {
+    "id": "4706dc37-6842-4bd3-8498-42b9beefbae9",
+    "project_id": null,
+    "source_term": "開く",
+    "target_term": "Open",
+    "target_lang": "en"
+  },
+  {
+    "id": "0f9f8bbf-3179-4d41-9e84-7ea6857b1dd1",
+    "project_id": null,
+    "source_term": "開始",
+    "target_term": "Start",
+    "target_lang": "en"
+  },
+  {
+    "id": "c79db537-7030-4351-9b2e-34a92680532c",
+    "project_id": null,
+    "source_term": "闇",
+    "target_term": "Dark",
+    "target_lang": "en"
+  },
+  {
+    "id": "59c168f7-b0bb-4c81-902f-acefe097d099",
+    "project_id": null,
+    "source_term": "防具",
+    "target_term": "Armor",
+    "target_lang": "en"
+  },
+  {
+    "id": "4422f804-dedd-41fe-895f-8c0333d6ec17",
+    "project_id": null,
+    "source_term": "防御",
+    "target_term": "Defense",
+    "target_lang": "en"
+  },
+  {
+    "id": "60476006-3aa4-441a-a1aa-dde50568924e",
+    "project_id": null,
+    "source_term": "防御する",
+    "target_term": "Guard",
+    "target_lang": "en"
+  },
+  {
+    "id": "5639043f-ba08-4fa3-ab24-b4dd8c174274",
+    "project_id": null,
+    "source_term": "階段",
+    "target_term": "Stairs",
+    "target_lang": "en"
+  },
+  {
+    "id": "ba13e324-cc8a-42b1-a121-636e0ca1b46d",
+    "project_id": null,
+    "source_term": "雷",
+    "target_term": "Lightning",
+    "target_lang": "en"
+  },
+  {
+    "id": "af470c07-d5da-4f84-9045-f3bc023514b7",
+    "project_id": null,
+    "source_term": "風",
+    "target_term": "Wind",
+    "target_lang": "en"
+  },
+  {
+    "id": "d42ff7b6-172d-49aa-93c9-8404cf68e898",
+    "project_id": null,
+    "source_term": "魔法",
+    "target_term": "Magic",
+    "target_lang": "en"
+  },
+  {
+    "id": "9f89f3d2-e44f-4018-9249-c99c863322d9",
+    "project_id": null,
+    "source_term": "麻痺",
+    "target_term": "Paralysis",
+    "target_lang": "en"
+  }
+]

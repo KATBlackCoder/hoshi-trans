@@ -62,6 +62,7 @@ pub fn run() {
             commands::project::update_wolf_rpg_font,
             commands::extract::extract_strings,
             commands::entries::get_entries,
+            commands::entries::get_file_stats,
             commands::entries::update_translation,
             commands::entries::update_status,
             commands::entries::reset_empty_translations,
