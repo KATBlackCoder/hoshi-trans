@@ -1,7 +1,7 @@
 # hoshi-trans — CONTEXT.md
 
 > Ce fichier est lu au début de chaque session de développement.
-> Version : 0.8 — Refine pass (second-pass quality review)
+> Version : 0.9 — Translation list improvements (click-to-edit, file filter, file stats view)
 
 ---
 
@@ -84,7 +84,7 @@ hoshi-trans/
 │   │   └── app/                      # Composants métier
 │   ├── features/
 │   │   ├── onboarding/               # Écran si Ollama absent
-│   │   ├── translation/              # Vue liste strings + édition
+│   │   ├── translation/              # Vue liste strings + édition — TranslationView (filter, file filter, view toggle), TranslationRow (click-to-edit), FileStatsPanel (stats par fichier)
 │   │   ├── file-import/              # Sélection dossier + détection moteur
 │   │   ├── file-export/              # Export + ouverture output/
 │   │   ├── ollama/                   # OllamaPage : connexion, 2 sélecteurs modèle (trans + refine), température, modèles disponibles
@@ -110,7 +110,7 @@ hoshi-trans/
 │   │   ├── commands/
 │   │   │   ├── mod.rs
 │   │   │   ├── project.rs            # create_project, get_projects, open_project, delete_project, update_wolf_rpg_font
-│   │   │   ├── entries.rs            # get_entries, update_translation, update_status, update_refined_manual
+│   │   │   ├── entries.rs            # get_entries, get_file_stats, update_translation, update_status, update_refined_manual
 │   │   │   ├── extract.rs            # extract_strings → parse + insert batch DB + write .hoshi.json
 │   │   │   ├── inject.rs             # inject_translations → output/
 │   │   │   └── ollama.rs             # check_ollama, list_models, translate_batch, refine_batch
@@ -637,6 +637,13 @@ pub async fn refine_batch(
 - `TranslationRow` : `✦` pour reviewed (avec draft barré en dessous), `✓` pour unchanged, `✎` pour manual
 - Badge `⚠ N/M ph` si `ph_count_draft ≠ ph_count_source`
 
+**Translation list improvements (v0.9) :**
+
+- **Click-to-edit** — cliquer sur le texte de traduction dans `TranslationRow` ouvre le textarea directement (plus besoin du bouton crayon). `draft` est synced via `useEffect` quand `entry` change hors édition (ex. batch complété). `save()` appelle `update_refined_manual` si l'entrée a déjà un `refined_text`, sinon `update_translation`.
+- **File filter dropdown** — `TranslationView` expose un `<Select>` dans la toolbar listant tous les fichiers du projet. Dérivé d'une query séparée sans `statusFilter` (évite que les fichiers 100% traduits disparaissent du dropdown). Le filtre actif est affiché en badge dans le header avec un bouton `×` pour effacer. Réinitialisé au changement de `projectId`.
+- **FileStatsPanel + view toggle** — toggle LayoutList/BarChart2 dans la toolbar. En mode `files`, affiche `FileStatsPanel` : une ligne par fichier avec nom, compteurs (translated/warning/pending/total), progress bar verte+amber. Cliquer un fichier bascule en mode `list` avec ce fichier comme `fileFilter`.
+- **`get_file_stats` command** — nouvelle query Rust dans `db/queries.rs`, struct `FileStats` dans `models/translation.rs`, command dans `commands/entries.rs`, type `FileStats` dans `src/types/index.ts`.
+
 ---
 
 ## 🗂️ Modelfiles hoshi-translator
@@ -646,15 +653,17 @@ Les modèles hoshi-translator sont les **seuls modèles supportés** par l'app. 
 ```
 src-tauri/modelfiles/
   trans/   ← pipeline de traduction JP→EN/FR
-    hoshi-translator-4b-trans.Modelfile        # 4B instruct  (qwen3-abliterated:4b-instruct-2507-q4_K_M)
-    hoshi-translator-claude-trans.Modelfile # 4B Claude    (qwen3.5-abliterated:4b-Claude)
-    hoshi-translator-27b-trans.Modelfile    # 27B dense    (RunPod RTX 4090, ~16 GB)
-    hoshi-translator-30b-trans.Modelfile    # 30B MoE      (RunPod RTX 4090, ~20 GB)
+    hoshi-translator-4b-trans.Modelfile        # 4B local      (qwen3.5:4b-q4_K_M)
+    hoshi-translator-claude-trans.Modelfile    # 4B Claude     (qwen3.5-abliterated:4b-Claude)
+    hoshi-translator-27b-trans.Modelfile       # 27B dense     (huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K)
+    hoshi-translator-30b-trans.Modelfile       # 30B MoE       (huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M)
+    hoshi-translator-14b-trans.Modelfile       # Sugoi 14B Q8  (hf.co/sugoitoolkit/Sugoi-14B-Ultra-GGUF:Q8_0) — RunPod RTX 4090, ~16 GB
+    hoshi-translator-32b-trans.Modelfile       # Sugoi 32B Q4  (hf.co/sugoitoolkit/Sugoi-32B-Ultra-GGUF:Q4_K_M) — RunPod RTX 4090, ~20 GB
   rev/     ← review/critique second-pass
-    hoshi-translator-rev.Modelfile          # 4B Claude    (qwen3.5-abliterated:4b-Claude)
-    hoshi-translator-4b-rev.Modelfile # 4B instruct  (qwen3-abliterated:4b-instruct-2507-q4_K_M)
-    hoshi-translator-27b-rev.Modelfile      # 27B dense
-    hoshi-translator-30b-rev.Modelfile      # 30B MoE
+    hoshi-translator-rev.Modelfile             # 4B Claude     (qwen3.5-abliterated:4b-Claude)
+    hoshi-translator-4b-rev.Modelfile          # 4B instruct   (qwen3-abliterated:4b-instruct-2507-q4_K_M)
+    hoshi-translator-27b-rev.Modelfile         # 27B dense
+    hoshi-translator-30b-rev.Modelfile         # 30B MoE
 ```
 
 **Différences `-trans` vs `-rev` :**
@@ -707,6 +716,15 @@ export type TranslationStatus =
   | 'skipped'
   | { error: string }
   | { warning: string }
+
+// Miroir de FileStats (Rust) — retourné par get_file_stats
+export interface FileStats {
+  file_path: string
+  total: number
+  translated: number
+  warning: number
+  pending: number
+}
 
 // Payload de l'event "translation:progress"
 export interface TranslationProgress {
