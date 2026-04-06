@@ -140,6 +140,10 @@
   .status-strip-skipped    { border-left: 2px solid oklch(1 0 0 / 5%); }
   .status-strip-reviewed   { border-left: 2px solid oklch(0.60 0.18 255 / 70%); }
 
+  .status-row-warning  { background-color: oklch(0.78 0.16 65 / 3%); }
+  .status-row-reviewed { background-color: oklch(0.60 0.18 255 / 4%); }
+  .status-row-error    { background-color: oklch(0.62 0.22 22 / 3%); }
+
   /* Shimmer animation for progress bar */
   @keyframes shimmer {
     0%   { background-position: -200% center; }

@@ -14,22 +14,22 @@ function parseWarningRatio(status: TranslationStatus): string | null {
   return null
 }
 
-function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dotCls: string; labelCls: string } {
+function getStatusMeta(status: TranslationStatus): { label: string; strip: string; dotCls: string; labelCls: string; rowCls: string } {
   if (status === 'translated')
-    return { label: 'translated', strip: 'status-strip-translated', dotCls: 'bg-emerald-500', labelCls: 'text-emerald-400' }
+    return { label: 'translated', strip: 'status-strip-translated', dotCls: 'bg-emerald-500', labelCls: 'text-emerald-400', rowCls: '' }
   if (status === 'reviewed')
-    return { label: 'reviewed', strip: 'status-strip-reviewed', dotCls: 'bg-blue-400', labelCls: 'text-blue-400' }
+    return { label: 'reviewed', strip: 'status-strip-reviewed', dotCls: 'bg-blue-400', labelCls: 'text-blue-400', rowCls: 'status-row-reviewed' }
   if (status === 'skipped')
-    return { label: 'skipped', strip: 'status-strip-skipped', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50' }
+    return { label: 'skipped', strip: 'status-strip-skipped', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50', rowCls: '' }
   if (typeof status === 'string' && status.startsWith('warning')) {
     const ratio = parseWarningRatio(status)
-    return { label: ratio ? `⚠ ${ratio}` : 'warning', strip: 'status-strip-warning', dotCls: 'bg-amber-400', labelCls: 'text-amber-400' }
+    return { label: ratio ? `⚠ ${ratio}` : 'warning', strip: 'status-strip-warning', dotCls: 'bg-amber-400', labelCls: 'text-amber-400', rowCls: 'status-row-warning' }
   }
   if (typeof status === 'object' && 'error' in status)
-    return { label: 'error', strip: 'status-strip-error', dotCls: 'bg-red-500', labelCls: 'text-red-400' }
+    return { label: 'error', strip: 'status-strip-error', dotCls: 'bg-red-500', labelCls: 'text-red-400', rowCls: 'status-row-error' }
   if (typeof status === 'object' && 'warning' in status)
-    return { label: 'warning', strip: 'status-strip-warning', dotCls: 'bg-amber-400', labelCls: 'text-amber-400' }
-  return { label: 'pending', strip: 'status-strip-pending', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50' }
+    return { label: 'warning', strip: 'status-strip-warning', dotCls: 'bg-amber-400', labelCls: 'text-amber-400', rowCls: 'status-row-warning' }
+  return { label: 'pending', strip: 'status-strip-pending', dotCls: 'bg-muted-foreground/40', labelCls: 'text-muted-foreground/50', rowCls: '' }
 }
 
 interface Props {
@@ -61,7 +61,7 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
   }, [entry.translation, entry.refined_text, entry.refined_status, editing])
 
   const filename = entry.file_path.split('/').pop() ?? entry.file_path
-  const { label, strip, dotCls, labelCls } = getStatusMeta(entry.status)
+  const { label, strip, dotCls, labelCls, rowCls } = getStatusMeta(entry.status)
   const translatedAtStr = entry.translated_at
     ? new Date(entry.translated_at * 1000).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
     : null
@@ -89,7 +89,7 @@ export function TranslationRow({ entry, onUpdated, style, selected, onToggleSele
       ref={measureRef}
       data-index={dataIndex}
       style={style}
-      className={`group absolute top-0 left-0 w-full flex border-b border-white/7 ${strip} ${
+      className={`group absolute top-0 left-0 w-full flex border-b border-white/7 ${strip} ${rowCls} ${
         selected ? 'bg-primary/5 hover:bg-primary/8' : 'hover:bg-white/3'
       }`}
     >
