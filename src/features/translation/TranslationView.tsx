@@ -12,7 +12,8 @@ import { useRefineBatch } from '@/hooks/useRefineBatch'
 import { useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, FolderOpen, Wand2, ShieldCheck, AlertTriangle, LayoutList, BarChart2 } from 'lucide-react'
+import { X, Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, FolderOpen, AlertTriangle, LayoutList, BarChart2 } from 'lucide-react'
+import { BatchControls } from './BatchControls'
 import { useMutation } from '@tanstack/react-query'
 import { openPath } from '@tauri-apps/plugin-opener'
 import type { TranslationEntry } from '@/types'
@@ -27,14 +28,6 @@ const STATUS_FILTERS = [
 
 type SortKey = 'order' | 'file' | 'status'
 type SortDir = 'asc' | 'desc'
-
-const CONCURRENCY_OPTIONS = [1, 2, 4, 8]
-const LIMIT_OPTIONS = [
-  { label: '100', value: 100 },
-  { label: '500', value: 500 },
-  { label: '1000', value: 1000 },
-  { label: 'All', value: 0 },
-]
 
 function sortEntries(entries: TranslationEntry[], key: SortKey, dir: SortDir): TranslationEntry[] {
   const mul = dir === 'asc' ? 1 : -1
@@ -84,8 +77,6 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const [selectedRefineModel, setSelectedRefineModel] = useState<string>('')
   const refineModel = selectedRefineModel || availableModels[0] || ''
   const [viewMode, setViewMode] = useState<'list' | 'files'>('list')
-  const [resetting, setResetting] = useState(false)
-  const [lastResetCount, setLastResetCount] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [translatingRowId, setTranslatingRowId] = useState<string | null>(null)
   const [refiningRowId, setRefiningRowId] = useState<string | null>(null)
@@ -187,11 +178,6 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     start(projectId, model, settings.ollamaHost, concurrency, limit, settings.temperature, warningIds)
   }
 
-  const analyzePh = useMutation({
-    mutationFn: () => invoke<number>('analyze_placeholders', { projectId }),
-    onSuccess: () => refetch(),
-  })
-
   // Refresh table when refine batch completes
   useEffect(() => {
     if (!refining) refetch()
@@ -213,18 +199,6 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   function handleFileClick(filePath: string) {
     setFileFilter(filePath)
     setViewMode('list')
-  }
-
-  async function handleReset() {
-    setResetting(true)
-    setLastResetCount(null)
-    try {
-      const count = await invoke<number>('reset_empty_translations', { projectId })
-      setLastResetCount(count)
-      await refetch()
-    } finally {
-      setResetting(false)
-    }
   }
 
   return (
@@ -259,129 +233,26 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
           </div>
         </div>
 
-        {/* Batch controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {running && (
-            <div className="flex items-center gap-2 mr-1">
-              <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums">
-                {progress?.done}<span className="opacity-40">/</span>{progress?.total}
-              </span>
-              <Button variant="ghost" size="sm" onClick={cancel} className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-destructive">
-                <X className="w-3 h-3 mr-1" />Cancel
-              </Button>
-            </div>
-          )}
-
-          {/* Model selector */}
-          <Select value={model} onValueChange={(v) => setSelectedModel(v ?? '')} disabled={running}>
-            <SelectTrigger className="h-7 w-44 max-w-50 text-xs font-mono">
-              <SelectValue placeholder="No model" />
-            </SelectTrigger>
-            <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
-              {availableModels.map(m => (
-                <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Concurrency segmented control */}
-          <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
-            {CONCURRENCY_OPTIONS.map(n => (
-              <button key={n} onClick={() => setConcurrency(n)} disabled={running}
-                title={`${n} parallel requests`}
-                className={`w-7 h-7 text-[11px] font-mono transition-colors border-r border-border/40 last:border-r-0 ${
-                  concurrency === n
-                    ? 'bg-secondary text-secondary-foreground font-semibold'
-                    : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
-                }`}
-              >{n}×</button>
-            ))}
-          </div>
-
-          {/* Limit segmented control */}
-          <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
-            {LIMIT_OPTIONS.map(o => (
-              <button key={o.value} onClick={() => setLimit(o.value)} disabled={running}
-                title={o.value === 0 ? 'Translate all pending' : `Translate next ${o.value}`}
-                className={`px-1.5 h-7 text-[11px] font-mono transition-colors border-r border-border/40 last:border-r-0 ${
-                  limit === o.value
-                    ? 'bg-secondary text-secondary-foreground font-semibold'
-                    : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
-                }`}
-              >{o.label}</button>
-            ))}
-          </div>
-
-          {selectedIds.size > 0 && !running && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleStart}
-              disabled={!model}
-              className="h-7 gap-1.5 text-xs font-medium px-3 border-primary/40 text-primary hover:bg-primary/10"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Translate {selectedIds.size} selected
-            </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={handleStart}
-            disabled={running || !model}
-            className="h-7 gap-1.5 text-xs font-medium px-3"
-          >
-            {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            {running ? 'Translating…' : 'Translate'}
-          </Button>
-
-          {/* Refine model selector */}
-          <Select value={refineModel} onValueChange={(v) => setSelectedRefineModel(v ?? '')} disabled={refining}>
-            <SelectTrigger className="h-7 w-44 max-w-50 text-xs font-mono border-amber-500/30">
-              <SelectValue placeholder="No model" />
-            </SelectTrigger>
-            <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
-              {availableModels.map(m => (
-                <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Refine controls */}
-          {refining && (
-            <div className="flex items-center gap-2 ml-1">
-              <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums">
-                {refineProgress?.done}<span className="opacity-40">/</span>{refineProgress?.total}
-              </span>
-              <Button variant="ghost" size="sm" onClick={cancelRefine} className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-destructive">
-                <X className="w-3 h-3 mr-1" />Cancel refine
-              </Button>
-            </div>
-          )}
-
-          {selectedIds.size > 0 && !running && !refining && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleRefine}
-              disabled={!refineModel}
-              className="h-7 gap-1.5 text-xs font-medium px-3 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
-            >
-              <Wand2 className="w-3.5 h-3.5" />
-              Refine {selectedIds.size} selected
-            </Button>
-          )}
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleRefine}
-            disabled={running || refining || !refineModel}
-            className="h-7 gap-1.5 text-xs font-medium px-3 border-amber-500/30 text-amber-400/80 hover:bg-amber-500/10"
-          >
-            {refining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-            {refining ? 'Refining…' : 'Refine'}
-          </Button>
-        </div>
+        <BatchControls
+          availableModels={availableModels}
+          model={model}
+          onModelChange={setSelectedModel}
+          refineModel={refineModel}
+          onRefineModelChange={setSelectedRefineModel}
+          running={running}
+          progress={progress}
+          onStart={handleStart}
+          onCancel={cancel}
+          selectedCount={selectedIds.size}
+          refining={refining}
+          refineProgress={refineProgress}
+          onRefine={handleRefine}
+          onCancelRefine={cancelRefine}
+          concurrency={concurrency}
+          onConcurrencyChange={setConcurrency}
+          limit={limit}
+          onLimitChange={setLimit}
+        />
       </div>
 
       {/* Toolbar */}
@@ -443,36 +314,6 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
         </div>
 
         <div className="flex-1" />
-
-        {lastResetCount !== null && (
-          <span className="text-[10.5px] text-emerald-500/80 font-mono">
-            {lastResetCount} reset
-          </span>
-        )}
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleReset}
-          disabled={running || resetting}
-          title="Reset translated entries with empty translation back to pending"
-          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-foreground gap-1"
-        >
-          <RotateCcw className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
-          Reset empty
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => analyzePh.mutate()}
-          disabled={analyzePh.isPending || running}
-          title="Re-analyze placeholder counts for all translated/warning entries"
-          className="h-7 px-2 text-xs text-muted-foreground/60 hover:text-amber-400 gap-1"
-        >
-          {analyzePh.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-          {analyzePh.isSuccess ? `${analyzePh.data} updated` : 'Check PH'}
-        </Button>
 
         <Button
           variant="ghost"
