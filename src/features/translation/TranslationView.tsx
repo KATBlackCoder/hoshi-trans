@@ -314,6 +314,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
         </div>
 
         <div className="flex-1" />
+        <div className="w-px h-4 bg-border/30 shrink-0" />
 
         <Button
           variant="ghost"
