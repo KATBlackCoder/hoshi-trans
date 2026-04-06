@@ -1,7 +1,7 @@
 # hoshi-trans — CONTEXT.md
 
 > Ce fichier est lu au début de chaque session de développement.
-> Version : 0.9 — Translation list improvements (click-to-edit, file filter, file stats view)
+> Version : 1.0 — Translation UI redesign (BatchControls component, toolbar separator, per-status row tinting)
 
 ---
 
@@ -84,7 +84,7 @@ hoshi-trans/
 │   │   └── app/                      # Composants métier
 │   ├── features/
 │   │   ├── onboarding/               # Écran si Ollama absent
-│   │   ├── translation/              # Vue liste strings + édition — TranslationView (filter, file filter, view toggle), TranslationRow (click-to-edit), FileStatsPanel (stats par fichier)
+│   │   ├── translation/              # Vue liste strings + édition — TranslationView, BatchControls, TranslationRow (click-to-edit), FileStatsPanel (stats par fichier)
 │   │   ├── file-import/              # Sélection dossier + détection moteur
 │   │   ├── file-export/              # Export + ouverture output/
 │   │   ├── ollama/                   # OllamaPage : connexion, 2 sélecteurs modèle (trans + refine), température, modèles disponibles
@@ -629,9 +629,7 @@ pub async fn refine_batch(
 **Commande manuelle :** `update_refined_manual(entry_id, refined_text)` — déclenché quand l'utilisateur édite manuellement un texte raffiné → `refined_status = "manual"`.
 
 **UI :**
-- Sélecteur modèle trans + sélecteur modèle refine indépendants dans la toolbar de `TranslationView`
-- Bouton **Refine** (amber) dans la toolbar, à côté de Translate
-- Refine all ou Refine N selected (mêmes sélections que Translate)
+- Contrôles translate + refine dans le composant `BatchControls` (voir ci-dessous)
 - Per-row refine button (icône `Wand2`) visible uniquement sur entrées `translated` / `warning:*`
 - Filtre status `Reviewed` dans la table
 - `TranslationRow` : `✦` pour reviewed (avec draft barré en dessous), `✓` pour unchanged, `✎` pour manual
@@ -643,6 +641,12 @@ pub async fn refine_batch(
 - **File filter dropdown** — `TranslationView` expose un `<Select>` dans la toolbar listant tous les fichiers du projet. Dérivé d'une query séparée sans `statusFilter` (évite que les fichiers 100% traduits disparaissent du dropdown). Le filtre actif est affiché en badge dans le header avec un bouton `×` pour effacer. Réinitialisé au changement de `projectId`.
 - **FileStatsPanel + view toggle** — toggle LayoutList/BarChart2 dans la toolbar. En mode `files`, affiche `FileStatsPanel` : une ligne par fichier avec nom, compteurs (translated/warning/pending/total), progress bar verte+amber. Cliquer un fichier bascule en mode `list` avec ce fichier comme `fileFilter`.
 - **`get_file_stats` command** — nouvelle query Rust dans `db/queries.rs`, struct `FileStats` dans `models/translation.rs`, command dans `commands/entries.rs`, type `FileStats` dans `src/types/index.ts`.
+
+**Translation UI redesign (v1.0) :**
+
+- **`BatchControls` component** (`src/features/translation/BatchControls.tsx`) — extrait du header de `TranslationView`. Regroupe les contrôles TL et RF dans deux boîtes bordées distinctes. Concurrency + limit déplacés dans un `<Popover>` `⚙` (shadcn `@base-ui/react/popover`). Affiche `Translate N` / `Refine N` quand des entrées sont sélectionnées. Progress + cancel inline dans chaque boîte.
+- **Toolbar séparateur** — `<div className="w-px h-4 bg-border/30">` entre le groupe filtres (status chips, file dropdown, view toggle) et le groupe actions (retry warnings, export, search).
+- **Row tinting** — fond subtil par statut dans `TranslationRow` via classes CSS dans `App.css` : `status-row-warning` (amber/3%), `status-row-reviewed` (bleu/4%), `status-row-error` (rouge/3%). Pending et translated restent sans tinte.
 
 ---
 
