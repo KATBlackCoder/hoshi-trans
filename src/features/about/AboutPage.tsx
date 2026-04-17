@@ -69,53 +69,23 @@ function GuideChip({ label, sub, selected, onClick }: { label: string; sub: stri
 function SetupGuides() {
   const [runpodOpen, setRunpodOpen] = useState(false)
   const [localOpen, setLocalOpen] = useState(false)
-  const [localModel, setLocalModel] = useState<'4b' | '27b' | '30b'>('4b')
+  const [localModel, setLocalModel] = useState<'4b' | '30b'>('4b')
 
-  const localModelName = localModel === '4b' ? 'hoshi-translator' : `hoshi-translator-${localModel}`
+  const localModelName = `hoshi-translator-${localModel}`
 
-  const runpodCmd = `bash -c "apt update && apt install -y curl lshw zstd && curl -fsSL https://ollama.com/install.sh | sh && OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 & sleep 60 && curl -fL -o /tmp/30b-trans.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile && ollama create hoshi-translator-30b-trans -f /tmp/30b-trans.Modelfile && echo hoshi-translator-ready && sleep infinity"`
+  const runpodCmd = `bash -c "apt update && apt install -y curl lshw zstd && curl -fsSL https://ollama.com/install.sh | sh && OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 & sleep 60 && curl -fL -o /tmp/30b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile && ollama create hoshi-translator-30b -f /tmp/30b.Modelfile && echo hoshi-translator-ready && sleep infinity"`
 
   const localPullCmd = localModel === '4b'
-    ? `ollama pull huihui_ai/qwen3.5-abliterated:4b-Claude\nollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-q4_K_M`
-    : localModel === '27b'
-    ? `ollama pull huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K`
-    : `ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M`
+    ? `ollama pull qwen3:4b-instruct-2507-q8_0`
+    : `ollama pull qwen3:30b-a3b-instruct-2507-q8_0`
 
   const localCreateCmd = localModel === '4b'
-    ? `# Translation models (instruct + claude variants)
-curl -f -L -o /tmp/hoshi-translator-4b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-4b-trans.Modelfile
-ollama create hoshi-translator-4b-trans -f /tmp/hoshi-translator-4b-trans.Modelfile
-curl -f -L -o /tmp/hoshi-translator-claude-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-claude-trans.Modelfile
-ollama create hoshi-translator-claude-trans -f /tmp/hoshi-translator-claude-trans.Modelfile
-
-# Review models (claude + instruct variants)
-curl -f -L -o /tmp/hoshi-translator-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-rev.Modelfile
-ollama create hoshi-translator-rev -f /tmp/hoshi-translator-rev.Modelfile
-curl -f -L -o /tmp/hoshi-translator-4b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-4b-rev.Modelfile
-ollama create hoshi-translator-4b-rev -f /tmp/hoshi-translator-4b-rev.Modelfile`
-    : localModel === '27b'
-    ? `# Translation model
-curl -f -L -o /tmp/hoshi-translator-27b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-27b-trans.Modelfile
-ollama create hoshi-translator-27b-trans -f /tmp/hoshi-translator-27b-trans.Modelfile
-
-# Review model
-curl -f -L -o /tmp/hoshi-translator-27b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-27b-rev.Modelfile
-ollama create hoshi-translator-27b-rev -f /tmp/hoshi-translator-27b-rev.Modelfile`
-    : `# Translation model
-curl -f -L -o /tmp/hoshi-translator-30b-trans.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/trans/hoshi-translator-30b-trans.Modelfile
-ollama create hoshi-translator-30b-trans -f /tmp/hoshi-translator-30b-trans.Modelfile
-
-# Review model
-curl -f -L -o /tmp/hoshi-translator-30b-rev.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/rev/hoshi-translator-30b-rev.Modelfile
-ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfile`
+    ? `curl -fL -o /tmp/hoshi-translator-4b.Modelfile \\
+  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-4b.Modelfile
+ollama create hoshi-translator-4b -f /tmp/hoshi-translator-4b.Modelfile`
+    : `curl -fL -o /tmp/hoshi-translator-30b.Modelfile \\
+  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile
+ollama create hoshi-translator-30b -f /tmp/hoshi-translator-30b.Modelfile`
 
   return (
     <div className="flex flex-col gap-2">
@@ -140,8 +110,7 @@ ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfil
             <div className="flex gap-1.5">
               {([
                 { id: '4b' as const, label: '4B', sub: 'Local · ~3 GB' },
-                { id: '27b' as const, label: '27B', sub: 'Dense · ~16 GB' },
-                { id: '30b' as const, label: '30B', sub: 'MoE · ~20 GB' },
+                { id: '30b' as const, label: '30B MoE', sub: 'RunPod · ~20 GB' },
               ]).map(({ id, label, sub }) => (
                 <GuideChip key={id} label={label} sub={sub} selected={localModel === id} onClick={() => setLocalModel(id)} />
               ))}
@@ -167,9 +136,7 @@ ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfil
               <CodeBlock>http://localhost:11434</CodeBlock>
               <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed mt-0.5">
                 Set the host above in the Ollama page, then select{' '}
-                <code className="font-mono text-foreground/70">{localModelName}-trans</code> as your model.
-                The review pass will automatically use{' '}
-                <code className="font-mono text-foreground/70">{localModelName}-rev</code>.
+                <code className="font-mono text-foreground/70">{localModelName}</code> as your translation and review model.
               </p>
             </div>
           </div>
@@ -194,8 +161,8 @@ ollama create hoshi-translator-30b-rev -f /tmp/hoshi-translator-30b-rev.Modelfil
           <div className="px-4 pb-5 border-t border-border/40 bg-background/20 flex flex-col gap-4 pt-4">
 
             <div className="flex gap-2 text-[10.5px] text-muted-foreground/60 leading-relaxed">
-              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border/30 font-mono">30b-trans</span>
-              <span className="text-muted-foreground/40 self-center text-[10px]">translategemma:27b-it-q8_0</span>
+              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border/30 font-mono">30b</span>
+              <span className="text-muted-foreground/40 self-center text-[10px]">qwen3:30b-a3b-instruct-2507-q8_0</span>
             </div>
 
             <div className="flex flex-col gap-1.5">
