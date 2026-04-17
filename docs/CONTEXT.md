@@ -1,7 +1,7 @@
 # hoshi-trans — CONTEXT.md
 
 > Ce fichier est lu au début de chaque session de développement.
-> Version : 1.0 — Translation UI redesign (BatchControls component, toolbar separator, per-status row tinting)
+> Version : 1.1 — Unified modelfiles (4b/30b) + hoshi-prompts.json
 
 ---
 
@@ -652,36 +652,42 @@ pub async fn refine_batch(
 
 ## 🗂️ Modelfiles hoshi-translator
 
-Les modèles hoshi-translator sont les **seuls modèles supportés** par l'app. Ils sont organisés en deux dossiers selon leur rôle :
+Les modèles hoshi-translator sont les **seuls modèles supportés** par l'app. Un modelfile par taille — pas de split trans/rev.
 
 ```
 src-tauri/modelfiles/
-  trans/   ← pipeline de traduction JP→EN/FR
-    hoshi-translator-4b-trans.Modelfile        # 4B local      (qwen3.5:4b-q4_K_M)
-    hoshi-translator-claude-trans.Modelfile    # 4B Claude     (qwen3.5-abliterated:4b-Claude)
-    hoshi-translator-27b-trans.Modelfile       # 27B dense     (huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K)
-    hoshi-translator-30b-trans.Modelfile       # 30B MoE       (huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M)
-    hoshi-translator-14b-trans.Modelfile       # Sugoi 14B Q8  (hf.co/sugoitoolkit/Sugoi-14B-Ultra-GGUF:Q8_0) — RunPod RTX 4090, ~16 GB
-    hoshi-translator-32b-trans.Modelfile       # Sugoi 32B Q4  (hf.co/sugoitoolkit/Sugoi-32B-Ultra-GGUF:Q4_K_M) — RunPod RTX 4090, ~20 GB
-  rev/     ← review/critique second-pass
-    hoshi-translator-rev.Modelfile             # 4B Claude     (qwen3.5-abliterated:4b-Claude)
-    hoshi-translator-4b-rev.Modelfile          # 4B instruct   (qwen3-abliterated:4b-instruct-2507-q4_K_M)
-    hoshi-translator-27b-rev.Modelfile         # 27B dense
-    hoshi-translator-30b-rev.Modelfile         # 30B MoE
+  hoshi-translator-4b.Modelfile   # 4B local    (qwen3:4b-instruct-2507-q8_0)    ~3 GB VRAM
+  hoshi-translator-30b.Modelfile  # 30B MoE     (qwen3:30b-a3b-instruct-2507-q8_0) ~20 GB VRAM — RunPod RTX 4090
 ```
 
-**Différences `-trans` vs `-rev` :**
+### Paramètres partagés (4b et 30b)
 
-| Paramètre | `-trans` | `-rev` |
-|-----------|----------|--------|
-| temperature | 0.05 | 0.1 |
-| num_predict | 512 (4b) / 3072 (27b/30b) | 768 (4b) / 3072 (27b/30b) |
-| thinking | bloqué sur 4b, autorisé 27b/30b | bloqué sur 4b, autorisé 27b/30b |
-| SYSTEM | traducteur JP→EN/FR, règles placeholder | critique structuré — vérifie placeholders, précision, fluidité, registre |
-| Base 27b | `huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K` | idem |
-| Base 30b | `huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M` | idem |
+| Paramètre | Valeur | Pourquoi |
+|-----------|--------|---------|
+| temperature | 0.3 | équilibré pour traduction et review |
+| top_k | 40 | nucleus sampling standard |
+| top_p | 0.9 | nucleus sampling standard |
+| repeat_penalty | 1.1 | décourage les répétitions |
+| min_p | 0.05 | filtre les tokens improbables |
+| num_predict | 600 | suffisant pour les dialogues longs |
+| num_ctx | 4096 (4b) / 8192 (30b) | fenêtre de contexte |
 
-**Convention de nommage Ollama :** `hoshi-translator[-NNb]-trans:latest` / `hoshi-translator[-NNb]-rev:latest`
+Les modèles `-instruct` utilisent un template ChatML sans bloc `{{- if .Thinking }}` — le thinking est désactivé au niveau du template, aucun stop token nécessaire.
+
+### Prompt engineering — `hoshi-prompts.json`
+
+Tout le texte spécifique aux tâches vit dans `src-tauri/prompts/hoshi-prompts.json`, embarqué au compile time via `include_str!()` et parsé une fois via `LazyLock<serde_json::Value>`.
+
+- `translate.header` + `translate.rules` → assemblés par `build_translate_prompt()`
+- `review.header` + `review.criteria` + `review.output_rule` → assemblés par `build_review_prompt()`
+
+Pour modifier une règle de traduction ou un critère de review : éditer `hoshi-prompts.json` uniquement.
+
+### ModelOptions — aucun paramètre custom dans l'app
+
+Seul `temperature` est envoyé à l'appel (depuis les settings utilisateur). Tous les autres paramètres viennent du modelfile.
+
+**Convention de nommage Ollama :** `hoshi-translator-4b:latest` / `hoshi-translator-30b:latest`
 
 **Check bypass system prompt :** `model.includes('hoshi-translator')` → `system_prompt` envoyé vide (le SYSTEM est baked dans le Modelfile).
 
@@ -814,8 +820,7 @@ Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
   - [x] UI : bouton Refine (amber), filtre Reviewed, `✦`/`✓`/`✎` badges, ⚠ placeholder count diff
   - [x] Per-row refine button (visible sur entrées `translated`/`warning`)
   - [x] Sélecteur modèle refine indépendant du sélecteur trans (pas d'auto-select)
-- [x] Modelfiles hoshi-translator séparés par rôle :
-  - [x] `src-tauri/modelfiles/trans/` — 4b, 27b, 30b, optimisés traduction
-  - [x] `src-tauri/modelfiles/rev/` — 4b, 27b, 30b, optimisés review/critique
-  - [x] `-trans` : thinking bloqué sur 4b, autorisé sur 27b/30b ; temperature 0.05
-  - [x] `-rev` : temperature 0.1, num_predict plus grand, SYSTEM critique structuré
+- [x] Unified modelfiles (4b/30b) — un modelfile par taille, pas de split trans/rev
+  - [x] `src-tauri/modelfiles/hoshi-translator-4b.Modelfile` — qwen3:4b-instruct-2507-q8_0
+  - [x] `src-tauri/modelfiles/hoshi-translator-30b.Modelfile` — qwen3:30b-a3b-instruct-2507-q8_0
+  - [x] `src-tauri/prompts/hoshi-prompts.json` — source unique des prompts, chargé via `include_str!()` + `LazyLock`
