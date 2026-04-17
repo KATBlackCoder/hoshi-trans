@@ -4,8 +4,13 @@ use ollama_rs::{generation::completion::request::GenerationRequest, Ollama};
 use sqlx::SqlitePool;
 use std::sync::{
     atomic::{AtomicBool, AtomicU32, Ordering},
-    Arc, Mutex,
+    Arc, LazyLock, Mutex,
 };
+
+static PROMPTS: LazyLock<serde_json::Value> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../prompts/hoshi-prompts.json"))
+        .expect("hoshi-prompts.json is invalid JSON")
+});
 use tauri::Emitter;
 
 /// Shared buffer that accumulates prompt logs during a translation batch.
@@ -102,13 +107,23 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
     format!("Reference glossary (use these translations, do not include in output):\n{}", lines.join("\n"))
 }
 
-const TRANSLATEGEMMA_HEADER: &str = "You are a professional Japanese (ja) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Japanese text while adhering to English grammar, vocabulary, and cultural sensitivities.\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Japanese text into English:";
-
 fn build_translate_prompt(glossary_block: &str, text: &str) -> String {
+    let t = &PROMPTS["translate"];
+    let header = t["header"].as_str().unwrap_or("");
+    let rules: String = t["rules"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .collect::<Vec<_>>()
+                .join("\n- ")
+        })
+        .unwrap_or_default();
+    let instruction = format!("{}\nRules:\n- {}", header, rules);
     if glossary_block.is_empty() {
-        format!("{}\n\n\n{}", TRANSLATEGEMMA_HEADER, text)
+        format!("{}\n\nTranslate:\n{}", instruction, text)
     } else {
-        format!("{}\n{}\n\n\n{}", TRANSLATEGEMMA_HEADER, glossary_block, text)
+        format!("{}\n{}\n\nTranslate:\n{}", instruction, glossary_block, text)
     }
 }
 
@@ -354,25 +369,35 @@ pub fn build_review_prompt(
     encoded_draft: &str,
     ph_count_source: i64,
     ph_count_draft: i64,
-    lang_name: &str,
+    _lang_name: &str,
 ) -> String {
+    let r = &PROMPTS["review"];
+    let header = r["header"].as_str().unwrap_or("");
+    let criteria: String = r["criteria"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .enumerate()
+                .filter_map(|(i, v)| v.as_str().map(|s| format!("{}. {}", i + 1, s)))
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+        .unwrap_or_default();
+    let output_rule = r["output_rule"].as_str().unwrap_or("");
     format!(
-        "Review this Japanese-to-{lang} game translation.\n\
+        "{header}\nCRITICAL: Output ONLY the final translation. No commentary, no labels.\n\n\
          Source (JP): {source}\n\
-         Draft translation: {draft}\n\
-         Source has {ph_src} placeholder token(s). Draft has {ph_draft} placeholder token(s).\n\n\
-         Review criteria:\n\
-         1. Placeholder count: if counts differ, fix the draft to preserve all placeholders.\n\
-         2. Accuracy: faithfully represent the Japanese meaning and tone.\n\
-         3. Fluency: natural, idiomatic {lang}.\n\
-         4. Register: preserve emotional register (dramatic, casual, cute, etc.).\n\n\
-         If the draft is already correct and natural, output it EXACTLY unchanged.\n\
-         If you can improve it, output ONLY the improved translation — no commentary.",
-        lang = lang_name,
+         Draft: {draft}\n\
+         Source has {ph_src} marker(s). Draft has {ph_draft} marker(s).\n\n\
+         Review criteria:\n{criteria}\n\n\
+         {output_rule}",
+        header = header,
         source = encoded_source,
         draft = encoded_draft,
         ph_src = ph_count_source,
         ph_draft = ph_count_draft,
+        criteria = criteria,
+        output_rule = output_rule,
     )
 }
 
@@ -617,7 +642,30 @@ mod tests {
         let prompt = build_review_prompt("こんにちは", "Hello", 0, 0, "English");
         assert!(prompt.contains("こんにちは"));
         assert!(prompt.contains("Hello"));
-        assert!(prompt.contains("English"));
+    }
+
+    #[test]
+    fn test_build_translate_prompt_reads_json() {
+        let prompt = build_translate_prompt("", "おはようございます");
+        assert!(prompt.contains("Translate:"));
+        assert!(prompt.contains("おはようございます"));
+        assert!(prompt.contains("honorific") || prompt.contains("Honorific") || prompt.contains("-san"));
+    }
+
+    #[test]
+    fn test_build_translate_prompt_includes_glossary() {
+        let glossary = "Reference glossary (use these translations, do not include in output):\n- 六花 → Rikka";
+        let prompt = build_translate_prompt(glossary, "六花が来た。");
+        assert!(prompt.contains("Reference glossary"));
+        assert!(prompt.contains("六花が来た。"));
+    }
+
+    #[test]
+    fn test_build_review_prompt_reads_json() {
+        let prompt = build_review_prompt("こんにちは", "Hello", 0, 0, "English");
+        assert!(prompt.contains("こんにちは"));
+        assert!(prompt.contains("Hello"));
+        assert!(prompt.contains("unchanged") || prompt.contains("EXACTLY"));
     }
 
     #[test]
@@ -640,7 +688,7 @@ mod tests {
             ("六花".to_string(), "Rikka".to_string()),
         ];
         let block = format_glossary_block(&terms);
-        assert!(block.contains("Glossary"));
+        assert!(block.contains("Reference glossary"));
         assert!(block.contains("羽鳥 → Hatori"));
         assert!(block.contains("六花 → Rikka"));
     }
