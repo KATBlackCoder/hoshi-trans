@@ -152,10 +152,12 @@ fn filter_glossary_for_text(text: &str, terms: &[(String, String)]) -> Vec<(Stri
         .collect()
 }
 
-/// Translate pending entries with configurable concurrency and batch limit.
+/// Translate pending entries in two sequential phases:
+/// - Phase 1: item/ui/general files first; short translated terms collected for auto-glossary.
+/// - Auto-inject: inserts Phase 1 short terms into project glossary (INSERT OR IGNORE), re-fetches.
+/// - Phase 2: dialogue files sequentially with 3-line context from DB.
 ///
-/// - `concurrency`: number of simultaneous Ollama requests (1–16, default 4)
-/// - `limit`: max entries to translate in this run (0 = all pending)
+/// `limit`: max entries to translate in this run (0 = all pending)
 #[tauri::command]
 pub async fn translate_batch(
     window: tauri::Window,
@@ -167,13 +169,10 @@ pub async fn translate_batch(
     project_id: String,
     model: String,
     ollama_host: String,
-    concurrency: u32,
     limit: u32,
     temperature: f32,
     entry_ids: Option<Vec<String>>,
 ) -> Result<(), String> {
-    use tokio::sync::Semaphore;
-
     cancel_flag.store(false, Ordering::Relaxed);
     batch_running.inner().0.store(true, Ordering::Relaxed);
     prompt_log.inner().0.lock().unwrap().clear();
@@ -182,11 +181,10 @@ pub async fn translate_batch(
     let glossary_terms = queries::get_glossary_for_translation(pool.inner(), &project_id, "en")
         .await
         .unwrap_or_default();
-    let term_pairs: Vec<(String, String)> = glossary_terms
+    let mut term_pairs: Vec<(String, String)> = glossary_terms
         .into_iter()
         .map(|t| (t.source_term, t.target_term))
         .collect();
-    // NOTE: glossary_block is no longer built here — filtered per-entry inside the spawn closure
 
     let engine = queries::get_project_engine_by_id(pool.inner(), &project_id)
         .await
@@ -212,44 +210,45 @@ pub async fn translate_batch(
     };
 
     let total = entries.len() as u32;
-    let concurrency = concurrency.max(1).min(16) as usize;
-    let semaphore = Arc::new(Semaphore::new(concurrency));
-    let done_count = Arc::new(AtomicU32::new(0));
     let cancel = cancel_flag.inner().clone();
     let pool_inner = pool.inner().clone();
-    let mut join_set = tokio::task::JoinSet::new();
+
+    // Split entries into Phase 1 (item/ui/general) and Phase 2 (dialogue)
+    let mut phase1_groups: std::collections::BTreeMap<String, Vec<crate::models::TranslationEntry>> =
+        std::collections::BTreeMap::new();
+    let mut phase2_groups: std::collections::BTreeMap<String, Vec<crate::models::TranslationEntry>> =
+        std::collections::BTreeMap::new();
 
     for entry in entries {
-        // Check cancel before acquiring permit — avoids spawning unnecessary tasks
-        if cancel.load(Ordering::Relaxed) {
-            break;
+        if infer_text_type(&entry.file_path) == "dialogue" {
+            phase2_groups
+                .entry(entry.file_path.clone())
+                .or_default()
+                .push(entry);
+        } else {
+            phase1_groups
+                .entry(entry.file_path.clone())
+                .or_default()
+                .push(entry);
         }
+    }
+    for group in phase1_groups.values_mut() {
+        group.sort_by_key(|e| e.order_index);
+    }
+    for group in phase2_groups.values_mut() {
+        group.sort_by_key(|e| e.order_index);
+    }
 
-        let permit = semaphore.clone().acquire_owned().await.unwrap();
+    let mut done: u32 = 0;
+    let mut auto_terms: Vec<(String, String)> = Vec::new();
 
-        // Check again — cancel may have been set while waiting for a permit
-        if cancel.load(Ordering::Relaxed) {
-            break;
-        }
-
-        let pool = pool_inner.clone();
-        let cancel = cancel.clone();
-        let window = window.clone();
-        let model = model.clone();
-        let term_pairs = term_pairs.clone();
-        let ollama_host = ollama_host.clone();
-        let done_count = done_count.clone();
-        let temperature = temperature;
-        let prompt_log = prompt_log.inner().0.clone();
-
-        join_set.spawn(async move {
-            let _permit = permit; // released when this task ends
-
+    // ── Phase 1: item / ui / general ────────────────────────────────────────
+    'phase1: for (_file_path, file_entries) in phase1_groups {
+        for entry in file_entries {
             if cancel.load(Ordering::Relaxed) {
-                return;
+                break 'phase1;
             }
 
-            // Single-pass: extract native codes → ❬n❭ markers
             let (simplified, ph_map) = if is_wolf {
                 wolf_ph::extract_native(&entry.source_text)
             } else {
@@ -257,39 +256,32 @@ pub async fn translate_batch(
             };
             let marker_count = ph_map.len();
 
-            // Per-entry glossary: only terms present in this source text
             let entry_glossary = filter_glossary_for_text(&entry.source_text, &term_pairs);
             let gb = format_glossary_block(&entry_glossary);
-
             let prompt = build_translate_prompt(&gb, "", &simplified);
 
-            // Log prompt for debug export
-            prompt_log.lock().unwrap().push(serde_json::json!({
-                "entry_id": entry.id,
-                "file": entry.file_path,
-                "order": entry.order_index,
-                "source": entry.source_text,
-                "simplified": simplified,
-                "prompt": prompt,
-            }));
+            {
+                let mut log = prompt_log.inner().0.lock().unwrap();
+                log.push(serde_json::json!({
+                    "entry_id": entry.id,
+                    "file": entry.file_path,
+                    "order": entry.order_index,
+                    "text_type": infer_text_type(&entry.file_path),
+                    "source": entry.source_text,
+                    "simplified": simplified,
+                    "prompt": prompt,
+                }));
+            }
 
             let ollama = ollama_from_url(&ollama_host);
             let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
+            let request = GenerationRequest::new(model.clone(), prompt).options(options);
 
-
-            let mut last_error: Option<String> = None;
-            let mut final_result = String::new();
-            let mut final_status = String::new();
-            let mut success = false;
-            let mut final_prompt_tokens: Option<i64> = None;
-            let mut final_output_tokens: Option<i64> = None;
-
-            let request = GenerationRequest::new(model.clone(), prompt).options(options.clone());
             match ollama.generate(request).await {
                 Ok(response) => {
                     let translated = response.response.trim().replace("\\\"", "\"");
-                    final_prompt_tokens = response.prompt_eval_count.map(|n| n as i64);
-                    final_output_tokens = response.eval_count.map(|n| n as i64);
+                    let prompt_tokens = response.prompt_eval_count.map(|n| n as i64);
+                    let output_tokens = response.eval_count.map(|n| n as i64);
                     let (reinjected, intact) = if is_wolf {
                         wolf_ph::reinject_native(&translated, &ph_map)
                     } else {
@@ -298,27 +290,35 @@ pub async fn translate_batch(
                     let found = (0..marker_count)
                         .filter(|i| translated.contains(&format!("❬{}❭", i)))
                         .count();
-                    final_result = reinjected;
-                    final_status = if intact {
+                    let status = if intact {
                         "translated".to_string()
                     } else {
                         format!("warning:missing_placeholder:{}/{}", found, marker_count)
                     };
-                    success = true;
+                    let _ = queries::update_translation(
+                        &pool_inner,
+                        &entry.id,
+                        &reinjected,
+                        &status,
+                        prompt_tokens,
+                        output_tokens,
+                    )
+                    .await;
+                    if entry.source_text.chars().count() <= 20 {
+                        auto_terms.push((entry.source_text.clone(), reinjected));
+                    }
                 }
                 Err(e) => {
-                    last_error = Some(e.to_string());
+                    let _ = queries::update_status(
+                        &pool_inner,
+                        &entry.id,
+                        &format!("error:{}", e),
+                    )
+                    .await;
                 }
             }
 
-            if success {
-                let _ = queries::update_translation(&pool, &entry.id, &final_result, &final_status, final_prompt_tokens, final_output_tokens).await;
-            } else {
-                let err = last_error.unwrap_or_else(|| "unknown".to_string());
-                let _ = queries::update_status(&pool, &entry.id, &format!("error:{}", err)).await;
-            }
-
-            let done = done_count.fetch_add(1, Ordering::Relaxed) + 1;
+            done += 1;
             let _ = window.emit(
                 "translation:progress",
                 TranslationProgress {
@@ -327,15 +327,118 @@ pub async fn translate_batch(
                     entry_id: entry.id.clone(),
                 },
             );
-        });
+        }
     }
 
-    // Wait for all in-flight tasks to finish
-    while join_set.join_next().await.is_some() {}
+    // ── Auto-inject Phase 1 results into project glossary ───────────────────
+    if !auto_terms.is_empty() && !cancel.load(Ordering::Relaxed) {
+        let _ = queries::bulk_insert_auto_glossary(&pool_inner, &project_id, &auto_terms).await;
+        if let Ok(refreshed) = queries::get_glossary_for_translation(&pool_inner, &project_id, "en").await {
+            term_pairs = refreshed
+                .into_iter()
+                .map(|t| (t.source_term, t.target_term))
+                .collect();
+        }
+    }
+
+    // ── Phase 2: dialogue — sequential with context lines ───────────────────
+    'phase2: for (_file_path, file_entries) in phase2_groups {
+        for entry in file_entries {
+            if cancel.load(Ordering::Relaxed) {
+                break 'phase2;
+            }
+
+            let preceding = queries::get_preceding_translated(
+                &pool_inner,
+                &project_id,
+                &entry.file_path,
+                entry.order_index,
+                3,
+            )
+            .await
+            .unwrap_or_default();
+            let context_block = format_context_block(&preceding);
+
+            let (simplified, ph_map) = if is_wolf {
+                wolf_ph::extract_native(&entry.source_text)
+            } else {
+                rpgmaker_ph::extract_native(&entry.source_text)
+            };
+            let marker_count = ph_map.len();
+
+            let entry_glossary = filter_glossary_for_text(&entry.source_text, &term_pairs);
+            let gb = format_glossary_block(&entry_glossary);
+            let prompt = build_translate_prompt(&gb, &context_block, &simplified);
+
+            {
+                let mut log = prompt_log.inner().0.lock().unwrap();
+                log.push(serde_json::json!({
+                    "entry_id": entry.id,
+                    "file": entry.file_path,
+                    "order": entry.order_index,
+                    "text_type": "dialogue",
+                    "source": entry.source_text,
+                    "simplified": simplified,
+                    "prompt": prompt,
+                }));
+            }
+
+            let ollama = ollama_from_url(&ollama_host);
+            let options = ollama_rs::models::ModelOptions::default().temperature(temperature);
+            let request = GenerationRequest::new(model.clone(), prompt).options(options);
+
+            match ollama.generate(request).await {
+                Ok(response) => {
+                    let translated = response.response.trim().replace("\\\"", "\"");
+                    let prompt_tokens = response.prompt_eval_count.map(|n| n as i64);
+                    let output_tokens = response.eval_count.map(|n| n as i64);
+                    let (reinjected, intact) = if is_wolf {
+                        wolf_ph::reinject_native(&translated, &ph_map)
+                    } else {
+                        rpgmaker_ph::reinject_native(&translated, &ph_map)
+                    };
+                    let found = (0..marker_count)
+                        .filter(|i| translated.contains(&format!("❬{}❭", i)))
+                        .count();
+                    let status = if intact {
+                        "translated".to_string()
+                    } else {
+                        format!("warning:missing_placeholder:{}/{}", found, marker_count)
+                    };
+                    let _ = queries::update_translation(
+                        &pool_inner,
+                        &entry.id,
+                        &reinjected,
+                        &status,
+                        prompt_tokens,
+                        output_tokens,
+                    )
+                    .await;
+                }
+                Err(e) => {
+                    let _ = queries::update_status(
+                        &pool_inner,
+                        &entry.id,
+                        &format!("error:{}", e),
+                    )
+                    .await;
+                }
+            }
+
+            done += 1;
+            let _ = window.emit(
+                "translation:progress",
+                TranslationProgress {
+                    done,
+                    total,
+                    entry_id: entry.id.clone(),
+                },
+            );
+        }
+    }
 
     // Send system notification
     use tauri_plugin_notification::NotificationExt;
-    let done = done_count.load(Ordering::Relaxed);
     let cancelled = cancel_flag.load(Ordering::Relaxed);
     let message = if cancelled {
         format!("Batch cancelled after {} entries.", done)
@@ -749,43 +852,4 @@ mod tests {
         assert!(result.is_ok() || result.is_err());
     }
 
-    #[tokio::test]
-    async fn test_semaphore_limits_concurrency() {
-        use tokio::sync::Semaphore;
-
-        let semaphore = Arc::new(Semaphore::new(2));
-        let active = Arc::new(AtomicU32::new(0));
-        let max_seen = Arc::new(AtomicU32::new(0));
-        let mut join_set = tokio::task::JoinSet::new();
-
-        for _ in 0..8 {
-            let permit = semaphore.clone().acquire_owned().await.unwrap();
-            let active = active.clone();
-            let max_seen = max_seen.clone();
-            join_set.spawn(async move {
-                let current = active.fetch_add(1, Ordering::SeqCst) + 1;
-                let mut seen = max_seen.load(Ordering::SeqCst);
-                while current > seen {
-                    match max_seen.compare_exchange(
-                        seen,
-                        current,
-                        Ordering::SeqCst,
-                        Ordering::SeqCst,
-                    ) {
-                        Ok(_) => break,
-                        Err(x) => seen = x,
-                    }
-                }
-                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-                active.fetch_sub(1, Ordering::SeqCst);
-                drop(permit);
-            });
-        }
-
-        while join_set.join_next().await.is_some() {}
-        assert!(
-            max_seen.load(Ordering::SeqCst) <= 2,
-            "concurrency exceeded semaphore limit"
-        );
-    }
 }
