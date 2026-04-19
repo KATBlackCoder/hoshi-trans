@@ -107,7 +107,18 @@ fn format_glossary_block(terms: &[(String, String)]) -> String {
     format!("Reference glossary (use these translations, do not include in output):\n{}", lines.join("\n"))
 }
 
-fn build_translate_prompt(glossary_block: &str, text: &str) -> String {
+fn format_context_block(entries: &[(String, String)]) -> String {
+    if entries.is_empty() {
+        return String::new();
+    }
+    let lines: Vec<String> = entries
+        .iter()
+        .map(|(src, tgt)| format!("- {} → {}", src, tgt))
+        .collect();
+    format!("[Previous lines]\n{}", lines.join("\n"))
+}
+
+fn build_translate_prompt(glossary_block: &str, context_block: &str, text: &str) -> String {
     let t = &PROMPTS["translate"];
     let header = t["header"].as_str().unwrap_or("");
     let rules: String = t["rules"]
@@ -120,11 +131,15 @@ fn build_translate_prompt(glossary_block: &str, text: &str) -> String {
         })
         .unwrap_or_default();
     let instruction = format!("{}\nRules:\n- {}", header, rules);
-    if glossary_block.is_empty() {
-        format!("{}\n\nTranslate:\n{}", instruction, text)
-    } else {
-        format!("{}\n{}\n\nTranslate:\n{}", instruction, glossary_block, text)
+    let mut parts = vec![instruction];
+    if !glossary_block.is_empty() {
+        parts.push(glossary_block.to_string());
     }
+    if !context_block.is_empty() {
+        parts.push(context_block.to_string());
+    }
+    parts.push(format!("Translate:\n{}", text));
+    parts.join("\n\n")
 }
 
 /// Returns only the glossary terms whose source_term appears literally in `text`.
@@ -246,7 +261,7 @@ pub async fn translate_batch(
             let entry_glossary = filter_glossary_for_text(&entry.source_text, &term_pairs);
             let gb = format_glossary_block(&entry_glossary);
 
-            let prompt = build_translate_prompt(&gb, &simplified);
+            let prompt = build_translate_prompt(&gb, "", &simplified);
 
             // Log prompt for debug export
             prompt_log.lock().unwrap().push(serde_json::json!({
@@ -646,7 +661,7 @@ mod tests {
 
     #[test]
     fn test_build_translate_prompt_reads_json() {
-        let prompt = build_translate_prompt("", "おはようございます");
+        let prompt = build_translate_prompt("", "", "おはようございます");
         assert!(prompt.contains("Translate:"));
         assert!(prompt.contains("おはようございます"));
         assert!(prompt.contains("honorific") || prompt.contains("Honorific") || prompt.contains("-san"));
@@ -655,9 +670,44 @@ mod tests {
     #[test]
     fn test_build_translate_prompt_includes_glossary() {
         let glossary = "Reference glossary (use these translations, do not include in output):\n- 六花 → Rikka";
-        let prompt = build_translate_prompt(glossary, "六花が来た。");
+        let prompt = build_translate_prompt(glossary, "", "六花が来た。");
         assert!(prompt.contains("Reference glossary"));
         assert!(prompt.contains("六花が来た。"));
+    }
+
+    #[test]
+    fn test_format_context_block_empty() {
+        let block = format_context_block(&[]);
+        assert_eq!(block, "");
+    }
+
+    #[test]
+    fn test_format_context_block_with_entries() {
+        let entries = vec![
+            ("こんにちは".to_string(), "Hello.".to_string()),
+            ("ありがとう".to_string(), "Thank you.".to_string()),
+        ];
+        let block = format_context_block(&entries);
+        assert!(block.contains("[Previous lines]"));
+        assert!(block.contains("こんにちは → Hello."));
+        assert!(block.contains("ありがとう → Thank you."));
+    }
+
+    #[test]
+    fn test_build_translate_prompt_with_context() {
+        let context = format_context_block(&[("おはよう".to_string(), "Good morning.".to_string())]);
+        let prompt = build_translate_prompt("", &context, "こんにちは");
+        assert!(prompt.contains("[Previous lines]"));
+        assert!(prompt.contains("Translate:"));
+        assert!(prompt.contains("こんにちは"));
+    }
+
+    #[test]
+    fn test_build_translate_prompt_no_context() {
+        let prompt = build_translate_prompt("", "", "おはよう");
+        assert!(!prompt.contains("[Previous lines]"));
+        assert!(prompt.contains("Translate:"));
+        assert!(prompt.contains("おはよう"));
     }
 
     #[test]
