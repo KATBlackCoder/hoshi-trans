@@ -330,7 +330,8 @@ pub async fn upsert_glossary_term(
                  VALUES (?, ?, ?, ?, ?)
                  ON CONFLICT(project_id, source_term, target_lang) WHERE project_id IS NOT NULL DO UPDATE SET
                    id = excluded.id,
-                   target_term = excluded.target_term",
+                   target_term = excluded.target_term,
+                   updated_at = datetime('now')",
             )
             .bind(id)
             .bind(pid)
@@ -431,6 +432,57 @@ pub async fn delete_glossary_term(pool: &SqlitePool, id: &str) -> anyhow::Result
         .execute(pool)
         .await?;
     Ok(())
+}
+
+pub async fn get_preceding_translated(
+    pool: &SqlitePool,
+    project_id: &str,
+    file_path: &str,
+    before_order: i64,
+    limit: u32,
+) -> anyhow::Result<Vec<(String, String)>> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT source_text, translation FROM entries
+         WHERE project_id = ? AND file_path = ? AND order_index < ?
+           AND status = 'translated' AND translation IS NOT NULL
+         ORDER BY order_index DESC
+         LIMIT ?",
+    )
+    .bind(project_id)
+    .bind(file_path)
+    .bind(before_order)
+    .bind(limit as i64)
+    .fetch_all(pool)
+    .await?;
+    let mut pairs = rows;
+    pairs.reverse();
+    Ok(pairs)
+}
+
+pub async fn bulk_insert_auto_glossary(
+    pool: &SqlitePool,
+    project_id: &str,
+    terms: &[(String, String)],
+) -> anyhow::Result<u32> {
+    let mut inserted = 0u32;
+    for (source, target) in terms {
+        let id = uuid::Uuid::new_v4().to_string();
+        let result = sqlx::query(
+            "INSERT OR IGNORE INTO glossary
+             (id, project_id, source_term, target_term, target_lang, created_at, updated_at)
+             VALUES (?, ?, ?, ?, 'en', datetime('now'), datetime('now'))",
+        )
+        .bind(&id)
+        .bind(project_id)
+        .bind(source)
+        .bind(target)
+        .execute(pool)
+        .await?;
+        if result.rows_affected() > 0 {
+            inserted += 1;
+        }
+    }
+    Ok(inserted)
 }
 
 pub async fn get_file_stats(
@@ -822,5 +874,107 @@ mod tests {
         assert_eq!(actors.translated, 1);
         assert_eq!(actors.warning, 1);
         assert_eq!(actors.pending, 0);
+    }
+}
+
+#[cfg(test)]
+mod context_glossary_tests {
+    use super::*;
+    use crate::db::init_pool;
+
+    async fn setup_test_db() -> sqlx::SqlitePool {
+        let dir = tempfile::tempdir().unwrap();
+        let pool = init_pool(dir.path().to_str().unwrap()).await.unwrap();
+        sqlx::query(
+            "INSERT INTO projects (id, game_dir, engine, game_title, target_lang, created_at, updated_at)
+             VALUES ('p1', '/g', 'wolf_rpg', 'Test', 'en', 0, 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        // Intentionally leak the TempDir so the DB file stays alive for the test.
+        // The pool holds the connection; dropping dir would delete the file on some platforms.
+        std::mem::forget(dir);
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_get_preceding_translated_returns_ordered() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index) VALUES ('e1','p1','こんにちは','Hello.','translated','mps/Map001.json',0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index) VALUES ('e2','p1','ありがとう','Thank you.','translated','mps/Map001.json',1)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES ('e3','p1','さようなら','pending','mps/Map001.json',2)").execute(&pool).await.unwrap();
+
+        let result = get_preceding_translated(&pool, "p1", "mps/Map001.json", 2, 3).await.unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].0, "こんにちは");
+        assert_eq!(result[0].1, "Hello.");
+        assert_eq!(result[1].0, "ありがとう");
+        assert_eq!(result[1].1, "Thank you.");
+    }
+
+    #[tokio::test]
+    async fn test_get_preceding_translated_ignores_pending() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index) VALUES ('e1','p1','こんにちは','Hello.','pending','mps/Map001.json',0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO entries (id, project_id, source_text, status, file_path, order_index) VALUES ('e2','p1','さようなら','pending','mps/Map001.json',1)").execute(&pool).await.unwrap();
+
+        let result = get_preceding_translated(&pool, "p1", "mps/Map001.json", 1, 3).await.unwrap();
+        assert_eq!(result.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_preceding_translated_respects_limit() {
+        let pool = setup_test_db().await;
+        for i in 0..5i64 {
+            let id = format!("e{}", i);
+            let src = format!("src{}", i);
+            let tgt = format!("tgt{}", i);
+            sqlx::query("INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index) VALUES (?,?,?,?,'translated','mps/Map001.json',?)")
+                .bind(&id).bind("p1").bind(&src).bind(&tgt).bind(i)
+                .execute(&pool).await.unwrap();
+        }
+        let result = get_preceding_translated(&pool, "p1", "mps/Map001.json", 5, 3).await.unwrap();
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].0, "src2");
+        assert_eq!(result[2].0, "src4");
+    }
+
+    #[tokio::test]
+    async fn test_bulk_insert_auto_glossary_inserts_new() {
+        let pool = setup_test_db().await;
+        let terms = vec![
+            ("勇者".to_string(), "Hero".to_string()),
+            ("剣".to_string(), "Sword".to_string()),
+        ];
+        let inserted = bulk_insert_auto_glossary(&pool, "p1", &terms).await.unwrap();
+        assert_eq!(inserted, 2);
+
+        let row: (String, String, Option<String>, Option<String>) = sqlx::query_as(
+            "SELECT source_term, target_term, created_at, updated_at FROM glossary WHERE project_id = 'p1' AND source_term = '勇者'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "勇者");
+        assert_eq!(row.1, "Hero");
+        assert!(row.2.is_some(), "created_at should be set");
+        assert!(row.3.is_some(), "updated_at should be set");
+    }
+
+    #[tokio::test]
+    async fn test_bulk_insert_auto_glossary_skips_existing() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO glossary (id, project_id, source_term, target_term, target_lang) VALUES ('g1','p1','勇者','Hero','en')")
+            .execute(&pool).await.unwrap();
+
+        let terms = vec![
+            ("勇者".to_string(), "Brave Hero".to_string()),
+            ("剣".to_string(), "Sword".to_string()),
+        ];
+        let inserted = bulk_insert_auto_glossary(&pool, "p1", &terms).await.unwrap();
+        assert_eq!(inserted, 1);
+
+        let existing: (String,) = sqlx::query_as(
+            "SELECT target_term FROM glossary WHERE project_id = 'p1' AND source_term = '勇者'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(existing.0, "Hero");
     }
 }
