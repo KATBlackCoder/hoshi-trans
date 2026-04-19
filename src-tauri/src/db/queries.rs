@@ -481,8 +481,53 @@ pub async fn bulk_insert_auto_glossary(
         if result.rows_affected() > 0 {
             inserted += 1;
         }
+        let _ = record_global_term_usage(pool, project_id, source, "en").await;
     }
     Ok(inserted)
+}
+
+pub async fn record_global_term_usage(
+    pool: &SqlitePool,
+    project_id: &str,
+    source_term: &str,
+    target_lang: &str,
+) -> anyhow::Result<()> {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM glossary WHERE project_id IS NULL AND source_term = ? AND target_lang = ?",
+    )
+    .bind(source_term)
+    .bind(target_lang)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some((global_id,)) = row {
+        sqlx::query(
+            "INSERT OR IGNORE INTO glossary_global_usage (global_term_id, project_id) VALUES (?, ?)",
+        )
+        .bind(&global_id)
+        .bind(project_id)
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
+}
+
+/// Returns (project_id, project_name, used_at) for all projects using a given global term.
+pub async fn get_global_term_projects(
+    pool: &SqlitePool,
+    global_term_id: &str,
+) -> anyhow::Result<Vec<(String, String, String)>> {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT p.id, p.game_title, u.used_at
+         FROM glossary_global_usage u
+         JOIN projects p ON p.id = u.project_id
+         WHERE u.global_term_id = ?
+         ORDER BY u.used_at DESC",
+    )
+    .bind(global_term_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
 }
 
 pub async fn get_file_stats(
@@ -976,5 +1021,83 @@ mod context_glossary_tests {
             "SELECT target_term FROM glossary WHERE project_id = 'p1' AND source_term = '勇者'"
         ).fetch_one(&pool).await.unwrap();
         assert_eq!(existing.0, "Hero");
+    }
+
+    #[tokio::test]
+    async fn test_record_global_term_usage_records_when_global_exists() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO glossary (id, project_id, source_term, target_term, target_lang) VALUES ('g1', NULL, '勇者', 'Hero', 'en')")
+            .execute(&pool).await.unwrap();
+
+        record_global_term_usage(&pool, "p1", "勇者", "en").await.unwrap();
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary_global_usage WHERE global_term_id = 'g1' AND project_id = 'p1'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_record_global_term_usage_ignores_when_no_global() {
+        let pool = setup_test_db().await;
+
+        record_global_term_usage(&pool, "p1", "存在しない", "en").await.unwrap();
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary_global_usage"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 0);
+    }
+
+    #[tokio::test]
+    async fn test_record_global_term_usage_is_idempotent() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO glossary (id, project_id, source_term, target_term, target_lang) VALUES ('g1', NULL, '勇者', 'Hero', 'en')")
+            .execute(&pool).await.unwrap();
+
+        record_global_term_usage(&pool, "p1", "勇者", "en").await.unwrap();
+        record_global_term_usage(&pool, "p1", "勇者", "en").await.unwrap();
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary_global_usage WHERE global_term_id = 'g1' AND project_id = 'p1'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_bulk_insert_auto_glossary_records_global_usage() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO glossary (id, project_id, source_term, target_term, target_lang) VALUES ('g1', NULL, '勇者', 'Hero', 'en')")
+            .execute(&pool).await.unwrap();
+
+        let terms = vec![
+            ("勇者".to_string(), "Hero".to_string()),
+            ("剣".to_string(), "Sword".to_string()),
+        ];
+        bulk_insert_auto_glossary(&pool, "p1", &terms).await.unwrap();
+
+        let usage: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary_global_usage WHERE global_term_id = 'g1' AND project_id = 'p1'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(usage.0, 1);
+
+        let proj: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary WHERE project_id = 'p1' AND source_term = '剣'"
+        ).fetch_one(&pool).await.unwrap();
+        assert_eq!(proj.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_global_term_projects_returns_usage() {
+        let pool = setup_test_db().await;
+        sqlx::query("INSERT INTO glossary (id, project_id, source_term, target_term, target_lang) VALUES ('g1', NULL, '勇者', 'Hero', 'en')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO glossary_global_usage (global_term_id, project_id) VALUES ('g1', 'p1')")
+            .execute(&pool).await.unwrap();
+
+        let result = get_global_term_projects(&pool, "g1").await.unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0, "p1");
+        assert_eq!(result[0].1, "Test");
     }
 }
