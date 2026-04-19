@@ -66,7 +66,6 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('order')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
-  const [concurrency, setConcurrency] = useState(4)
   const [limit, setLimit] = useState(0)
   const { availableModels: allModels, settings } = useAppStore()
   const availableModels = allModels.filter(m => m.includes('hoshi-translator'))
@@ -152,14 +151,14 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   function handleTranslateSingle(entry: TranslationEntry) {
     if (translatingRowId || running) return
     setTranslatingRowId(entry.id)
-    start(projectId, model, settings.ollamaHost, 1, 0, settings.temperature, [entry.id])
+    start(projectId, model, settings.ollamaHost, 0, settings.temperature, [entry.id])
       .finally(() => { setTranslatingRowId(null); refetch() })
   }
 
   function handleStart() {
     const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined
     setSelectedIds(new Set())
-    start(projectId, model, settings.ollamaHost, concurrency, limit, settings.temperature, ids)
+    start(projectId, model, settings.ollamaHost, limit, settings.temperature, ids)
   }
 
   const exportTranslated = useMutation({
@@ -175,7 +174,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
       .filter(e => typeof e.status === 'string' && e.status.startsWith('warning'))
       .map(e => e.id)
     if (warningIds.length === 0) return
-    start(projectId, model, settings.ollamaHost, concurrency, limit, settings.temperature, warningIds)
+    start(projectId, model, settings.ollamaHost, limit, settings.temperature, warningIds)
   }
 
   // Refresh table when refine batch completes
@@ -248,8 +247,6 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
           refineProgress={refineProgress}
           onRefine={handleRefine}
           onCancelRefine={cancelRefine}
-          concurrency={concurrency}
-          onConcurrencyChange={setConcurrency}
           limit={limit}
           onLimitChange={setLimit}
         />

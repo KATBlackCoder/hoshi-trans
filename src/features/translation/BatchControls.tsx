@@ -3,7 +3,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Sparkles, Wand2, X, Settings2 } from 'lucide-react'
 
-const CONCURRENCY_OPTIONS = [1, 2, 4, 8]
 const LIMIT_OPTIONS = [
   { label: '100', value: 100 },
   { label: '500', value: 500 },
@@ -26,8 +25,6 @@ interface BatchControlsProps {
   refineProgress: { done: number; total: number } | null
   onRefine: () => void
   onCancelRefine: () => void
-  concurrency: number
-  onConcurrencyChange: (n: number) => void
   limit: number
   onLimitChange: (n: number) => void
 }
@@ -39,7 +36,6 @@ export function BatchControls({
   running, progress, onStart, onCancel,
   selectedCount,
   refining, refineProgress, onRefine, onCancelRefine,
-  concurrency, onConcurrencyChange,
   limit, onLimitChange,
 }: BatchControlsProps) {
   return (
@@ -71,22 +67,6 @@ export function BatchControls({
             <Settings2 className="w-3 h-3" />
           </PopoverTrigger>
           <PopoverContent align="end" className="w-52 p-3 space-y-3">
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                Concurrency
-              </p>
-              <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
-                {CONCURRENCY_OPTIONS.map(n => (
-                  <button key={n} onClick={() => onConcurrencyChange(n)}
-                    className={`flex-1 h-7 text-[11px] font-mono transition-colors border-r border-border/40 last:border-r-0 ${
-                      concurrency === n
-                        ? 'bg-secondary text-secondary-foreground font-semibold'
-                        : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
-                    }`}
-                  >{n}×</button>
-                ))}
-              </div>
-            </div>
             <div className="space-y-1.5">
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
                 Limit
