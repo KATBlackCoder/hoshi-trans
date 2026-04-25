@@ -461,8 +461,7 @@ pub async fn maybe_feed_glossary_from_manual(
     .await?;
 
     if let Some((source_text, project_id, file_path)) = row {
-        let lower = file_path.to_lowercase();
-        let is_dialogue = ["mps/", "common/", "map"].iter().any(|k| lower.contains(k));
+        let is_dialogue = crate::engines::common::text_type::infer_text_type(&file_path) == "dialogue";
         if !is_dialogue && source_text.chars().count() <= 10 {
             bulk_insert_auto_glossary(
                 pool,

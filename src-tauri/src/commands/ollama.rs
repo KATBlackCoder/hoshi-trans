@@ -458,27 +458,7 @@ pub async fn translate_batch(
     Ok(())
 }
 
-/// Infer the semantic type of a string from its file path.
-/// Used to give the review model additional context.
-pub fn infer_text_type(file_path: &str) -> &'static str {
-    let lower = file_path.to_lowercase();
-    let item_keywords = ["item", "weapon", "armor", "skill", "actor", "class", "enemy",
-                         "troop", "state", "アイテム", "武器", "防具", "スキル"];
-    let ui_keywords = ["system", "game.json"];
-    let dialogue_keywords = ["mps/", "common/", "map"];
-
-    // Check dialogue path patterns first — common/ and mps/ are always dialogue
-    // regardless of what's in the filename (e.g. アイテム増減 common event)
-    if dialogue_keywords.iter().any(|k| lower.contains(k)) {
-        "dialogue"
-    } else if item_keywords.iter().any(|k| lower.contains(k)) {
-        "item"
-    } else if ui_keywords.iter().any(|k| lower.contains(k)) {
-        "ui"
-    } else {
-        "general"
-    }
-}
+pub use crate::engines::common::text_type::infer_text_type;
 
 /// Build the critique prompt sent to the thinking model during the refine pass.
 /// The model receives encoded source + encoded draft so it can reason about placeholders.
