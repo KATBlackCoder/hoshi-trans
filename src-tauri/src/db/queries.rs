@@ -453,15 +453,17 @@ pub async fn maybe_feed_glossary_from_manual(
     entry_id: &str,
     new_text: &str,
 ) -> anyhow::Result<()> {
-    let row: Option<(String, String)> = sqlx::query_as(
-        "SELECT source_text, project_id FROM entries WHERE id = ?",
+    let row: Option<(String, String, String)> = sqlx::query_as(
+        "SELECT source_text, project_id, file_path FROM entries WHERE id = ?",
     )
     .bind(entry_id)
     .fetch_optional(pool)
     .await?;
 
-    if let Some((source_text, project_id)) = row {
-        if source_text.chars().count() <= 10 {
+    if let Some((source_text, project_id, file_path)) = row {
+        let lower = file_path.to_lowercase();
+        let is_dialogue = ["mps/", "common/", "map"].iter().any(|k| lower.contains(k));
+        if !is_dialogue && source_text.chars().count() <= 10 {
             bulk_insert_auto_glossary(
                 pool,
                 &project_id,
@@ -1229,6 +1231,29 @@ mod context_glossary_tests {
     async fn test_maybe_feed_glossary_unknown_entry_is_noop() {
         let pool = setup_test_db().await;
         maybe_feed_glossary_from_manual(&pool, "nonexistent", "Hero").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_maybe_feed_glossary_dialogue_skips() {
+        let pool = setup_test_db().await;
+        // Short source (3 chars) but from a dialogue file → must NOT be injected
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', '剣士', 'Swordsman', 'translated', 'mps/Map001.json', 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        maybe_feed_glossary_from_manual(&pool, "e1", "Swordsman").await.unwrap();
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary WHERE project_id = 'p1'"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count.0, 0);
     }
 
     #[tokio::test]
