@@ -66,10 +66,12 @@ pub fn run() {
             commands::entries::update_translation,
             commands::entries::update_status,
             commands::entries::reset_empty_translations,
+            commands::entries::get_inconsistent_source_texts,
             commands::inject::inject_translations,
             commands::glossary::get_all_glossary_terms,
             commands::glossary::upsert_glossary_term,
             commands::glossary::delete_glossary_term,
+            commands::glossary::delete_glossary_terms,
             commands::glossary::export_glossary,
             commands::glossary::import_glossary,
         ])

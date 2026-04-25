@@ -685,6 +685,15 @@ pub async fn refine_batch(
 
     while join_set.join_next().await.is_some() {}
 
+    // Feed short reviewed entries back into project glossary
+    if !cancel.load(Ordering::Relaxed) {
+        if let Ok(terms) = queries::get_reviewed_short_for_glossary(&pool_inner, &project_id, 10).await {
+            if !terms.is_empty() {
+                let _ = queries::bulk_insert_auto_glossary(&pool_inner, &project_id, &terms).await;
+            }
+        }
+    }
+
     use tauri_plugin_notification::NotificationExt;
     let done = done_count.load(Ordering::Relaxed);
     let _ = app
