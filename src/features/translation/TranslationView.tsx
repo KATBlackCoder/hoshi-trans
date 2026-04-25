@@ -102,8 +102,17 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     staleTime: 30_000,
   })
 
+  const { data: inconsistentTexts = [] } = useQuery({
+    queryKey: ['inconsistent', projectId],
+    queryFn: () => invoke<string[]>('get_inconsistent_source_texts', { projectId }),
+    enabled: !running && !refining,
+  })
+
+  const [showInconsistent, setShowInconsistent] = useState(false)
+
   useEffect(() => {
     setFileFilter(undefined)
+    setShowInconsistent(false)
   }, [projectId])
 
   const progressPct = progress ? Math.round((progress.done / progress.total) * 100) : 0
@@ -112,7 +121,7 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const base = q
+    let base = q
       ? entries.filter(
           e =>
             e.source_text.toLowerCase().includes(q) ||
@@ -120,8 +129,12 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
             e.file_path.toLowerCase().includes(q),
         )
       : entries
+    if (showInconsistent && inconsistentTexts.length > 0) {
+      const set = new Set(inconsistentTexts)
+      base = base.filter(e => set.has(e.source_text))
+    }
     return sortEntries(base, sortKey, sortDir)
-  }, [entries, search, sortKey, sortDir])
+  }, [entries, search, sortKey, sortDir, showInconsistent, inconsistentTexts])
 
   const virtualizer = useVirtualizer({
     count: filtered.length,
@@ -177,6 +190,11 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
     start(projectId, model, settings.ollamaHost, limit, settings.temperature, warningIds)
   }
 
+  // Refresh table when batch completes
+  useEffect(() => {
+    if (!running) refetch()
+  }, [running])
+
   // Refresh table when refine batch completes
   useEffect(() => {
     if (!refining) refetch()
@@ -206,17 +224,17 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
       <div className="px-5 py-2.5 border-b border-border/50 flex items-center justify-between gap-4 shrink-0 bg-background/60 backdrop-blur-sm">
         <div className="flex flex-col gap-0.5 min-w-0">
           <h2 className="font-semibold text-sm truncate text-foreground/90">{gameTitle ?? 'Translation'}</h2>
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 font-mono">
-            <span className="tabular-nums">{entries.length}</span>
-            <span className="opacity-50">entries</span>
-            {translatedCount > 0 && (
-              <><span className="opacity-30">·</span><span className="text-emerald-500/60 tabular-nums">{translatedCount} done</span></>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono">
+            <span className="tabular-nums text-foreground/60">{entries.length}</span>
+            <span className="text-muted-foreground/40">entries</span>
+            {(running ? (progress?.done ?? 0) : translatedCount) > 0 && (
+              <><span className="text-muted-foreground/30">·</span><span className="text-emerald-400/80 tabular-nums">{running ? (progress?.done ?? 0) : translatedCount} done</span></>
             )}
-            {pendingCount > 0 && (
-              <><span className="opacity-30">·</span><span className="tabular-nums">{pendingCount} pending</span></>
+            {(running ? ((progress?.total ?? 0) - (progress?.done ?? 0)) : pendingCount) > 0 && (
+              <><span className="text-muted-foreground/30">·</span><span className="text-muted-foreground/50 tabular-nums">{running ? ((progress?.total ?? 0) - (progress?.done ?? 0)) : pendingCount} pending</span></>
             )}
             {search && (
-              <><span className="opacity-30">·</span><span className="text-primary/70 tabular-nums">{filtered.length} found</span></>
+              <><span className="text-muted-foreground/30">·</span><span className="text-primary/70 tabular-nums">{filtered.length} found</span></>
             )}
             {fileFilter && (
               <>
@@ -265,6 +283,21 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
             >{f.label}</button>
           ))}
         </div>
+
+        {inconsistentTexts.length > 0 && (
+          <button
+            onClick={() => setShowInconsistent(v => !v)}
+            title={`${inconsistentTexts.length} source text(s) with inconsistent translations`}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+              showInconsistent
+                ? 'bg-amber-500/20 text-amber-400'
+                : 'text-amber-500/60 hover:text-amber-400 hover:bg-amber-500/10'
+            }`}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            {inconsistentTexts.length} inconsistent
+          </button>
+        )}
 
         {uniqueFiles.length > 1 && (
           <Select value={fileFilter ?? '__all__'} onValueChange={(v) => setFileFilter(!v || v === '__all__' ? undefined : v)}>
