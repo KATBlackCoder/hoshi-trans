@@ -304,7 +304,7 @@ pub async fn translate_batch(
                         output_tokens,
                     )
                     .await;
-                    if entry.source_text.chars().count() <= 20 {
+                    if entry.source_text.chars().count() <= 10 {
                         auto_terms.push((entry.source_text.clone(), reinjected));
                     }
                 }
@@ -353,7 +353,7 @@ pub async fn translate_batch(
                 &project_id,
                 &entry.file_path,
                 entry.order_index,
-                3,
+                5,
             )
             .await
             .unwrap_or_default();
