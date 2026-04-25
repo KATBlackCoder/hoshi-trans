@@ -638,7 +638,7 @@ pub async fn refine_batch(
 
 **Helpers :**
 - `count_placeholders(text)` — compte les `{{...}}` tokens (i64)
-- `infer_text_type(file_path)` — `'dialogue'` (mps/, common/, map) | `'item'` | `'ui'` | `'general'` — priorité dialogue > item > ui > general
+- `infer_text_type(file_path)` — défini dans `src-tauri/src/engines/common/text_type.rs` (module partagé). Retourne `'dialogue'` | `'item'` | `'ui'` | `'general'`. **Point d'extension moteur** : ajouter les patterns de chemins du nouveau moteur ici — la logique est automatiquement appliquée partout (auto-glossary, feedback manuel, refine). Re-exporté dans `commands/ollama.rs` via `pub use`.
 - `build_review_prompt(encoded_source, encoded_draft, ph_count_source, ph_count_draft, lang_name)` — prompt critique structuré
 
 **Commande manuelle :** `update_refined_manual(entry_id, refined_text)` — déclenché quand l'utilisateur édite manuellement un texte raffiné → `refined_status = "manual"`.
@@ -675,7 +675,7 @@ pub async fn refine_batch(
 - **`delete_glossary_terms(ids: Vec<String>)`** — commande Rust (`commands/glossary.rs`) + query (`db/queries.rs`) : `DELETE FROM glossary WHERE id IN (...)` — une seule requête SQL pour toute la sélection.
 - **`glossary_global_usage`** — table jonction `(global_term_id, project_id)` — `used_at` enregistré automatiquement par `bulk_insert_auto_glossary` via `record_global_term_usage`. Permet de savoir quels projets utilisent chaque terme global.
 - **Feedback loop automatique** — deux chemins alimentent le glossaire projet automatiquement :
-  - `update_refined_manual` et `update_translation` (Tauri commands) appellent `maybe_feed_glossary_from_manual` après save — si `source_text ≤ 10 chars`, le terme est injecté (`INSERT OR IGNORE`). Concerne uniquement les sauvegardes UI (les batchs appellent `queries::update_translation` directement, non affectés).
+  - `update_refined_manual` et `update_translation` (Tauri commands) appellent `maybe_feed_glossary_from_manual` après save — conditions : `infer_text_type(file_path) != "dialogue"` ET `source_text ≤ 10 chars` → injecté (`INSERT OR IGNORE`). Concerne uniquement les sauvegardes UI (les batchs appellent `queries::update_translation` directement, non affectés). La condition dialogue utilise `engines/common/text_type.rs` — s'adapte automatiquement aux nouveaux moteurs.
   - Fin de `refine_batch` : `get_reviewed_short_for_glossary` + `bulk_insert_auto_glossary` injecte les entrées courtes `refined_status='reviewed'`.
 - **Badge inconsistances** — `get_inconsistent_source_texts(project_id)` détecte les `source_text` ayant plusieurs traductions distinctes (`COALESCE(refined_text, translation)`). Badge `⚠ N inconsistent` dans la toolbar de `TranslationView` ; cliquer filtre la table sur ces entrées via `showInconsistent` state + `inconsistentTexts` TanStack Query (désactivée pendant les batchs).
 
