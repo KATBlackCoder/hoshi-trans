@@ -153,7 +153,11 @@ hoshi-trans/
 │   │   ├── 002_glossary.sql
 │   │   ├── 003_unique_entries.sql
 │   │   ├── 004_glossary_global.sql
-│   │   └── 005_refine_columns.sql    # 7 colonnes refine-pass nullable sur entries
+│   │   ├── 005_refine_columns.sql    # 7 colonnes refine-pass nullable sur entries
+│   │   ├── 006_translated_at.sql
+│   │   ├── 007_token_counts.sql
+│   │   ├── 008_glossary_timestamps.sql   # created_at + updated_at sur glossary
+│   │   └── 009_glossary_global_usage.sql # table jonction global term ↔ projets
 │   └── Cargo.toml
 │
 ├── .github/workflows/release.yml
@@ -563,10 +567,7 @@ pub async fn translate_batch(
     batch_running: tauri::State<'_, BatchRunning>,
     project_id: String,
     model: String,
-    target_lang: String,
-    system_prompt: String,
     ollama_host: String,
-    concurrency: u32,
     limit: u32,
     temperature: f32,
     entry_ids: Option<Vec<String>>,  // si Some → traduit ces entrées spécifiques
@@ -583,6 +584,20 @@ pub async fn is_batch_running(batch_running: tauri::State<'_, BatchRunning>) -> 
 // get_entries_by_ids : pour traduire une sélection d'entrées
 pub async fn get_entries_by_ids(pool: &SqlitePool, ids: &[String]) -> anyhow::Result<Vec<TranslationEntry>>
 ```
+
+**Pipeline de traduction en deux phases (séquentiel — pas de parallélisme) :**
+
+- **Phase 1 — item/ui/general** : fichiers non-dialogue traités en premier. Chaque entrée traduite dont `source_text.chars().count() <= 10` est ajoutée à `auto_terms`.
+- **Auto-inject** : après Phase 1, `bulk_insert_auto_glossary` insère les `auto_terms` dans le glossaire projet (`INSERT OR IGNORE`). Le glossaire est re-fetché pour que Phase 2 en bénéficie.
+- **Phase 2 — dialogue** : fichiers `mps/`, `common/`, `map` traités séquentiellement. Avant chaque entrée, `get_preceding_translated` remonte jusqu'à **5** entrées traduites du même fichier → formatées comme `[Previous lines]\n- src → tgt`.
+- `filter_glossary_for_text` : sélectionne uniquement les termes du glossaire dont `source_term` est contenu littéralement dans le texte de l'entrée courante.
+- `format_context_block` + `format_glossary_block` → injectés dans `build_translate_prompt(glossary_block, context_block, text)`.
+
+**DB queries liées :**
+- `get_glossary_for_translation(pool, project_id, lang)` — retourne global + project-scoped, project override global
+- `get_preceding_translated(pool, project_id, file_path, before_order, limit)` — N entrées `status='translated'` avant `order_index`, ordre chronologique
+- `bulk_insert_auto_glossary(pool, project_id, terms)` — INSERT OR IGNORE + appelle `record_global_term_usage` par terme
+- `record_global_term_usage(pool, project_id, source_term, lang)` — INSERT OR IGNORE dans `glossary_global_usage` si le terme existe en global
 
 **Re-connexion après rechargement webview :** `useTranslationBatch` appelle `is_batch_running` au montage. Si `true`, re-subscribe à `translation:progress` + `translation:complete` → l'indicateur reprend sans intervention.
 
@@ -644,9 +659,25 @@ pub async fn refine_batch(
 
 **Translation UI redesign (v1.0) :**
 
-- **`BatchControls` component** (`src/features/translation/BatchControls.tsx`) — extrait du header de `TranslationView`. Regroupe les contrôles TL et RF dans deux boîtes bordées distinctes. Concurrency + limit déplacés dans un `<Popover>` `⚙` (shadcn `@base-ui/react/popover`). Affiche `Translate N` / `Refine N` quand des entrées sont sélectionnées. Progress + cancel inline dans chaque boîte.
+- **`BatchControls` component** (`src/features/translation/BatchControls.tsx`) — extrait du header de `TranslationView`. Regroupe les contrôles TL et RF dans deux boîtes bordées distinctes. Limit dans un `<Popover>` `⚙`. Affiche `Translate N` / `Refine N` quand des entrées sont sélectionnées. Progress + cancel inline dans chaque boîte.
+- **Progress counter live** — le header affiche `done` et `pending` depuis `progress.done / progress.total` (event stream) pendant le batch, puis retombe sur les counts DB après (`refetch` sur `running → false`). Garantit que les deux compteurs bougent en sync.
 - **Toolbar séparateur** — `<div className="w-px h-4 bg-border/30">` entre le groupe filtres (status chips, file dropdown, view toggle) et le groupe actions (retry warnings, export, search).
 - **Row tinting** — fond subtil par statut dans `TranslationRow` via classes CSS dans `App.css` : `status-row-warning` (amber/3%), `status-row-reviewed` (bleu/4%), `status-row-error` (rouge/3%). Pending et translated restent sans tinte.
+
+**Glossary UI :**
+
+- **`GlossaryPage`** (`src/features/glossary/GlossaryPage.tsx`) — barre de filtres client-side entre le formulaire d'ajout et la table :
+  - Search (source ou target term, `toLowerCase().includes`)
+  - Scope : boutons `All` / `Global` + dropdown projet (affiche `game_title`, pas l'UUID)
+  - Lang : boutons `All` / `EN` / `FR`
+  - Compteur `N / total` affiché quand un filtre est actif
+- **Sélection bulk** — checkbox par ligne + select-all dans le header (sélectionne les termes filtrés visibles). Bouton `Delete N` apparaît dans le header quand ≥ 1 terme sélectionné → appelle `delete_glossary_terms`. Ligne sélectionnée teintée `bg-primary/5`.
+- **`delete_glossary_terms(ids: Vec<String>)`** — commande Rust (`commands/glossary.rs`) + query (`db/queries.rs`) : `DELETE FROM glossary WHERE id IN (...)` — une seule requête SQL pour toute la sélection.
+- **`glossary_global_usage`** — table jonction `(global_term_id, project_id)` — `used_at` enregistré automatiquement par `bulk_insert_auto_glossary` via `record_global_term_usage`. Permet de savoir quels projets utilisent chaque terme global.
+- **Feedback loop automatique** — deux chemins alimentent le glossaire projet automatiquement :
+  - `update_refined_manual` et `update_translation` (Tauri commands) appellent `maybe_feed_glossary_from_manual` après save — si `source_text ≤ 10 chars`, le terme est injecté (`INSERT OR IGNORE`). Concerne uniquement les sauvegardes UI (les batchs appellent `queries::update_translation` directement, non affectés).
+  - Fin de `refine_batch` : `get_reviewed_short_for_glossary` + `bulk_insert_auto_glossary` injecte les entrées courtes `refined_status='reviewed'`.
+- **Badge inconsistances** — `get_inconsistent_source_texts(project_id)` détecte les `source_text` ayant plusieurs traductions distinctes (`COALESCE(refined_text, translation)`). Badge `⚠ N inconsistent` dans la toolbar de `TranslationView` ; cliquer filtre la table sur ces entrées via `showInconsistent` state + `inconsistentTexts` TanStack Query (désactivée pendant les batchs).
 
 ---
 
