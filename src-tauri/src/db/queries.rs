@@ -434,6 +434,85 @@ pub async fn delete_glossary_term(pool: &SqlitePool, id: &str) -> anyhow::Result
     Ok(())
 }
 
+pub async fn delete_glossary_terms(pool: &SqlitePool, ids: &[String]) -> anyhow::Result<u32> {
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+    let sql = format!("DELETE FROM glossary WHERE id IN ({})", placeholders);
+    let mut q = sqlx::query(&sql);
+    for id in ids {
+        q = q.bind(id);
+    }
+    let result = q.execute(pool).await?;
+    Ok(result.rows_affected() as u32)
+}
+
+pub async fn maybe_feed_glossary_from_manual(
+    pool: &SqlitePool,
+    entry_id: &str,
+    new_text: &str,
+) -> anyhow::Result<()> {
+    let row: Option<(String, String)> = sqlx::query_as(
+        "SELECT source_text, project_id FROM entries WHERE id = ?",
+    )
+    .bind(entry_id)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some((source_text, project_id)) = row {
+        if source_text.chars().count() <= 10 {
+            bulk_insert_auto_glossary(
+                pool,
+                &project_id,
+                &[(source_text, new_text.to_string())],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn get_reviewed_short_for_glossary(
+    pool: &SqlitePool,
+    project_id: &str,
+    max_chars: usize,
+) -> anyhow::Result<Vec<(String, String)>> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT source_text, refined_text FROM entries
+         WHERE project_id = ? AND refined_status = 'reviewed'
+           AND refined_text IS NOT NULL",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .filter(|(src, _)| src.chars().count() <= max_chars)
+        .collect())
+}
+
+pub async fn get_inconsistent_source_texts(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> anyhow::Result<Vec<String>> {
+    let rows: Vec<(String,)> = sqlx::query_as(
+        "SELECT source_text
+         FROM entries
+         WHERE project_id = ?
+           AND (status = 'translated' OR status LIKE 'warning%')
+           AND translation IS NOT NULL
+         GROUP BY source_text
+         HAVING COUNT(DISTINCT COALESCE(refined_text, translation)) > 1
+         ORDER BY source_text",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().map(|(s,)| s).collect())
+}
+
 pub async fn get_preceding_translated(
     pool: &SqlitePool,
     project_id: &str,
@@ -1099,5 +1178,141 @@ mod context_glossary_tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].0, "p1");
         assert_eq!(result[0].1, "Test");
+    }
+
+    #[tokio::test]
+    async fn test_maybe_feed_glossary_short_source_inserts() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', '勇者', 'Brave', 'translated', 'items/armor.json', 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        maybe_feed_glossary_from_manual(&pool, "e1", "Hero").await.unwrap();
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary WHERE project_id = 'p1' AND source_term = '勇者' AND target_term = 'Hero'"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_maybe_feed_glossary_long_source_skips() {
+        let pool = setup_test_db().await;
+        // 11 chars — exceeds limit of 10, must not be inserted
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', 'アイテムショップに行く', 'Go to the item shop', 'translated', 'items/skill.json', 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        maybe_feed_glossary_from_manual(&pool, "e1", "Go to the item shop").await.unwrap();
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM glossary WHERE project_id = 'p1'"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count.0, 0);
+    }
+
+    #[tokio::test]
+    async fn test_maybe_feed_glossary_unknown_entry_is_noop() {
+        let pool = setup_test_db().await;
+        maybe_feed_glossary_from_manual(&pool, "nonexistent", "Hero").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_reviewed_short_returns_only_short_reviewed() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, refined_text, refined_status, status, file_path, order_index)
+             VALUES ('e1', 'p1', '剣', 'Sword', 'Blade', 'reviewed', 'translated', 'items/weapons.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, refined_text, refined_status, status, file_path, order_index)
+             VALUES ('e2', 'p1', 'アイテムショップに行く', 'Go to the item shop', 'Go to the shop', 'reviewed', 'translated', 'mps/Map001.json', 1)",
+        )
+        .execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, refined_text, refined_status, status, file_path, order_index)
+             VALUES ('e3', 'p1', '盾', 'Shield', 'Shield', 'unchanged', 'translated', 'items/armor.json', 2)",
+        )
+        .execute(&pool).await.unwrap();
+
+        let pairs = get_reviewed_short_for_glossary(&pool, "p1", 10).await.unwrap();
+        assert_eq!(pairs.len(), 1);
+        assert_eq!(pairs[0].0, "剣");
+        assert_eq!(pairs[0].1, "Blade");
+    }
+
+    #[tokio::test]
+    async fn test_get_inconsistent_source_texts_detects_conflicts() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', '魔法', 'Magic', 'translated', 'mps/Map001.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e2', 'p1', '魔法', 'Spell', 'translated', 'mps/Map002.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e3', 'p1', '剣', 'Sword', 'translated', 'items/weapons.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+
+        let result = get_inconsistent_source_texts(&pool, "p1").await.unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "魔法");
+    }
+
+    #[tokio::test]
+    async fn test_get_inconsistent_prefers_refined_text() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, refined_text, refined_status, status, file_path, order_index)
+             VALUES ('e1', 'p1', '魔法', 'Magic', 'Sorcery', 'reviewed', 'translated', 'mps/Map001.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e2', 'p1', '魔法', 'Magic', 'translated', 'mps/Map002.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+
+        let result = get_inconsistent_source_texts(&pool, "p1").await.unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_inconsistent_returns_empty_when_consistent() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e1', 'p1', '魔法', 'Magic', 'translated', 'mps/Map001.json', 0)",
+        )
+        .execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO entries (id, project_id, source_text, translation, status, file_path, order_index)
+             VALUES ('e2', 'p1', '魔法', 'Magic', 'translated', 'mps/Map002.json', 1)",
+        )
+        .execute(&pool).await.unwrap();
+
+        let result = get_inconsistent_source_texts(&pool, "p1").await.unwrap();
+        assert!(result.is_empty());
     }
 }

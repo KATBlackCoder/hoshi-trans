@@ -26,7 +26,14 @@ pub async fn update_translation(
 ) -> Result<(), String> {
     queries::update_translation(pool.inner(), &entry_id, &translation, "translated", None, None)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    let _ = crate::db::queries::maybe_feed_glossary_from_manual(
+        pool.inner(),
+        &entry_id,
+        &translation,
+    )
+    .await;
+    Ok(())
 }
 
 /// Reset entries with empty translation back to pending so they get retranslated.
@@ -49,7 +56,14 @@ pub async fn update_refined_manual(
 ) -> Result<(), String> {
     crate::db::queries::update_refined_manual(pool.inner(), &entry_id, &refined_text)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    let _ = crate::db::queries::maybe_feed_glossary_from_manual(
+        pool.inner(),
+        &entry_id,
+        &refined_text,
+    )
+    .await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -69,6 +83,16 @@ pub async fn update_status(
     status: String,
 ) -> Result<(), String> {
     queries::update_status(pool.inner(), &entry_id, &status)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_inconsistent_source_texts(
+    pool: tauri::State<'_, SqlitePool>,
+    project_id: String,
+) -> Result<Vec<String>, String> {
+    crate::db::queries::get_inconsistent_source_texts(pool.inner(), &project_id)
         .await
         .map_err(|e| e.to_string())
 }
