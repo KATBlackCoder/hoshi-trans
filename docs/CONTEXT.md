@@ -23,9 +23,9 @@ Application desktop Tauri pour traduire les textes de jeux japonais (RPG Maker M
 │  • Parsing / injection jeu      │  • Appels Tauri commands   │
 │  • Appels Ollama (ollama-rs)    │  • State local (Zustand)   │
 │  • TOUT le SQL (sqlx)           │  • File picker (plugin)    │
-│  • Sidecars WolfTL/UberWolf     │  • Opener output/ + Ko-fi  │
-│  • Logique placeholders/skip    │  • Notifications, window   │
-│  • Lecture/écriture .hoshi.json │  • QR codes donations      │
+│  • Logique placeholders/skip    │  • Opener output/ + Ko-fi  │
+│  • Lecture/écriture .hoshi.json │  • Notifications, window   │
+│                                 │  • QR codes donations      │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,7 +61,6 @@ React appelle `invoke('get_entries', {...})` — jamais `@tauri-apps/plugin-sql`
 |---|---|
 | `tauri` v2 | Core |
 | `sqlx` features sqlite,runtime-tokio | SQLite async — toute la DB |
-| `tauri-plugin-shell` | Sidecars WolfTL/UberWolf |
 | `tauri-plugin-fs` | Accès fichiers **exposé au frontend** via Tauri commands — pour la lecture interne Rust, utiliser `std::fs` ou `tokio::fs` directement |
 | `tauri-plugin-log` | Logs structurés |
 | `ollama-rs` 0.3.3 | Health check, list models, generate |
@@ -132,7 +131,6 @@ hoshi-trans/
 │   │   │   │   └── ENGINE_NOTES.md
 │   │   │   ├── wolf_rpg/
 │   │   │   │   ├── mod.rs
-│   │   │   │   ├── sidecar.rs
 │   │   │   │   ├── placeholders.rs   # Codes Wolf spécifiques
 │   │   │   │   ├── skip.rs           # Skip Wolf + appelle common::skip
 │   │   │   │   └── ENGINE_NOTES.md
@@ -145,9 +143,6 @@ hoshi-trans/
 │   │   │   ├── translation.rs        # TranslationEntry, TranslationStatus
 │   │   │   └── project.rs            # ProjectFile, ProjectStats, EngineType
 │   │   └── main.rs
-│   ├── bin/
-│   │   ├── WolfTL-x86_64-pc-windows-msvc.exe
-│   │   └── UberWolf-x86_64-pc-windows-msvc.exe
 │   ├── migrations/
 │   │   ├── 001_init.sql
 │   │   ├── 002_glossary.sql
@@ -158,9 +153,12 @@ hoshi-trans/
 │   │   ├── 007_token_counts.sql
 │   │   ├── 008_glossary_timestamps.sql   # created_at + updated_at sur glossary
 │   │   └── 009_glossary_global_usage.sql # table jonction global term ↔ projets
-│   └── Cargo.toml
+│   ├── Cargo.toml
+│   └── tauri.conf.json           # bundle.windows: webviewInstallMode downloadBootstrapper, nsis perUser → currentUser
 │
-├── .github/workflows/release.yml
+├── .github/
+│   └── workflows/
+│       └── release.yml           # CI/CD : AppImage (ubuntu-22.04) + NSIS (windows-latest) → GitHub Release sur tag v*.*.*
 ├── CONTEXT.md
 ├── PRD.md
 ├── CHANGELOG.md
@@ -801,6 +799,61 @@ export interface ProjectStats {
 
 ---
 
+## 🚀 CI/CD — GitHub Release
+
+Sur chaque tag `v*.*.*`, le workflow `.github/workflows/release.yml` build et publie automatiquement deux artefacts.
+
+### Architecture du workflow
+
+```
+tag push v*.*.*
+    ├── build-linux  (ubuntu-22.04)   → hoshitrans_X.X.X_amd64.AppImage
+    └── build-windows (windows-latest) → hoshitrans_X.X.X_x64-setup.exe
+              ↓ (needs: both)
+          release    (ubuntu-latest)  → GitHub Release avec les deux fichiers
+```
+
+### Décisions techniques
+
+| Choix | Raison |
+|---|---|
+| `ubuntu-22.04` fixé (non `ubuntu-latest`) | glibc 24.04 refuse de tourner sur Ubuntu 20.04 / Debian 11 — toujours utiliser 22.04 |
+| `--bundles appimage` / `--bundles nsis` | Build uniquement le format cible en CI (pas tous les formats) |
+| `libayatana-appindicator3-dev` uniquement | `libappindicator3-dev` (deprecated) conflit avec ayatana sur ubuntu-22.04 — ne pas réajouter |
+| `nsis.installMode: "currentUser"` | Valeur valide du schéma Tauri v2 — `"perUser"` n'existe pas |
+| `Swatinem/rust-cache@v2` | Cache `~/.cargo` + `src-tauri/target` par job |
+| `softprops/action-gh-release@v2` | Crée la release + upload les artefacts + `generate_release_notes: true` |
+| `if-no-files-found: error` | Fail explicite si le glob d'artefact ne matche rien |
+
+### Déclencher une nouvelle release
+
+```bash
+git push origin main
+git tag v0.2.0
+git push origin v0.1.0  # remplacer par la nouvelle version
+```
+
+Pour re-déclencher un tag existant :
+```bash
+git tag -d v0.1.0
+git push origin :refs/tags/v0.1.0
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+### `tauri.conf.json` — bundle Windows
+
+```json
+"bundle": {
+  "windows": {
+    "webviewInstallMode": { "type": "downloadBootstrapper" },
+    "nsis": { "installMode": "currentUser" }
+  }
+}
+```
+
+---
+
 ## 💰 Donations
 
 Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
@@ -837,7 +890,7 @@ Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
   - [x] Fix : CDataBase skippé entièrement (évite crash type 18 runtime)
   - [x] Fix : item["name"]/["description"] ignorés (évite doublons)
 - [x] Interface de traduction + batch + annulation + sélection multi-lignes
-- [x] Glossaire (global + par projet + import/export)
+- [x] Glossaire (global + par projet + import/export + filtres + bulk delete)
 - [x] Batch translation re-connexion après rechargement webview
 - [x] Signature `| TL: hoshi-trans` dans les titres de jeux exportés
 - [x] Page Ollama (connexion, 2 sélecteurs modèle trans/refine, température, modèles disponibles — layout 2 colonnes)
@@ -855,3 +908,7 @@ Liens dans `AboutPage` (`src/features/about/AboutPage.tsx`) :
   - [x] `src-tauri/modelfiles/hoshi-translator-4b.Modelfile` — qwen3:4b-instruct-2507-q8_0
   - [x] `src-tauri/modelfiles/hoshi-translator-30b.Modelfile` — qwen3:30b-a3b-instruct-2507-q8_0
   - [x] `src-tauri/prompts/hoshi-prompts.json` — source unique des prompts, chargé via `include_str!()` + `LazyLock`
+- [x] CI/CD GitHub Release (`v0.1.0` publié)
+  - [x] `.github/workflows/release.yml` — build AppImage (ubuntu-22.04) + NSIS (windows-latest) en parallèle
+  - [x] `tauri.conf.json` — `bundle.windows` : `webviewInstallMode downloadBootstrapper`, `nsis.installMode currentUser`
+  - [x] Artefacts : `hoshitrans_0.1.0_amd64.AppImage` + `hoshitrans_0.1.0_x64-setup.exe`
