@@ -497,13 +497,6 @@
     "target_lang": "en"
   },
   {
-    "id": "fa07dec5-8432-4b01-9c77-8a9fd91b53e0",
-    "project_id": null,
-    "source_term": "全快する",
-    "target_term": "Fully Recover",
-    "target_lang": "en"
-  },
-  {
     "id": "cca1c6b9-5dbe-43c7-ac06-30b648ffd06a",
     "project_id": null,
     "source_term": "制限時間",
@@ -592,13 +585,6 @@
     "project_id": null,
     "source_term": "回復した",
     "target_term": "Recovered",
-    "target_lang": "en"
-  },
-  {
-    "id": "5519bec6-577e-47e5-ab67-bbf85ab7a9b1",
-    "project_id": null,
-    "source_term": "回復する",
-    "target_term": "Restore",
     "target_lang": "en"
   },
   {
@@ -742,13 +728,6 @@
     "target_lang": "en"
   },
   {
-    "id": "3111eb0f-3c4b-4f68-9f5f-f916ea1b97c3",
-    "project_id": null,
-    "source_term": "弱体化する",
-    "target_term": "Weaken",
-    "target_lang": "en"
-  },
-  {
     "id": "b00153dd-29d7-49f9-b3c8-9a5e0a429591",
     "project_id": null,
     "source_term": "弱点",
@@ -760,13 +739,6 @@
     "project_id": null,
     "source_term": "強化",
     "target_term": "Enhance",
-    "target_lang": "en"
-  },
-  {
-    "id": "ce9cca62-0bb4-44ed-b44c-58a7d3990a99",
-    "project_id": null,
-    "source_term": "強化する",
-    "target_term": "Strengthen",
     "target_lang": "en"
   },
   {
@@ -1064,24 +1036,10 @@
     "target_lang": "en"
   },
   {
-    "id": "4873efd8-4803-4155-aaa9-5320292548f0",
-    "project_id": null,
-    "source_term": "治療する",
-    "target_term": "Treat",
-    "target_lang": "en"
-  },
-  {
     "id": "11532328-fce3-45b3-b87b-1e5949dc0304",
     "project_id": null,
     "source_term": "治癒",
     "target_term": "Healing",
-    "target_lang": "en"
-  },
-  {
-    "id": "c3e388e6-7dfa-4b6c-9b80-d3f0e5dc5069",
-    "project_id": null,
-    "source_term": "治癒する",
-    "target_term": "Heal",
     "target_lang": "en"
   },
   {
@@ -1243,13 +1201,6 @@
     "project_id": null,
     "source_term": "移動先",
     "target_term": "Destination",
-    "target_lang": "en"
-  },
-  {
-    "id": "fdcd0c62-e760-4fa5-9841-9e6f4602079b",
-    "project_id": null,
-    "source_term": "空",
-    "target_term": "Empty",
     "target_lang": "en"
   },
   {
@@ -1523,13 +1474,6 @@
     "project_id": null,
     "source_term": "防御",
     "target_term": "Defense",
-    "target_lang": "en"
-  },
-  {
-    "id": "60476006-3aa4-441a-a1aa-dde50568924e",
-    "project_id": null,
-    "source_term": "防御する",
-    "target_term": "Guard",
     "target_lang": "en"
   },
   {

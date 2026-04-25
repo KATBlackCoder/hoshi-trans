@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Trash2, Plus, Globe, FolderOpen, Download, Upload, Pencil, Check, X } from 'lucide-react'
+import { Trash2, Plus, Globe, FolderOpen, Download, Upload, Pencil, Check, X, Search } from 'lucide-react'
 import type { GlossaryTerm } from '@/types'
 
 interface EditState {
@@ -32,8 +32,12 @@ export function GlossaryPage() {
   const [source, setSource] = useState('')
   const [target, setTarget] = useState('')
   const [targetLang, setTargetLang] = useState('en')
-  const [scopeProjectId, setScopeProjectId] = useState<string | null>(null) // null = global
+  const [scopeProjectId, setScopeProjectId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterScope, setFilterScope] = useState<'all' | 'global' | string>('all')
+  const [filterLang, setFilterLang] = useState<'all' | 'en' | 'fr'>('all')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const { data: terms = [] } = useQuery<GlossaryTerm[]>({
     queryKey: ['glossary-all'],
@@ -68,6 +72,14 @@ export function GlossaryPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['glossary-all'] }),
   })
 
+  const deleteSelected = useMutation({
+    mutationFn: (ids: string[]) => invoke('delete_glossary_terms', { ids }),
+    onSuccess: () => {
+      setSelectedIds(new Set())
+      qc.invalidateQueries({ queryKey: ['glossary-all'] })
+    },
+  })
+
   const updateTerm = useMutation({
     mutationFn: (s: EditState) =>
       invoke('upsert_glossary_term', {
@@ -100,6 +112,17 @@ export function GlossaryPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['glossary-all'] }),
   })
 
+  const filteredTerms = useMemo(() => {
+    const q = filterSearch.trim().toLowerCase()
+    return terms.filter(t => {
+      if (filterScope === 'global' && t.project_id !== null) return false
+      if (filterScope !== 'all' && filterScope !== 'global' && t.project_id !== filterScope) return false
+      if (filterLang !== 'all' && t.target_lang !== filterLang) return false
+      if (q && !t.source_term.toLowerCase().includes(q) && !t.target_term.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [terms, filterSearch, filterScope, filterLang])
+
   function handleAdd() {
     if (!source.trim() || !target.trim()) return
     upsert.mutate()
@@ -120,6 +143,18 @@ export function GlossaryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => deleteSelected.mutate(Array.from(selectedIds))}
+              disabled={deleteSelected.isPending}
+              className="h-7 px-2.5 text-xs gap-1.5 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete {selectedIds.size}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -220,29 +255,122 @@ export function GlossaryPage() {
         </div>
       </div>
 
+      {/* Filter bar */}
+      <div className="px-6 py-2 border-b border-border/40 shrink-0 flex items-center gap-3 flex-wrap">
+        <div className="relative w-44">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40 pointer-events-none" />
+          <Input
+            value={filterSearch}
+            onChange={e => setFilterSearch(e.target.value)}
+            placeholder="Search terms…"
+            className="h-7 pl-6 text-xs bg-transparent"
+          />
+          {filterSearch && (
+            <button onClick={() => setFilterSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-0.5">
+          {(['all', 'global'] as const).map(s => (
+            <button key={s} onClick={() => setFilterScope(s)}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors capitalize ${
+                filterScope === s
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40'
+              }`}
+            >{s}</button>
+          ))}
+          <Select
+            value={typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global' ? filterScope : '__none__'}
+            onValueChange={v => { if (v && v !== '__none__') setFilterScope(v) }}
+          >
+            <SelectTrigger className={`h-7 w-32 text-xs font-mono border-border/40 ${typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global' ? 'bg-secondary' : ''}`}>
+              <span className="flex items-center gap-1 truncate">
+                {typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global'
+                  ? <><FolderOpen className="w-3 h-3 shrink-0" /><span className="truncate">{projects.find(p => p.id === filterScope)?.game_title ?? filterScope}</span></>
+                  : <span className="text-muted-foreground/50">Project…</span>
+                }
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__" className="text-xs text-muted-foreground/50">Project…</SelectItem>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id} className="text-xs font-mono">
+                  <span className="flex items-center gap-1.5"><FolderOpen className="w-3 h-3 shrink-0" />{p.game_title}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-0.5">
+          {(['all', 'en', 'fr'] as const).map(l => (
+            <button key={l} onClick={() => setFilterLang(l)}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors uppercase ${
+                filterLang === l
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40'
+              }`}
+            >{l === 'all' ? 'All' : l}</button>
+          ))}
+        </div>
+
+        {(filterSearch || filterScope !== 'all' || filterLang !== 'all') && (
+          <span className="text-[10px] text-muted-foreground/50 font-mono ml-auto tabular-nums">
+            {filteredTerms.length} / {terms.length}
+          </span>
+        )}
+      </div>
+
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         {terms.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-xs text-muted-foreground/40">
             No glossary terms yet.
           </div>
+        ) : filteredTerms.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-xs text-muted-foreground/40">
+            No terms match the current filters.
+          </div>
         ) : (
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-muted/50 backdrop-blur-sm border-b border-border/40">
               <tr>
-                <th className="text-left px-6 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[30%]">JP Term</th>
-                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[30%]">Translation</th>
+                <th className="w-10 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={filteredTerms.length > 0 && filteredTerms.every(t => selectedIds.has(t.id))}
+                    onChange={e => setSelectedIds(e.target.checked ? new Set(filteredTerms.map(t => t.id)) : new Set())}
+                    className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                  />
+                </th>
+                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[28%]">JP Term</th>
+                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[28%]">Translation</th>
                 <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[12%]">Lang</th>
-                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[24%]">Scope</th>
+                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[22%]">Scope</th>
                 <th className="w-16" />
               </tr>
             </thead>
             <tbody>
-              {terms.map(term => {
+              {filteredTerms.map(term => {
                 const isEditing = editState?.id === term.id
                 return (
-                  <tr key={term.id} className="group border-b border-border/20 hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-1.5 font-mono text-foreground/80">
+                  <tr key={term.id} className={`group border-b border-border/20 hover:bg-muted/30 transition-colors ${selectedIds.has(term.id) ? 'bg-primary/5' : ''}`}>
+                    <td className="w-10 px-3 py-1.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(term.id)}
+                        onChange={e => setSelectedIds(prev => {
+                          const next = new Set(prev)
+                          e.target.checked ? next.add(term.id) : next.delete(term.id)
+                          return next
+                        })}
+                        className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-4 py-1.5 font-mono text-foreground/80">
                       {isEditing ? (
                         <Input
                           value={editState.source_term}

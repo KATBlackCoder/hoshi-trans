@@ -1,10 +1,10 @@
 # Context Lines + Auto-Glossary Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Process translations in two phases: item/ui entries first (auto-populate project glossary with short translated names), then dialogue entries sequentially with the enriched glossary and 3-line context from the same file.
 
-**Architecture:** `translate_batch` splits entries into Phase 1 (item/ui/general files) and Phase 2 (dialogue files). Phase 1 runs first — short translations (source ≤ 20 chars) are auto-inserted into the project glossary if not already present. Phase 2 re-fetches the enriched glossary, then processes dialogue files sequentially with context lines from DB. No parallelism — Ollama processes one request at a time locally. Concurrency slider removed from UI.
+**Architecture:** `translate_batch` splits entries into Phase 1 (item/ui/general files) and Phase 2 (dialogue files). Phase 1 runs first — short translations (source ≤ 10 chars) are auto-inserted into the project glossary if not already present. Phase 2 re-fetches the enriched glossary, then processes dialogue files sequentially with context lines from DB. No parallelism — Ollama processes one request at a time locally. Concurrency slider removed from UI.
 
 **Tech Stack:** SQLite migration (timestamps on glossary), Rust/SQLx (2 new queries), Rust async (sequential Phase 1 → Phase 2 loop), React/TypeScript (remove concurrency from hook + BatchControls + TranslationView).
 
@@ -29,7 +29,7 @@
 **Files:**
 - Create: `src-tauri/migrations/008_glossary_timestamps.sql`
 
-- [ ] **Step 1: Write the migration file**
+- [x] **Step 1: Write the migration file**
 
 ```sql
 ALTER TABLE glossary ADD COLUMN created_at TEXT;
@@ -38,7 +38,7 @@ ALTER TABLE glossary ADD COLUMN updated_at TEXT;
 
 Existing rows will have NULL for both — acceptable, they predate the feature.
 
-- [ ] **Step 2: Run cargo test to verify migration applies cleanly**
+- [x] **Step 2: Run cargo test to verify migration applies cleanly**
 
 ```bash
 cd src-tauri && cargo test 2>&1 | grep -E "^error|FAILED|migration" | head -20
@@ -46,7 +46,7 @@ cd src-tauri && cargo test 2>&1 | grep -E "^error|FAILED|migration" | head -20
 
 Expected: all existing tests pass (sqlx runs migrations on the test DB automatically via `setup_test_db()`).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src-tauri/migrations/008_glossary_timestamps.sql
@@ -60,7 +60,7 @@ git commit -m "feat(db): add created_at and updated_at columns to glossary"
 **Files:**
 - Modify: `src-tauri/src/db/queries.rs`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 At the bottom of `queries.rs` in the `#[cfg(test)]` block, add:
 
@@ -151,7 +151,7 @@ async fn test_bulk_insert_auto_glossary_skips_existing() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd src-tauri && cargo test test_get_preceding_translated test_bulk_insert_auto_glossary 2>&1 | tail -15
@@ -159,7 +159,7 @@ cd src-tauri && cargo test test_get_preceding_translated test_bulk_insert_auto_g
 
 Expected: FAIL with "cannot find function".
 
-- [ ] **Step 3: Implement `get_preceding_translated`**
+- [x] **Step 3: Implement `get_preceding_translated`**
 
 Add after the `get_entries_by_ids` function (around line 254):
 
@@ -190,7 +190,7 @@ pub async fn get_preceding_translated(
 }
 ```
 
-- [ ] **Step 4: Implement `bulk_insert_auto_glossary`**
+- [x] **Step 4: Implement `bulk_insert_auto_glossary`**
 
 Add immediately after `get_preceding_translated`:
 
@@ -225,7 +225,7 @@ pub async fn bulk_insert_auto_glossary(
 }
 ```
 
-- [ ] **Step 5: Update `update_glossary_term` to set `updated_at`**
+- [x] **Step 5: Update `update_glossary_term` to set `updated_at`**
 
 Find the existing `update_glossary_term` function in `queries.rs`. Add `updated_at = datetime('now')` to its UPDATE query:
 
@@ -237,7 +237,7 @@ Find the existing `update_glossary_term` function in `queries.rs`. Add `updated_
 "UPDATE glossary SET source_term = ?, target_term = ?, updated_at = datetime('now') WHERE id = ?"
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 ```bash
 cd src-tauri && cargo test test_get_preceding_translated test_bulk_insert_auto_glossary 2>&1 | tail -15
@@ -245,7 +245,7 @@ cd src-tauri && cargo test test_get_preceding_translated test_bulk_insert_auto_g
 
 Expected: 5 tests pass.
 
-- [ ] **Step 7: Run full test suite**
+- [x] **Step 7: Run full test suite**
 
 ```bash
 cd src-tauri && cargo test 2>&1 | tail -10
@@ -253,7 +253,7 @@ cd src-tauri && cargo test 2>&1 | tail -10
 
 Expected: all tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src-tauri/src/db/queries.rs
@@ -267,7 +267,7 @@ git commit -m "feat(db): add get_preceding_translated + bulk_insert_auto_glossar
 **Files:**
 - Modify: `src-tauri/src/commands/ollama.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 In the `#[cfg(test)]` block at the bottom of `ollama.rs`, add:
 
@@ -310,7 +310,7 @@ fn test_build_translate_prompt_no_context() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd src-tauri && cargo test test_format_context_block test_build_translate_prompt_with_context test_build_translate_prompt_no_context 2>&1 | tail -10
@@ -318,7 +318,7 @@ cd src-tauri && cargo test test_format_context_block test_build_translate_prompt
 
 Expected: FAIL.
 
-- [ ] **Step 3: Add `format_context_block`**
+- [x] **Step 3: Add `format_context_block`**
 
 After the `format_glossary_block` function (around line 108), add:
 
@@ -335,7 +335,7 @@ fn format_context_block(entries: &[(String, String)]) -> String {
 }
 ```
 
-- [ ] **Step 4: Update `build_translate_prompt` to accept a context block**
+- [x] **Step 4: Update `build_translate_prompt` to accept a context block**
 
 Replace the existing `build_translate_prompt` function:
 
@@ -365,7 +365,7 @@ fn build_translate_prompt(glossary_block: &str, context_block: &str, text: &str)
 }
 ```
 
-- [ ] **Step 5: Fix existing call site and tests**
+- [x] **Step 5: Fix existing call site and tests**
 
 Find the existing call site in `translate_batch` (around line 249):
 
@@ -399,7 +399,7 @@ fn test_build_translate_prompt_includes_glossary() {
 }
 ```
 
-- [ ] **Step 6: Run all tests**
+- [x] **Step 6: Run all tests**
 
 ```bash
 cd src-tauri && cargo test 2>&1 | tail -10
@@ -407,7 +407,7 @@ cd src-tauri && cargo test 2>&1 | tail -10
 
 Expected: all tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src-tauri/src/commands/ollama.rs
@@ -426,7 +426,7 @@ Two phases:
 - **Auto-inject** — inserts collected terms into project glossary (skip if exists), re-fetches enriched glossary.
 - **Phase 2** — dialogue files, sequential with 3-line context from DB.
 
-- [ ] **Step 1: Remove `concurrency: u32` from the `translate_batch` signature**
+- [x] **Step 1: Remove `concurrency: u32` from the `translate_batch` signature**
 
 Find (around line 150):
 
@@ -467,7 +467,7 @@ pub async fn translate_batch(
 ) -> Result<(), String> {
 ```
 
-- [ ] **Step 2: Make `term_pairs` mutable**
+- [x] **Step 2: Make `term_pairs` mutable**
 
 Find (around line 170):
 
@@ -481,7 +481,7 @@ Change to:
 let mut term_pairs: Vec<(String, String)> = glossary_terms
 ```
 
-- [ ] **Step 3: Replace the loop body with Phase 1 / auto-inject / Phase 2**
+- [x] **Step 3: Replace the loop body with Phase 1 / auto-inject / Phase 2**
 
 Find `let total = entries.len() as u32;` in `translate_batch`. Replace everything from that line to `while join_set.join_next().await.is_some() {}` with:
 
@@ -717,7 +717,7 @@ Find `let total = entries.len() as u32;` in `translate_batch`. Replace everythin
     }
 ```
 
-- [ ] **Step 4: Fix the notification block**
+- [x] **Step 4: Fix the notification block**
 
 The notification block immediately after (already in the file) references `done_count` which no longer exists. Find:
 
@@ -732,7 +732,7 @@ Delete the first line — `done` is already the final counter from the loops abo
 let cancelled = cancel_flag.load(Ordering::Relaxed);
 ```
 
-- [ ] **Step 5: Run cargo check**
+- [x] **Step 5: Run cargo check**
 
 ```bash
 cd src-tauri && cargo check 2>&1 | grep "^error" | head -20
@@ -740,7 +740,7 @@ cd src-tauri && cargo check 2>&1 | grep "^error" | head -20
 
 Expected: 0 errors. Fix any type mismatches before continuing.
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```bash
 cd src-tauri && cargo test 2>&1 | tail -10
@@ -748,7 +748,7 @@ cd src-tauri && cargo test 2>&1 | tail -10
 
 Expected: all tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src-tauri/src/commands/ollama.rs
@@ -764,7 +764,7 @@ git commit -m "feat(ollama): Phase 1 item/ui → auto-glossary → Phase 2 dialo
 - Modify: `src/features/translation/BatchControls.tsx`
 - Modify: `src/features/translation/TranslationView.tsx`
 
-- [ ] **Step 1: Update `useTranslationBatch.ts`**
+- [x] **Step 1: Update `useTranslationBatch.ts`**
 
 Replace the `start` function (lines 39–72):
 
@@ -803,7 +803,7 @@ const start = useCallback(async (
 }, [])
 ```
 
-- [ ] **Step 2: Update `BatchControls.tsx` — remove concurrency prop and UI**
+- [x] **Step 2: Update `BatchControls.tsx` — remove concurrency prop and UI**
 
 Delete `CONCURRENCY_OPTIONS` constant (line 6):
 
@@ -849,7 +849,7 @@ Remove the entire Concurrency section from the `PopoverContent` (the `<div>` blo
             </div>
 ```
 
-- [ ] **Step 3: Update `TranslationView.tsx`**
+- [x] **Step 3: Update `TranslationView.tsx`**
 
 Remove `concurrency` state (line 69):
 
@@ -880,7 +880,7 @@ Remove the two concurrency props from `<BatchControls />` (lines 251–252):
           onConcurrencyChange={setConcurrency}
 ```
 
-- [ ] **Step 4: TypeScript build check**
+- [x] **Step 4: TypeScript build check**
 
 ```bash
 pnpm build 2>&1 | grep "error TS" | head -20
@@ -888,7 +888,7 @@ pnpm build 2>&1 | grep "error TS" | head -20
 
 Expected: 0 errors related to our changes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/hooks/useTranslationBatch.ts \
@@ -909,7 +909,7 @@ git commit -m "feat(ui): remove concurrency slider — translation is now sequen
 
 Many-to-many junction table: a global term can be used by N projects; a project can use N global terms. Populated automatically during Phase 1 auto-inject — when `bulk_insert_auto_glossary` finds a matching global term, it records usage via `INSERT OR IGNORE`. Enables future UI to display "used by: Project A, Project B" on each global term row.
 
-- [ ] **Step 1: Write the migration file**
+- [x] **Step 1: Write the migration file**
 
 ```sql
 CREATE TABLE IF NOT EXISTS glossary_global_usage (
@@ -925,7 +925,7 @@ CREATE INDEX IF NOT EXISTS idx_global_usage_project ON glossary_global_usage(pro
 CREATE INDEX IF NOT EXISTS idx_global_usage_term    ON glossary_global_usage(global_term_id);
 ```
 
-- [ ] **Step 2: Run cargo test to verify migration applies cleanly**
+- [x] **Step 2: Run cargo test to verify migration applies cleanly**
 
 ```bash
 cd src-tauri && cargo test 2>&1 | grep -E "^error|FAILED|migration" | head -20
@@ -933,7 +933,7 @@ cd src-tauri && cargo test 2>&1 | grep -E "^error|FAILED|migration" | head -20
 
 Expected: all existing tests pass.
 
-- [ ] **Step 3: Write failing tests**
+- [x] **Step 3: Write failing tests**
 
 Add to the `#[cfg(test)]` block in `queries.rs`:
 
@@ -1011,7 +1011,7 @@ async fn test_bulk_insert_auto_glossary_records_global_usage() {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they fail**
+- [x] **Step 4: Run tests to verify they fail**
 
 ```bash
 cd src-tauri && cargo test test_record_global_term_usage test_bulk_insert_auto_glossary_records_global_usage 2>&1 | tail -15
@@ -1019,7 +1019,7 @@ cd src-tauri && cargo test test_record_global_term_usage test_bulk_insert_auto_g
 
 Expected: FAIL with "cannot find function".
 
-- [ ] **Step 5: Implement `record_global_term_usage`**
+- [x] **Step 5: Implement `record_global_term_usage`**
 
 Add immediately after `bulk_insert_auto_glossary` in `queries.rs`:
 
@@ -1051,7 +1051,7 @@ pub async fn record_global_term_usage(
 }
 ```
 
-- [ ] **Step 6: Update `bulk_insert_auto_glossary` to call `record_global_term_usage`**
+- [x] **Step 6: Update `bulk_insert_auto_glossary` to call `record_global_term_usage`**
 
 Replace the existing `bulk_insert_auto_glossary` function (from Task 2, Step 4):
 
@@ -1085,7 +1085,7 @@ pub async fn bulk_insert_auto_glossary(
 }
 ```
 
-- [ ] **Step 7: Add `get_global_term_projects` for future UI reads**
+- [x] **Step 7: Add `get_global_term_projects` for future UI reads**
 
 Add after `record_global_term_usage`:
 
@@ -1109,7 +1109,7 @@ pub async fn get_global_term_projects(
 }
 ```
 
-- [ ] **Step 8: Run all tests**
+- [x] **Step 8: Run all tests**
 
 ```bash
 cd src-tauri && cargo test 2>&1 | tail -10
@@ -1117,7 +1117,7 @@ cd src-tauri && cargo test 2>&1 | tail -10
 
 Expected: all tests pass.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src-tauri/migrations/009_glossary_global_usage.sql \

@@ -103,3 +103,13 @@ pub async fn delete_glossary_term(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn delete_glossary_terms(
+    pool: tauri::State<'_, SqlitePool>,
+    ids: Vec<String>,
+) -> Result<u32, String> {
+    queries::delete_glossary_terms(pool.inner(), &ids)
+        .await
+        .map_err(|e| e.to_string())
+}
