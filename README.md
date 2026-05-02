@@ -117,9 +117,15 @@ hoshi-trans is free and open source. If it saved you hours on a translation proj
 | BTC | `bc1qmr578evx5fzwyr754a00j9hkekd2gzpvs8zxzz` |
 | ETH | `0x29652Fd86095913d472fF08BFEE5a15c5E7C9D51` |
 
+## Bug reports & feedback
+
+Found a bug or something unclear? Feel free to open an issue on GitHub — I read everything and do my best to fix things, but I can't always guarantee an immediate response. Your patience is appreciated! 🙏
+
+[Open an issue](https://github.com/KATBlackCoder/hoshi-trans/issues)
+
 ## Contributing
 
-Bug reports and pull requests welcome. See [CONTEXT.md](docs/CONTEXT.md) for architecture notes.
+Pull requests welcome. See [CONTEXT.md](docs/CONTEXT.md) for architecture notes.
 
 ## License
 
