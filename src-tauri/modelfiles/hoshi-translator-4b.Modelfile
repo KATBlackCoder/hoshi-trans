@@ -1,4 +1,4 @@
-FROM qwen3:4b-instruct-2507-q8_0
+FROM huihui_ai/qwen3-abliterated:4b-instruct-2507-q8_0
 
 # --- Sampling ---
 PARAMETER temperature 0.3
