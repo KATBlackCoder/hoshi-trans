@@ -4,5 +4,6 @@ pub mod entries;
 pub mod extract;
 pub mod glossary;
 pub mod inject;
+pub mod install;
 pub mod ollama;
 pub mod project;

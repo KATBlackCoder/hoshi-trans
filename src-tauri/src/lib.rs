@@ -74,6 +74,7 @@ pub fn run() {
             commands::glossary::delete_glossary_terms,
             commands::glossary::export_glossary,
             commands::glossary::import_glossary,
+            commands::install::install_modelfile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
