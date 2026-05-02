@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Heart, Coffee, Github, ChevronDown, ChevronRight, Cpu, Copy, Check } from 'lucide-react'
+import { ExternalLink, Coffee, Github, ChevronDown, ChevronRight, Cpu, Copy, Check } from 'lucide-react'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -175,19 +175,6 @@ export function AboutPage() {
                 <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
               </a>
 
-              <a
-                href="https://github.com/sponsors/KATBlackCoder"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded border border-border/50 bg-background/40 hover:bg-primary/8 hover:border-primary/30 transition-colors group"
-              >
-                <Heart className="w-4 h-4 text-pink-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">GitHub Sponsors</p>
-                  <p className="text-[10.5px] text-muted-foreground/40">Monthly support</p>
-                </div>
-                <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
-              </a>
             </div>
             <div className="mt-3 pt-3 border-t border-border/20 flex items-center gap-2">
               <span className="text-[10px] text-muted-foreground/35">Free to support:</span>

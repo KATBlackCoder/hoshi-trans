@@ -68,7 +68,7 @@ Fix any translation directly in the table. Manual edits feed back into the gloss
 
 Source code: [github.com/KATBlackCoder/hoshi-trans](https://github.com/KATBlackCoder/hoshi-trans)
 
-If hoshi-trans saves you time on your translation project, consider supporting development on [Ko-fi](https://ko-fi.com/katblackcoder) or [GitHub Sponsors](https://github.com/sponsors/KATBlackCoder).
+If hoshi-trans saves you time on your translation project, consider supporting development on [Ko-fi](https://ko-fi.com/katblackcoder).
 
 ---
 
