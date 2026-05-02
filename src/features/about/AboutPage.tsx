@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Heart, Coffee, Github, ChevronDown, ChevronRight, Cpu, Zap, Copy, Check } from 'lucide-react'
+import { ExternalLink, Heart, Coffee, Github, ChevronDown, ChevronRight, Cpu, Copy, Check } from 'lucide-react'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -67,13 +67,10 @@ function GuideChip({ label, sub, selected, onClick }: { label: string; sub: stri
 }
 
 function SetupGuides() {
-  const [runpodOpen, setRunpodOpen] = useState(false)
   const [localOpen, setLocalOpen] = useState(false)
   const [localModel, setLocalModel] = useState<'4b' | '30b'>('4b')
 
   const localModelName = `hoshi-translator-${localModel}`
-
-  const runpodCmd = `bash -c "apt update && apt install -y curl lshw zstd && curl -fsSL https://ollama.com/install.sh | sh && OLLAMA_HOST=0.0.0.0 nohup ollama serve > /root/ollama.log 2>&1 & sleep 60 && curl -fL -o /tmp/30b.Modelfile https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile && ollama create hoshi-translator-30b -f /tmp/30b.Modelfile && echo hoshi-translator-ready && sleep infinity"`
 
   const localPullCmd = localModel === '4b'
     ? `ollama pull qwen3:4b-instruct-2507-q8_0`
@@ -110,7 +107,7 @@ ollama create hoshi-translator-30b -f /tmp/hoshi-translator-30b.Modelfile`
             <div className="flex gap-1.5">
               {([
                 { id: '4b' as const, label: '4B', sub: 'Local · ~3 GB' },
-                { id: '30b' as const, label: '30B MoE', sub: 'RunPod · ~20 GB' },
+                { id: '30b' as const, label: '30B MoE', sub: 'min 24 GB VRAM' },
               ]).map(({ id, label, sub }) => (
                 <GuideChip key={id} label={label} sub={sub} selected={localModel === id} onClick={() => setLocalModel(id)} />
               ))}
@@ -143,53 +140,6 @@ ollama create hoshi-translator-30b -f /tmp/hoshi-translator-30b.Modelfile`
         )}
       </div>
 
-      {/* RunPod */}
-      <div className="rounded border border-border/40 bg-card/30 overflow-hidden">
-        <button
-          onClick={() => setRunpodOpen(o => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors"
-        >
-          <div className="flex items-center gap-2.5">
-            <Zap className="w-3.5 h-3.5 text-amber-400/60" />
-            <span className="text-[12px] font-medium text-foreground/80">RunPod Cloud GPU</span>
-            <span className="text-[10px] text-muted-foreground/40 font-mono">— RTX 4090</span>
-          </div>
-          {runpodOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground/50" /> : <ChevronRight className="w-4 h-4 text-muted-foreground/50" />}
-        </button>
-
-        {runpodOpen && (
-          <div className="px-4 pb-5 border-t border-border/40 bg-background/20 flex flex-col gap-4 pt-4">
-
-            <div className="flex gap-2 text-[10.5px] text-muted-foreground/60 leading-relaxed">
-              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border/30 font-mono">30b</span>
-              <span className="text-muted-foreground/40 self-center text-[10px]">qwen3:30b-a3b-instruct-2507-q8_0</span>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <StepLabel>Pod URL format</StepLabel>
-              <CodeBlock>{'https://<POD_ID>-11434.proxy.runpod.net'}</CodeBlock>
-              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed mt-0.5">
-                Paste this URL in the Ollama page → Host URL field once your pod is running.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <StepLabel>Container start command</StepLabel>
-              <CodeBlock>{runpodCmd}</CodeBlock>
-            </div>
-
-            <a
-              href="https://github.com/KATBlackCoder/hoshi-trans/blob/main/RUNPOD.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[10.5px] text-primary/60 hover:text-primary transition-colors w-fit"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Full setup guide (RUNPOD.md)
-            </a>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
