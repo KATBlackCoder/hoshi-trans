@@ -66,7 +66,7 @@ function SetupGuides() {
           <div className="flex items-center gap-2.5">
             <Cpu className="w-3.5 h-3.5 text-primary/50" />
             <span className="text-[12px] font-medium text-foreground/80">Local Setup</span>
-            <span className="text-[10px] text-muted-foreground/40 font-mono">— Linux / macOS / Windows</span>
+            <span className="text-[10px] text-muted-foreground/40 font-mono">— Linux / Windows</span>
           </div>
           {localOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground/50" /> : <ChevronRight className="w-4 h-4 text-muted-foreground/50" />}
         </button>
@@ -78,7 +78,7 @@ function SetupGuides() {
               <StepLabel>1. Install Ollama</StepLabel>
               <CodeBlock>curl -fsSL https://ollama.com/install.sh | sh</CodeBlock>
               <p className="text-[10px] text-muted-foreground/45 leading-relaxed mt-0.5">
-                Or download the installer at <span className="font-mono text-foreground/60">ollama.com</span> (Windows / macOS).
+                Or download the Windows installer at <span className="font-mono text-foreground/60">ollama.com</span>.
               </p>
             </div>
 
