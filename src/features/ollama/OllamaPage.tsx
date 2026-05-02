@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { useAppStore, DEFAULT_OLLAMA_HOST } from '@/stores/appStore'
 import { HOSHI_MODEL_INFO } from '@/lib/models'
 import { Label } from '@/components/ui/label'
@@ -28,6 +30,44 @@ export function OllamaPage() {
   const ollamaOnline = useAppStore((s) => s.ollamaOnline)
   const [hostDraft, setHostDraft] = useState(settings.ollamaHost)
   const [saved, setSaved] = useState(false)
+  const [installing, setInstalling] = useState<'4b' | 'abliterated-4b' | '30b' | null>(null)
+  const [installLines, setInstallLines] = useState<string[]>([])
+  const [installFallback, setInstallFallback] = useState<string | null>(null)
+  const [installDone, setInstallDone] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const unlistenProgress = listen<{ line: string }>('modelfile:progress', (e) => {
+      setInstallLines((prev) => [...prev.slice(-50), e.payload.line])
+      setTimeout(() => scrollRef.current?.scrollTo({ top: 99999 }), 10)
+    })
+    const unlistenDone = listen<string>('modelfile:done', (e) => {
+      setInstalling(null)
+      setInstallDone(e.payload)
+    })
+    const unlistenFallback = listen<{ command: string }>('modelfile:fallback', (e) => {
+      setInstalling(null)
+      setInstallFallback(e.payload.command)
+    })
+    return () => {
+      unlistenProgress.then((f) => f())
+      unlistenDone.then((f) => f())
+      unlistenFallback.then((f) => f())
+    }
+  }, [])
+
+  async function startInstall(model: '4b' | 'abliterated-4b' | '30b') {
+    setInstalling(model)
+    setInstallLines([])
+    setInstallFallback(null)
+    setInstallDone(null)
+    try {
+      await invoke('install_modelfile', { model })
+    } catch (e) {
+      setInstalling(null)
+      setInstallLines((prev) => [...prev, `Error: ${e}`])
+    }
+  }
 
   const langLabel = settings.targetLang === 'en' ? 'English' : 'French'
   const tempLabel = settings.temperature <= 0.2
@@ -283,6 +323,80 @@ export function OllamaPage() {
                   No hoshi-translator models found. Use the Install Models section below to create them.
                 </p>
               )}
+            </div>
+
+            {/* Install Models */}
+            <div className="rounded-lg border border-border/30 bg-card/20 overflow-hidden">
+              <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
+                <SectionLabel>Install models</SectionLabel>
+                <span className="text-[9px] text-muted-foreground/25 font-mono mb-2">local</span>
+              </div>
+              <div className="px-3 pb-3 flex flex-col gap-2">
+                <p className="text-[10px] text-muted-foreground/45 leading-relaxed px-1">
+                  Creates the hoshi-translator models from embedded Modelfiles. Requires Ollama + base model already pulled.
+                </p>
+
+                <div className="flex flex-col gap-1.5">
+                  {([
+                    { id: '4b' as const, label: 'hoshi-translator-4b', sub: 'q8_0 · ~4 GB VRAM' },
+                    { id: 'abliterated-4b' as const, label: 'hoshi-translator-abliterated-4b', sub: 'fp16 · ~8 GB VRAM' },
+                    { id: '30b' as const, label: 'hoshi-translator-30b', sub: 'q4_K_M · min 24 GB VRAM' },
+                  ]).map(({ id, label, sub }) => (
+                    <button
+                      key={id}
+                      onClick={() => startInstall(id)}
+                      disabled={installing !== null}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded border transition-all ${
+                        installing === id
+                          ? 'border-primary/40 bg-primary/10 text-foreground cursor-wait'
+                          : 'border-border/25 bg-background/20 text-muted-foreground/50 hover:border-border/50 hover:text-muted-foreground/70 disabled:opacity-40'
+                      }`}
+                    >
+                      <span className="text-[10px] font-mono font-medium">{label}</span>
+                      <span className="text-[9px] text-muted-foreground/40">
+                        {installing === id ? <span className="text-primary/60 animate-pulse">Installing…</span> : sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {installLines.length > 0 && (
+                  <div
+                    ref={scrollRef}
+                    className="max-h-28 overflow-y-auto rounded border border-border/20 bg-background/40 px-2.5 py-2"
+                  >
+                    {installLines.map((line, i) => (
+                      <p key={i} className="text-[9.5px] font-mono text-muted-foreground/55 leading-relaxed">{line}</p>
+                    ))}
+                  </div>
+                )}
+
+                {installDone && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-green-500/20 bg-green-500/5">
+                    <Check className="w-3 h-3 text-green-400 shrink-0" />
+                    <span className="text-[10px] text-green-400/80 font-mono">{installDone} created — reload model list</span>
+                  </div>
+                )}
+
+                {installFallback && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-[9.5px] text-amber-400/70 px-1">
+                      `ollama` not found in PATH. Run this command manually:
+                    </p>
+                    <div className="relative group">
+                      <pre className="text-[9.5px] font-mono bg-background/60 border border-border/50 rounded px-2.5 py-2 text-foreground/70 whitespace-pre-wrap break-all">
+                        {installFallback}
+                      </pre>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(installFallback)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-background/80 border border-border/50 text-[9px] text-muted-foreground/60 hover:text-foreground"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Tips */}
