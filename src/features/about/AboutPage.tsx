@@ -156,8 +156,9 @@ export function AboutPage() {
           <SectionLabel>Support the project</SectionLabel>
           <Card>
             <p className="text-xs text-muted-foreground/60 mb-3 leading-relaxed">
-              hoshi-trans is developed and maintained for free. If it saves you time on your translation projects,
-              consider supporting its development.
+              hoshi-trans is free and open source — no subscription, no limits.
+              If it saved you hours on a translation project, a coffee or a monthly sponsorship
+              helps keep development going and new engines supported.
             </p>
             <div className="flex flex-col gap-2">
               <a
@@ -186,6 +187,18 @@ export function AboutPage() {
                   <p className="text-[10.5px] text-muted-foreground/40">Monthly support</p>
                 </div>
                 <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
+              </a>
+            </div>
+            <div className="mt-3 pt-3 border-t border-border/20 flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground/35">Free to support:</span>
+              <a
+                href="https://github.com/KATBlackCoder/hoshi-trans"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[10px] text-muted-foreground/45 hover:text-foreground/70 transition-colors"
+              >
+                <Github className="w-3 h-3" />
+                Star on GitHub
               </a>
             </div>
           </Card>
