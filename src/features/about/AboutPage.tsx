@@ -82,39 +82,30 @@ function SetupGuides() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <StepLabel>2. Pull the base model</StepLabel>
-              <p className="text-[10px] text-muted-foreground/45 leading-relaxed">
-                Choose one depending on your available VRAM:
+            <div className="flex flex-col gap-1.5">
+              <StepLabel>2. Install a hoshi-translator model</StepLabel>
+              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
+                Go to the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Install Models</span> → click the model you want. hoshi-trans runs <span className="font-mono text-foreground/60">ollama create</span> for you — it pulls the base model automatically if needed.
               </p>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1 mt-1">
                 {([
-                  { cmd: 'ollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-q8_0', vram: '~4 GB VRAM' },
-                  { cmd: 'ollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-fp16', vram: '~8 GB VRAM' },
-                  { cmd: 'ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M', vram: 'min 24 GB VRAM' },
-                ]).map(({ cmd, vram }) => (
-                  <div key={vram} className="flex flex-col gap-0.5">
-                    <span className="text-[9px] text-muted-foreground/35 font-mono px-0.5">{vram}</span>
-                    <CodeBlock>{cmd}</CodeBlock>
+                  { name: 'hoshi-translator-4b', vram: '~4 GB VRAM', note: 'recommended' },
+                  { name: 'hoshi-translator-abliterated-4b', vram: '~8 GB VRAM', note: 'higher quality' },
+                  { name: 'hoshi-translator-30b', vram: 'min 24 GB VRAM', note: 'best quality' },
+                ]).map(({ name, vram, note }) => (
+                  <div key={name} className="flex items-center gap-2 px-2 py-1 rounded bg-background/30 border border-border/20">
+                    <span className="text-[10px] font-mono text-foreground/70 flex-1">{name}</span>
+                    <span className="text-[9px] text-muted-foreground/35">{vram}</span>
+                    <span className="text-[9px] text-primary/40 italic">{note}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <StepLabel>3. Create the hoshi-translator model</StepLabel>
+              <StepLabel>3. Select the model</StepLabel>
               <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
-                Go to the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Install Models</span> section → click the model matching the base you pulled. hoshi-trans creates it automatically from the embedded Modelfile.
-              </p>
-              <p className="text-[10px] text-muted-foreground/35 leading-relaxed">
-                No internet required for this step — the Modelfile is bundled in the app.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <StepLabel>4. Select the model</StepLabel>
-              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
-                In the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Connection &amp; Model</span>, select the newly created model as your translation model.
+                In the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Connection &amp; Model</span>, select the installed model as your translation model.
               </p>
             </div>
 
