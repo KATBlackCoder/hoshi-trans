@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Coffee, Github, ChevronDown, ChevronRight, Cpu, Copy, Check } from 'lucide-react'
+import { ExternalLink, Github, ChevronDown, ChevronRight, Cpu, Copy, Check, Coins } from 'lucide-react'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -50,6 +50,31 @@ function CodeBlock({ children }: { children: string }) {
   )
 }
 
+
+function CryptoRow({ symbol, name, address }: { symbol: string; name: string; address: string }) {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded border border-border/50 bg-background/40">
+      <Coins className="w-4 h-4 text-amber-400/70 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground/80">{symbol} <span className="text-[10px] text-muted-foreground/40 font-normal">— {name}</span></p>
+        <p className="text-[10px] font-mono text-muted-foreground/40 truncate mt-0.5">{address}</p>
+      </div>
+      <button
+        onClick={copy}
+        className="flex items-center gap-1 px-2 py-1 rounded border border-border/40 text-[9.5px] text-muted-foreground/50 hover:text-foreground/70 hover:border-border/70 transition-colors shrink-0"
+      >
+        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  )
+}
 
 function SetupGuides() {
   const [localOpen, setLocalOpen] = useState(false)
@@ -157,24 +182,17 @@ export function AboutPage() {
           <Card>
             <p className="text-xs text-muted-foreground/60 mb-3 leading-relaxed">
               hoshi-trans is free and open source — no subscription, no limits.
-              If it saved you hours on a translation project, a coffee or a monthly sponsorship
+              If it saved you hours on a translation project, a crypto donation
               helps keep development going and new engines supported.
             </p>
             <div className="flex flex-col gap-2">
-              <a
-                href="https://ko-fi.com/katblackcoder"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded border border-border/50 bg-background/40 hover:bg-primary/8 hover:border-primary/30 transition-colors group"
-              >
-                <Coffee className="w-4 h-4 text-amber-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">Ko-fi</p>
-                  <p className="text-[10.5px] text-muted-foreground/40">Buy me a coffee</p>
-                </div>
-                <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
-              </a>
-
+              {([
+                { symbol: 'BTC', name: 'Bitcoin', address: 'YOUR_BTC_ADDRESS' },
+                { symbol: 'ETH', name: 'Ethereum', address: 'YOUR_ETH_ADDRESS' },
+                { symbol: 'XMR', name: 'Monero', address: 'YOUR_XMR_ADDRESS' },
+              ]).map(({ symbol, name, address }) => (
+                <CryptoRow key={symbol} symbol={symbol} name={name} address={address} />
+              ))}
             </div>
             <div className="mt-3 pt-3 border-t border-border/20 flex items-center gap-2">
               <span className="text-[10px] text-muted-foreground/35">Free to support:</span>

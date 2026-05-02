@@ -9,9 +9,6 @@
     <a href="https://github.com/KATBlackCoder/hoshi-trans/releases/latest">
       <img alt="Downloads" src="https://img.shields.io/github/downloads/KATBlackCoder/hoshi-trans/total?style=flat-square&color=4f46e5">
     </a>
-    <a href="https://ko-fi.com/katblackcoder">
-      <img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support%20the%20project-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white">
-    </a>
     <img alt="License" src="https://img.shields.io/github/license/KATBlackCoder/hoshi-trans?style=flat-square">
   </p>
 
@@ -113,9 +110,13 @@ ollama create hoshi-translator-4b -f /tmp/hoshi-4b.Modelfile
 
 ## Support the project
 
-hoshi-trans is free and open source. If it saved you hours on a translation project, consider supporting its development:
+hoshi-trans is free and open source. If it saved you hours on a translation project, consider a crypto donation:
 
-- ☕ [Ko-fi](https://ko-fi.com/katblackcoder) — one-time coffee
+| Coin | Address |
+|------|---------|
+| BTC | `YOUR_BTC_ADDRESS` |
+| ETH | `YOUR_ETH_ADDRESS` |
+| XMR | `YOUR_XMR_ADDRESS` |
 
 ## Contributing
 
