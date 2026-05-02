@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppStore, DEFAULT_OLLAMA_HOST } from '@/stores/appStore'
+import { HOSHI_MODEL_INFO } from '@/lib/models'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,6 @@ export function OllamaPage() {
   const ollamaOnline = useAppStore((s) => s.ollamaOnline)
   const [hostDraft, setHostDraft] = useState(settings.ollamaHost)
   const [saved, setSaved] = useState(false)
-  const isRunPod = settings.ollamaHost.includes('runpod.net')
 
   const langLabel = settings.targetLang === 'en' ? 'English' : 'French'
   const tempLabel = settings.temperature <= 0.2
@@ -73,7 +73,7 @@ export function OllamaPage() {
               <span className="opacity-40">· {availableModels.length} hoshi</span>
             )}
             <span className="opacity-30">·</span>
-            <span className="opacity-50">{isRunPod ? 'RunPod' : 'Local'}</span>
+            <span className="opacity-50">Local</span>
           </div>
         </div>
 
@@ -121,7 +121,12 @@ export function OllamaPage() {
                       </SelectTrigger>
                       <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
                         {availableModels.map((m) => (
-                          <SelectItem key={m} value={m} className="font-mono text-xs">{m}</SelectItem>
+                          <SelectItem key={m} value={m} className="font-mono text-xs">
+                            <span>hoshi-translator</span>
+                            {HOSHI_MODEL_INFO[m] && (
+                              <span className="ml-1.5 text-[9px] text-muted-foreground/50 font-normal">{HOSHI_MODEL_INFO[m]}</span>
+                            )}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -203,7 +208,7 @@ export function OllamaPage() {
                     icon: <Cpu className="w-3.5 h-3.5" />,
                     label: 'Model',
                     value: settings.ollamaModel || 'None selected',
-                    sub: isRunPod ? 'RunPod (cloud)' : 'Local Ollama',
+                    sub: 'Local Ollama',
                   },
                   {
                     icon: <Globe className="w-3.5 h-3.5" />,
@@ -248,26 +253,34 @@ export function OllamaPage() {
               </div>
               {availableModels.length > 0 ? (
                 <div className="px-3 pb-3 flex flex-wrap gap-1.5">
-                  {availableModels.map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => updateSettings({ ollamaModel: m })}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono transition-all ${
-                        settings.ollamaModel === m
-                          ? 'border-primary/40 bg-primary/10 text-foreground/90'
-                          : 'border-border/25 bg-background/20 text-muted-foreground/45 hover:border-border/50 hover:text-muted-foreground/70'
-                      }`}
-                    >
-                      {settings.ollamaModel === m && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                      )}
-                      {m}
-                    </button>
-                  ))}
+                  {availableModels.map((m) => {
+                    const base = HOSHI_MODEL_INFO[m]
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => updateSettings({ ollamaModel: m })}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono transition-all ${
+                          settings.ollamaModel === m
+                            ? 'border-primary/40 bg-primary/10 text-foreground/90'
+                            : 'border-border/25 bg-background/20 text-muted-foreground/45 hover:border-border/50 hover:text-muted-foreground/70'
+                        }`}
+                      >
+                        {settings.ollamaModel === m && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                        )}
+                        <span>hoshi-translator</span>
+                        {base && (
+                          <span className="text-[9px] text-muted-foreground/50 font-normal border border-border/30 rounded px-1 py-0.5 ml-0.5">
+                            {base}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="px-4 pb-4 text-[10.5px] text-muted-foreground/45 leading-relaxed">
-                  No hoshi-translator models found. See <span className="text-primary/60">About → Setup Guides</span> to install them.
+                  No hoshi-translator models found. Use the Install Models section below to create them.
                 </p>
               )}
             </div>
