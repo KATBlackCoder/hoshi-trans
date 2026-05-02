@@ -6,7 +6,6 @@ import { HOSHI_MODEL_INFO } from '@/lib/models'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Thermometer, Globe, Cpu, Wifi, WifiOff, Check, Trash2, X, AlertTriangle, HardDrive, Layers } from 'lucide-react'
 import {
   Select,
@@ -243,47 +242,6 @@ export function OllamaPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Generation */}
-            <div className="rounded-lg border border-border/30 bg-card/20 overflow-hidden">
-              <div className="px-4 pt-3.5 pb-0.5">
-                <SectionLabel>Generation</SectionLabel>
-              </div>
-              <div className="px-4 pb-4 flex flex-col gap-3.5">
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10.5px] text-muted-foreground/70">Temperature</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9.5px] text-muted-foreground/55">{tempLabel}</span>
-                      <span className="text-xs font-mono text-primary tabular-nums">{settings.temperature.toFixed(1)}</span>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    value={settings.temperature}
-                    onChange={(e) => updateSettings({ temperature: parseFloat(e.target.value) })}
-                    className="w-full accent-amber-400 h-1"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10.5px] text-muted-foreground/70">System prompt</Label>
-                    <span className="text-[9.5px] text-muted-foreground/50">Use <code className="font-mono">{'{lang}'}</code> for language</span>
-                  </div>
-                  <Textarea
-                    value={settings.systemPrompt}
-                    onChange={(e) => updateSettings({ systemPrompt: e.target.value })}
-                    rows={5}
-                    className="font-mono text-[11px] leading-relaxed resize-none bg-background/60 text-foreground/80"
-                  />
                 </div>
               </div>
             </div>
