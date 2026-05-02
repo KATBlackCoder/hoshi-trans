@@ -37,6 +37,7 @@ tauri-plugin-store = "2"
 tauri-plugin-log = "2"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+sysinfo = "0.33"
 tauri-plugin-notification = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-process = "2"

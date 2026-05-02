@@ -3,6 +3,7 @@ mod db;
 mod engines;
 mod models;
 
+pub use commands::install::InstallChild;
 pub use commands::ollama::BatchRunning;
 pub use commands::ollama::PromptLog;
 pub use commands::ollama::RefineRunning;
@@ -37,6 +38,7 @@ pub fn run() {
             app.manage(BatchRunning(Arc::new(AtomicBool::new(false)))); // batch running flag
             app.manage(RefineRunning(Arc::new(AtomicBool::new(false)))); // refine running flag
             app.manage(PromptLog(Arc::new(Mutex::new(Vec::new())))); // prompt debug buffer
+            app.manage(InstallChild(Arc::new(tokio::sync::Mutex::new(None)))); // install process handle
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -74,7 +76,10 @@ pub fn run() {
             commands::glossary::delete_glossary_terms,
             commands::glossary::export_glossary,
             commands::glossary::import_glossary,
+            commands::install::check_system_resources,
             commands::install::install_modelfile,
+            commands::install::cancel_install,
+            commands::install::delete_modelfile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
