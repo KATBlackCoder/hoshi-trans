@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Sparkles, Wand2, X, Settings2 } from 'lucide-react'
+import { HOSHI_MODEL_INFO } from '@/lib/models'
 
 const LIMIT_OPTIONS = [
   { label: '100', value: 100 },
@@ -48,12 +49,17 @@ export function BatchControls({
         </span>
 
         <Select value={model} onValueChange={(v) => onModelChange(v ?? '')} disabled={running}>
-          <SelectTrigger className="h-6 w-40 text-xs font-mono border-0 bg-transparent px-1 focus:ring-0">
+          <SelectTrigger className="h-6 w-52 text-xs font-mono border-0 bg-transparent px-1 focus:ring-0">
             <SelectValue placeholder="No model" />
           </SelectTrigger>
           <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
             {availableModels.map(m => (
-              <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
+              <SelectItem key={m} value={m} className="text-xs font-mono">
+                <span>hoshi-translator</span>
+                {HOSHI_MODEL_INFO[m] && (
+                  <span className="ml-1.5 text-[9px] text-muted-foreground/50 font-normal">{HOSHI_MODEL_INFO[m]}</span>
+                )}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -117,12 +123,17 @@ export function BatchControls({
         </span>
 
         <Select value={refineModel} onValueChange={(v) => onRefineModelChange(v ?? '')} disabled={refining}>
-          <SelectTrigger className="h-6 w-40 text-xs font-mono border-0 bg-transparent px-1 focus:ring-0">
+          <SelectTrigger className="h-6 w-52 text-xs font-mono border-0 bg-transparent px-1 focus:ring-0">
             <SelectValue placeholder="No model" />
           </SelectTrigger>
           <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
             {availableModels.map(m => (
-              <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
+              <SelectItem key={m} value={m} className="text-xs font-mono">
+                <span>hoshi-translator</span>
+                {HOSHI_MODEL_INFO[m] && (
+                  <span className="ml-1.5 text-[9px] text-muted-foreground/50 font-normal">{HOSHI_MODEL_INFO[m]}</span>
+                )}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
