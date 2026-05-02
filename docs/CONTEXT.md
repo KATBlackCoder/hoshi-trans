@@ -86,9 +86,9 @@ hoshi-trans/
 │   │   ├── translation/              # Vue liste strings + édition — TranslationView, BatchControls, TranslationRow (click-to-edit), FileStatsPanel (stats par fichier)
 │   │   ├── file-import/              # Sélection dossier + détection moteur
 │   │   ├── file-export/              # Export + ouverture output/
-│   │   ├── ollama/                   # OllamaPage : connexion, 2 sélecteurs modèle (trans + refine), température, modèles disponibles
+│   │   ├── ollama/                   # OllamaPage : host, 2 sélecteurs modèle (trans + refine), température, Install Models (3 modèles)
 │   │   ├── settings/                 # SettingsPage : préférences app (thème dark/light, couleur accent)
-│   │   ├── about/                    # AboutPage : infos app + Setup Guides (Local + RunPod) + liens donations
+│   │   ├── about/                    # AboutPage : infos app + Setup Guides (Local) + liens donations
 │   │   ├── glossary/                 # Glossaire global + par projet
 │   │   └── project-library/          # Grille de tous les projets
 │   ├── hooks/
@@ -671,6 +671,8 @@ pub async fn refine_batch(
   - Compteur `N / total` affiché quand un filtre est actif
 - **Sélection bulk** — checkbox par ligne + select-all dans le header (sélectionne les termes filtrés visibles). Bouton `Delete N` apparaît dans le header quand ≥ 1 terme sélectionné → appelle `delete_glossary_terms`. Ligne sélectionnée teintée `bg-primary/5`.
 - **`delete_glossary_terms(ids: Vec<String>)`** — commande Rust (`commands/glossary.rs`) + query (`db/queries.rs`) : `DELETE FROM glossary WHERE id IN (...)` — une seule requête SQL pour toute la sélection.
+
+- **`install_modelfile(model: "4b" | "abliterated-4b" | "30b")`** — (`commands/install.rs`) : embarque le Modelfile correspondant via `include_str!()`, l'écrit dans un fichier temp, puis lance `ollama create hoshi-translator-{model}` via `tokio::task::spawn_blocking`. Streame stderr ligne par ligne via l'event `modelfile:progress`. Émet `modelfile:done` (nom du modèle) à la fin, ou `modelfile:fallback` (commande copy-paste) si `ollama` n'est pas dans le PATH.
 - **`glossary_global_usage`** — table jonction `(global_term_id, project_id)` — `used_at` enregistré automatiquement par `bulk_insert_auto_glossary` via `record_global_term_usage`. Permet de savoir quels projets utilisent chaque terme global.
 - **Feedback loop automatique** — deux chemins alimentent le glossaire projet automatiquement :
   - `update_refined_manual` et `update_translation` (Tauri commands) appellent `maybe_feed_glossary_from_manual` après save — conditions : `infer_text_type(file_path) != "dialogue"` ET `source_text ≤ 10 chars` → injecté (`INSERT OR IGNORE`). Concerne uniquement les sauvegardes UI (les batchs appellent `queries::update_translation` directement, non affectés). La condition dialogue utilise `engines/common/text_type.rs` — s'adapte automatiquement aux nouveaux moteurs.
@@ -685,9 +687,14 @@ Les modèles hoshi-translator sont les **seuls modèles supportés** par l'app. 
 
 ```
 src-tauri/modelfiles/
-  hoshi-translator-4b.Modelfile   # 4B local    (qwen3:4b-instruct-2507-q8_0)    ~3 GB VRAM
-  hoshi-translator-30b.Modelfile  # 30B MoE     (qwen3:30b-a3b-instruct-2507-q8_0) ~20 GB VRAM — RunPod RTX 4090
+  hoshi-translator-4b.Modelfile               # q8_0  4B  (huihui_ai/qwen3-abliterated:4b-instruct-2507-q8_0)        ~4 GB VRAM
+  hoshi-translator-abliterated-4b.Modelfile   # fp16  4B  (huihui_ai/qwen3-abliterated:4b-instruct-2507-fp16)         ~8 GB VRAM
+  hoshi-translator-30b.Modelfile              # q4_KM 30B (huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M) min 24 GB VRAM
 ```
+
+Tous les modèles utilisent les variantes **huihui_ai/qwen3-abliterated** (modèles Qwen3 ablitérés — comportement non-censuré pour le contenu adulte des jeux RPG).
+
+Les modelfiles sont embarqués au compile time via `include_str!()` dans `commands/install.rs` et créés en local via `install_modelfile`.
 
 ### Paramètres partagés (4b et 30b)
 
@@ -716,7 +723,7 @@ Pour modifier une règle de traduction ou un critère de review : éditer `hoshi
 
 Seul `temperature` est envoyé à l'appel (depuis les settings utilisateur). Tous les autres paramètres viennent du modelfile.
 
-**Convention de nommage Ollama :** `hoshi-translator-4b:latest` / `hoshi-translator-30b:latest`
+**Convention de nommage Ollama :** `hoshi-translator-4b:latest` / `hoshi-translator-abliterated-4b:latest` / `hoshi-translator-30b:latest`
 
 **Check bypass system prompt :** `model.includes('hoshi-translator')` → `system_prompt` envoyé vide (le SYSTEM est baked dans le Modelfile).
 
