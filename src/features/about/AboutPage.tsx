@@ -50,39 +50,9 @@ function CodeBlock({ children }: { children: string }) {
   )
 }
 
-function GuideChip({ label, sub, selected, onClick }: { label: string; sub: string; selected: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 flex flex-col items-center py-2 rounded border text-center transition-all ${
-        selected
-          ? 'border-primary/50 bg-primary/10 text-foreground'
-          : 'border-border/40 bg-background/30 text-muted-foreground/50 hover:bg-muted/30 hover:text-muted-foreground/70'
-      }`}
-    >
-      <span className="text-[11.5px] font-semibold">{label}</span>
-      <span className="text-[10px] text-muted-foreground/50 mt-0.5">{sub}</span>
-    </button>
-  )
-}
 
 function SetupGuides() {
   const [localOpen, setLocalOpen] = useState(false)
-  const [localModel, setLocalModel] = useState<'4b' | '30b'>('4b')
-
-  const localModelName = `hoshi-translator-${localModel}`
-
-  const localPullCmd = localModel === '4b'
-    ? `ollama pull qwen3:4b-instruct-2507-q8_0`
-    : `ollama pull qwen3:30b-a3b-instruct-2507-q8_0`
-
-  const localCreateCmd = localModel === '4b'
-    ? `curl -fL -o /tmp/hoshi-translator-4b.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-4b.Modelfile
-ollama create hoshi-translator-4b -f /tmp/hoshi-translator-4b.Modelfile`
-    : `curl -fL -o /tmp/hoshi-translator-30b.Modelfile \\
-  https://raw.githubusercontent.com/KATBlackCoder/hoshi-trans/main/src-tauri/modelfiles/hoshi-translator-30b.Modelfile
-ollama create hoshi-translator-30b -f /tmp/hoshi-translator-30b.Modelfile`
 
   return (
     <div className="flex flex-col gap-2">
@@ -104,38 +74,50 @@ ollama create hoshi-translator-30b -f /tmp/hoshi-translator-30b.Modelfile`
         {localOpen && (
           <div className="px-4 pb-5 border-t border-border/40 bg-background/20 flex flex-col gap-4 pt-4">
 
-            <div className="flex gap-1.5">
-              {([
-                { id: '4b' as const, label: '4B', sub: 'Local · ~3 GB' },
-                { id: '30b' as const, label: '30B MoE', sub: 'min 24 GB VRAM' },
-              ]).map(({ id, label, sub }) => (
-                <GuideChip key={id} label={label} sub={sub} selected={localModel === id} onClick={() => setLocalModel(id)} />
-              ))}
-            </div>
-
             <div className="flex flex-col gap-1.5">
               <StepLabel>1. Install Ollama</StepLabel>
               <CodeBlock>curl -fsSL https://ollama.com/install.sh | sh</CodeBlock>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <StepLabel>2. Pull base model(s)</StepLabel>
-              <CodeBlock>{localPullCmd}</CodeBlock>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <StepLabel>3. Create hoshi-translator models</StepLabel>
-              <CodeBlock>{localCreateCmd}</CodeBlock>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <StepLabel>4. Configure hoshi-trans</StepLabel>
-              <CodeBlock>http://localhost:11434</CodeBlock>
-              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed mt-0.5">
-                Set the host above in the Ollama page, then select{' '}
-                <code className="font-mono text-foreground/70">{localModelName}</code> as your translation and review model.
+              <p className="text-[10px] text-muted-foreground/45 leading-relaxed mt-0.5">
+                Or download the installer at <span className="font-mono text-foreground/60">ollama.com</span> (Windows / macOS).
               </p>
             </div>
+
+            <div className="flex flex-col gap-2">
+              <StepLabel>2. Pull the base model</StepLabel>
+              <p className="text-[10px] text-muted-foreground/45 leading-relaxed">
+                Choose one depending on your available VRAM:
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {([
+                  { cmd: 'ollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-q8_0', vram: '~4 GB VRAM' },
+                  { cmd: 'ollama pull huihui_ai/qwen3-abliterated:4b-instruct-2507-fp16', vram: '~8 GB VRAM' },
+                  { cmd: 'ollama pull huihui_ai/qwen3-abliterated:30b-a3b-instruct-2507-q4_K_M', vram: 'min 24 GB VRAM' },
+                ]).map(({ cmd, vram }) => (
+                  <div key={vram} className="flex flex-col gap-0.5">
+                    <span className="text-[9px] text-muted-foreground/35 font-mono px-0.5">{vram}</span>
+                    <CodeBlock>{cmd}</CodeBlock>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <StepLabel>3. Create the hoshi-translator model</StepLabel>
+              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
+                Go to the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Install Models</span> section → click the model matching the base you pulled. hoshi-trans creates it automatically from the embedded Modelfile.
+              </p>
+              <p className="text-[10px] text-muted-foreground/35 leading-relaxed">
+                No internet required for this step — the Modelfile is bundled in the app.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <StepLabel>4. Select the model</StepLabel>
+              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
+                In the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Connection &amp; Model</span>, select the newly created model as your translation model.
+              </p>
+            </div>
+
           </div>
         )}
       </div>
