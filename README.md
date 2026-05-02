@@ -114,9 +114,8 @@ hoshi-trans is free and open source. If it saved you hours on a translation proj
 
 | Coin | Address |
 |------|---------|
-| BTC | `YOUR_BTC_ADDRESS` |
-| ETH | `YOUR_ETH_ADDRESS` |
-| XMR | `YOUR_XMR_ADDRESS` |
+| BTC | `bc1qmr578evx5fzwyr754a00j9hkekd2gzpvs8zxzz` |
+| ETH | `0x29652Fd86095913d472fF08BFEE5a15c5E7C9D51` |
 
 ## Contributing
 

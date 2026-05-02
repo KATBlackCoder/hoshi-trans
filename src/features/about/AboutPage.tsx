@@ -187,9 +187,8 @@ export function AboutPage() {
             </p>
             <div className="flex flex-col gap-2">
               {([
-                { symbol: 'BTC', name: 'Bitcoin', address: 'YOUR_BTC_ADDRESS' },
-                { symbol: 'ETH', name: 'Ethereum', address: 'YOUR_ETH_ADDRESS' },
-                { symbol: 'XMR', name: 'Monero', address: 'YOUR_XMR_ADDRESS' },
+                { symbol: 'BTC', name: 'Bitcoin', address: 'bc1qmr578evx5fzwyr754a00j9hkekd2gzpvs8zxzz' },
+                { symbol: 'ETH', name: 'Ethereum', address: '0x29652Fd86095913d472fF08BFEE5a15c5E7C9D51' },
               ]).map(({ symbol, name, address }) => (
                 <CryptoRow key={symbol} symbol={symbol} name={name} address={address} />
               ))}
