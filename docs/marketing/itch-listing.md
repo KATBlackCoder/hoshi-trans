@@ -83,5 +83,5 @@ If hoshi-trans saves you time on your translation project, consider a crypto don
 
 | Platform | URL |
 |----------|-----|
-| Linux AppImage | https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.0_amd64.AppImage |
-| Windows installer | https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.0_x64-setup.exe |
+| Linux AppImage | https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.1_amd64.AppImage |
+| Windows installer | https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.1_x64-setup.exe |

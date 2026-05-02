@@ -13,9 +13,9 @@
   </p>
 
   <p>
-    <a href="https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.0_amd64.AppImage">⬇ Download for Linux</a>
+    <a href="https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.1_amd64.AppImage">⬇ Download for Linux</a>
     ·
-    <a href="https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.0_x64-setup.exe">⬇ Download for Windows</a>
+    <a href="https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.1_x64-setup.exe">⬇ Download for Windows</a>
     ·
     <a href="#setup">Setup guide</a>
   </p>
@@ -72,8 +72,8 @@ You point it at a game folder, it extracts all translatable text, runs it throug
 
 | Platform | Download |
 |----------|----------|
-| Linux (AppImage) | [hoshitrans_0.1.0_amd64.AppImage](https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.0_amd64.AppImage) |
-| Windows (installer) | [hoshitrans_0.1.0_x64-setup.exe](https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.0_x64-setup.exe) |
+| Linux (AppImage) | [hoshitrans_0.1.1_amd64.AppImage](https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.1_amd64.AppImage) |
+| Windows (installer) | [hoshitrans_0.1.1_x64-setup.exe](https://github.com/KATBlackCoder/hoshi-trans/releases/latest/download/hoshitrans_0.1.1_x64-setup.exe) |
 
 ### Install the translation model
 
