@@ -8,7 +8,6 @@ import { GlossaryPage } from '@/features/glossary'
 import { ProjectLibrary } from '@/features/project-library'
 import { AboutPage } from '@/features/about'
 import { OllamaPage } from '@/features/ollama'
-import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,13 +64,13 @@ function WolfRpgFontPanel({
   const charsHint = numVal != null && !isNaN(numVal) ? wolfCharsPerLine(numVal) : null
 
   return (
-    <div className="rounded-lg border border-sidebar-border/60 bg-sidebar-accent/10 px-2.5 py-2 flex flex-col gap-1.5">
+    <div className="rounded-sm border border-sidebar-border bg-card/50 px-2.5 py-2 flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
           Wolf RPG font
         </span>
         {charsHint != null && (
-          <span className="text-[9px] text-muted-foreground/40">~{charsHint} chars/line</span>
+          <span className="text-[9px] font-mono text-muted-foreground/60">~{charsHint} chars/line</span>
         )}
       </div>
       <div className="flex items-center gap-1.5">
@@ -82,7 +81,7 @@ function WolfRpgFontPanel({
             setValue(s)
             applyFont(s)
           }}
-          className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-sidebar-accent/60 transition-colors text-xs shrink-0"
+          className="w-6 h-6 rounded-sm border border-border flex items-center justify-center text-muted-foreground hover:text-primary-foreground hover:bg-primary transition-colors text-xs font-bold shrink-0"
         >−</button>
         <input
           ref={inputRef}
@@ -94,7 +93,7 @@ function WolfRpgFontPanel({
           onChange={e => setValue(e.target.value)}
           onBlur={e => applyFont(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') applyFont(value) }}
-          className="flex-1 min-w-0 bg-transparent border border-sidebar-border/50 rounded px-1.5 py-0.5 text-[11px] text-center text-sidebar-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="flex-1 min-w-0 bg-card border border-sidebar-border rounded-sm px-1.5 py-0.5 text-xs text-center font-mono font-bold text-sidebar-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/55 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
           onClick={() => {
@@ -103,19 +102,19 @@ function WolfRpgFontPanel({
             setValue(s)
             applyFont(s)
           }}
-          className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-sidebar-accent/60 transition-colors text-xs shrink-0"
+          className="w-6 h-6 rounded-sm border border-border flex items-center justify-center text-muted-foreground hover:text-primary-foreground hover:bg-primary transition-colors text-xs font-bold shrink-0"
         >+</button>
         {value !== '' && (
           <button
             onClick={() => { setValue(''); applyFont('') }}
-            className="text-[9px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors shrink-0"
+            className="text-[10px] text-muted-foreground/50 hover:text-destructive transition-colors shrink-0"
             title="Reset to game default"
           >✕</button>
         )}
       </div>
-      {saving && <span className="text-[9px] text-muted-foreground/40 text-center">saving…</span>}
-      <p className="text-[9px] text-muted-foreground/35 leading-relaxed">
-        Try the game first before changing the font. Ideal size for Latin text: <span className="text-muted-foreground/55 font-medium">20–22</span>.
+      {saving && <span className="text-[9px] font-mono text-muted-foreground/60 text-center">saving…</span>}
+      <p className="text-[9px] text-muted-foreground/55 leading-relaxed">
+        Try the game first before changing the font. Ideal: <span className="text-primary font-bold">20–22</span>.
       </p>
     </div>
   )
@@ -148,18 +147,18 @@ function TranslationTimer() {
   const running = batchStartedAt !== null
 
   return (
-    <div className="rounded-lg border border-sidebar-border/60 bg-sidebar-accent/10 px-2.5 py-2 flex flex-col gap-1">
+    <div className="rounded-sm border border-sidebar-border bg-card/50 px-2.5 py-2 flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
           Translation time
         </span>
-        <Timer className={`w-3 h-3 ${running ? 'text-primary/70 animate-pulse' : 'text-muted-foreground/30'}`} />
+        <Timer className={`w-3 h-3 ${running ? 'text-primary animate-pulse' : 'text-muted-foreground/40'}`} />
       </div>
-      <span className="text-[13px] font-mono tabular-nums text-sidebar-foreground/80 text-center">
+      <span className="text-base font-mono font-bold tabular-nums text-primary text-center tracking-wider">
         {running ? formatDuration(elapsed) : formatDuration(batchLastDuration!)}
       </span>
       {!running && (
-        <span className="text-[9px] text-muted-foreground/35 text-center">last batch</span>
+        <span className="text-[9px] font-mono text-muted-foreground/55 text-center uppercase tracking-wider">last batch</span>
       )}
     </div>
   )
@@ -187,13 +186,12 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
     return (
       <button
         onClick={() => onViewChange(toggle)}
-        className={`relative flex items-center gap-2 px-3.5 py-2 text-xs transition-colors ${
+        className={`flex items-center gap-2 px-3 py-2 rounded-sm text-[11px] font-bold uppercase tracking-wider transition-colors ${
           active
-            ? 'text-foreground font-medium'
-            : 'text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/40'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
         }`}
       >
-        {active && <span className="absolute left-0 inset-y-1.5 w-0.5 bg-primary rounded-r" />}
         {icon}
         {label}
       </button>
@@ -203,27 +201,25 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
   return (
     <aside className="w-56 shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-3.5">
-        <div className="relative flex items-center justify-center w-7 h-7 rounded-lg bg-primary/12 border border-primary/20 shrink-0">
-          <span className="text-primary text-[13px] font-bold leading-none select-none">星</span>
+      <div className="flex items-center gap-2.5 px-3.5 py-3.5 border-b-2 border-primary">
+        <div className="flex items-center justify-center w-8 h-8 rounded-sm bg-primary shrink-0">
+          <span className="text-primary-foreground text-base font-bold leading-none select-none">星</span>
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">hoshi</span>
-          <span className="text-sm font-light text-muted-foreground/50 tracking-tight">trans</span>
+          <span className="text-sm font-extrabold tracking-tight uppercase text-sidebar-foreground">hoshi</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider bg-primary text-primary-foreground rounded-sm px-1.5 py-0.5">trans</span>
         </div>
       </div>
-
-      <Separator className="bg-sidebar-border" />
 
       <div className="flex flex-col gap-2 p-3 flex-1 overflow-y-auto">
         <FileImportButton onProjectOpened={(p) => { onProjectOpened(p); onViewChange('translation') }} />
 
         {activeProject && (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             {/* Back to library */}
             <button
               onClick={() => onViewChange('library')}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground/35 hover:text-muted-foreground/70 transition-colors px-1 py-0.5"
+              className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground/55 hover:text-foreground transition-colors px-1 py-0.5"
             >
               <ChevronLeft className="w-3 h-3" />
               All projects
@@ -232,22 +228,22 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
             {/* Active project card */}
             <div
               onClick={() => onViewChange('translation')}
-              className={`rounded-lg border overflow-hidden cursor-pointer transition-all duration-150 ${
+              className={`rounded-sm border bg-card/40 overflow-hidden cursor-pointer transition-all duration-150 ${
                 view === 'translation'
-                  ? 'border-primary/35 bg-primary/6'
-                  : 'border-sidebar-border/80 bg-sidebar-accent/20 hover:bg-sidebar-accent/40 hover:border-sidebar-border'
+                  ? 'border-l-[3px] border-l-primary border-y-border border-r-border'
+                  : 'border-sidebar-border hover:bg-card/70'
               }`}
             >
               <div className="flex items-start gap-2 p-2.5 pb-1.5">
-                <Languages className="w-3 h-3 text-primary/70 mt-0.5 shrink-0" />
-                <p className="text-[11px] font-medium text-sidebar-foreground leading-tight flex-1 min-w-0 wrap-break-word">
+                <Languages className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                <p className="text-[11px] font-bold text-sidebar-foreground leading-tight flex-1 min-w-0 wrap-break-word">
                   {activeProject.game_title}
                 </p>
                 <AlertDialog>
                   <AlertDialogTrigger
                     onClick={e => e.stopPropagation()}
                     title="Delete project"
-                    className="text-muted-foreground/30 hover:text-destructive transition-colors shrink-0 mt-0.5 p-0.5 rounded hover:bg-destructive/10"
+                    className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 mt-0.5 p-0.5 rounded-sm hover:bg-destructive/10"
                   >
                     <Trash2 className="w-3 h-3" />
                   </AlertDialogTrigger>
@@ -271,7 +267,7 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-              <p className="text-[9px] text-muted-foreground/40 font-mono px-2.5 pb-2 uppercase tracking-wider">
+              <p className="text-[9px] text-primary font-mono font-bold px-2.5 pb-2 uppercase tracking-widest">
                 {activeProject.engine.replace(/_/g, ' ')}
               </p>
             </div>
@@ -283,33 +279,38 @@ function Sidebar({ activeProject, onProjectOpened, onProjectDeleted, onProjectUp
         )}
       </div>
 
-      {/* Nav buttons — bottom of sidebar */}
-      <Separator className="bg-sidebar-border" />
-      {activeProject && (
-        <div className="flex flex-col py-1 border-b border-sidebar-border">
-          {(['export_debug_json', 'export_debug_review_json', 'export_debug_warning_json', 'export_debug_prompts_json'] as const).map((cmd, i) => {
-            const label = i === 0 ? 'Debug JSON' : i === 1 ? 'Debug Review' : i === 2 ? 'Debug Warning' : 'Debug Prompts'
-            return (
-              <button
-                key={cmd}
-                onClick={async () => {
-                  const { openPath } = await import('@tauri-apps/plugin-opener')
-                  const args = cmd === 'export_debug_prompts_json'
-                    ? { outputDir: activeProject.output_dir }
-                    : { projectId: activeProject.project_id, outputDir: activeProject.output_dir }
-                  const path = await invoke<string>(cmd, args)
-                  await openPath(path)
-                }}
-                className="relative flex items-center gap-2 px-3.5 py-2 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/40 transition-colors"
-              >
-                <Bug className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            )
-          })}
-        </div>
+      {/* Debug buttons — DEV only (Bug fix #3) */}
+      {activeProject && import.meta.env.DEV && (
+        <>
+          <div className="h-px bg-sidebar-border" />
+          <div className="flex flex-col py-1 border-b border-sidebar-border">
+            {(['export_debug_json', 'export_debug_review_json', 'export_debug_warning_json', 'export_debug_prompts_json'] as const).map((cmd, i) => {
+              const label = i === 0 ? 'Debug JSON' : i === 1 ? 'Debug Review' : i === 2 ? 'Debug Warning' : 'Debug Prompts'
+              return (
+                <button
+                  key={cmd}
+                  onClick={async () => {
+                    const { openPath } = await import('@tauri-apps/plugin-opener')
+                    const args = cmd === 'export_debug_prompts_json'
+                      ? { outputDir: activeProject.output_dir }
+                      : { projectId: activeProject.project_id, outputDir: activeProject.output_dir }
+                    const path = await invoke<string>(cmd, args)
+                    await openPath(path)
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-card/60 transition-colors"
+                >
+                  <Bug className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </>
       )}
-      <div className="flex flex-col py-1">
+
+      {/* Nav buttons */}
+      <div className="h-px bg-sidebar-border" />
+      <div className="flex flex-col gap-0.5 p-1.5">
         {navBtn('glossary', 'Glossary', <BookOpen className="w-3.5 h-3.5" />)}
         {navBtn('ollama', 'Ollama', <Cpu className="w-3.5 h-3.5" />)}
         {navBtn('settings', 'Settings', <Settings className="w-3.5 h-3.5" />)}
