@@ -221,28 +221,30 @@ export function TranslationView({ projectId, gameTitle, gameDir, outputDir }: Pr
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-5 py-2.5 border-b border-border/50 flex items-center justify-between gap-4 shrink-0 bg-background/60 backdrop-blur-sm">
-        <div className="flex flex-col gap-0.5 min-w-0">
-          <h2 className="font-semibold text-sm truncate text-foreground/90">{gameTitle ?? 'Translation'}</h2>
-          <div className="flex items-center gap-1.5 text-[10px] font-mono">
-            <span className="tabular-nums text-foreground/60">{entries.length}</span>
-            <span className="text-muted-foreground/40">entries</span>
+      <div className="px-5 py-3 border-b-2 border-primary flex items-center justify-between gap-4 shrink-0 bg-background">
+        <div className="flex flex-col gap-1 min-w-0">
+          <h2 className="font-extrabold text-sm uppercase tracking-tight truncate text-foreground">
+            {gameTitle ?? 'Translation'}
+          </h2>
+          <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider">
+            <span className="tabular-nums text-foreground/80">{entries.length.toLocaleString()}</span>
+            <span className="text-muted-foreground">entries</span>
             {(running ? (progress?.done ?? 0) : translatedCount) > 0 && (
-              <><span className="text-muted-foreground/30">·</span><span className="text-emerald-400/80 tabular-nums">{running ? (progress?.done ?? 0) : translatedCount} done</span></>
+              <><span className="text-primary">//</span><span className="tabular-nums text-emerald-400">{(running ? (progress?.done ?? 0) : translatedCount).toLocaleString()} done</span></>
             )}
             {(running ? ((progress?.total ?? 0) - (progress?.done ?? 0)) : pendingCount) > 0 && (
-              <><span className="text-muted-foreground/30">·</span><span className="text-muted-foreground/50 tabular-nums">{running ? ((progress?.total ?? 0) - (progress?.done ?? 0)) : pendingCount} pending</span></>
+              <><span className="text-primary">//</span><span className="tabular-nums text-muted-foreground">{(running ? ((progress?.total ?? 0) - (progress?.done ?? 0)) : pendingCount).toLocaleString()} pending</span></>
             )}
             {search && (
-              <><span className="text-muted-foreground/30">·</span><span className="text-primary/70 tabular-nums">{filtered.length} found</span></>
+              <><span className="text-primary">//</span><span className="tabular-nums text-primary">{filtered.length} found</span></>
             )}
             {fileFilter && (
               <>
-                <span className="opacity-30">·</span>
-                <span className="text-primary/70 font-mono truncate max-w-24">
+                <span className="text-primary">//</span>
+                <span className="text-primary font-mono truncate max-w-24">
                   {fileFilter.split('/').pop()}
                 </span>
-                <button onClick={() => setFileFilter(undefined)} className="text-muted-foreground/40 hover:text-foreground">
+                <button onClick={() => setFileFilter(undefined)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-2.5 h-2.5" />
                 </button>
               </>
