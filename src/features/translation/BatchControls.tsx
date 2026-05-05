@@ -40,16 +40,16 @@ export function BatchControls({
   limit, onLimitChange,
 }: BatchControlsProps) {
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
+    <div className="flex items-center gap-2 shrink-0">
 
       {/* ── TRANSLATE SECTION ── */}
-      <div className="flex items-center gap-1 border border-border/40 rounded-md px-1.5 py-0.5">
-        <span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/40 mr-0.5 select-none">
+      <div className="flex items-center gap-1.5 border border-primary/30 rounded-sm px-2 py-1 bg-card/30">
+        <span className="text-[9px] font-bold font-mono uppercase tracking-widest text-primary mr-0.5 select-none">
           TL
         </span>
 
         <Select value={model} onValueChange={(v) => onModelChange(v ?? '')} disabled={running}>
-          <SelectTrigger className="h-6 w-52 text-xs font-mono border-0 bg-transparent px-1 focus:ring-0">
+          <SelectTrigger className="h-6 w-52 text-[11px] font-mono border-0 bg-transparent px-1 focus:ring-0 focus-visible:ring-0">
             <SelectValue placeholder="No model" />
           </SelectTrigger>
           <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
@@ -57,7 +57,7 @@ export function BatchControls({
               <SelectItem key={m} value={m} className="text-xs font-mono">
                 <span>hoshi-translator</span>
                 {HOSHI_MODEL_INFO[m] && (
-                  <span className="ml-1.5 text-[9px] text-muted-foreground/50 font-normal">{HOSHI_MODEL_INFO[m]}</span>
+                  <span className="ml-1.5 text-[9px] text-primary font-bold uppercase">{HOSHI_MODEL_INFO[m]}</span>
                 )}
               </SelectItem>
             ))}
@@ -66,7 +66,7 @@ export function BatchControls({
 
         <Popover>
           <PopoverTrigger
-            className="inline-flex h-6 w-6 items-center justify-center p-0 rounded-sm text-muted-foreground/40 hover:text-foreground transition-colors disabled:opacity-40"
+            className="inline-flex h-6 w-6 items-center justify-center p-0 rounded-sm text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-40"
             title="Batch settings"
             disabled={running}
           >
@@ -74,17 +74,17 @@ export function BatchControls({
           </PopoverTrigger>
           <PopoverContent align="end" className="w-52 p-3 space-y-3">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Limit
               </p>
-              <div className="flex items-center border border-border/50 rounded-md overflow-hidden">
+              <div className="flex items-center border border-border rounded-sm overflow-hidden">
                 {LIMIT_OPTIONS.map(o => (
                   <button key={o.value} onClick={() => onLimitChange(o.value)}
                     title={o.value === 0 ? 'All pending' : `Next ${o.value}`}
-                    className={`flex-1 h-7 text-[11px] font-mono transition-colors border-r border-border/40 last:border-r-0 ${
+                    className={`flex-1 h-7 text-[10px] font-bold font-mono uppercase tracking-wider transition-colors border-r border-border last:border-r-0 ${
                       limit === o.value
-                        ? 'bg-secondary text-secondary-foreground font-semibold'
-                        : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
                     }`}
                   >{o.label}</button>
                 ))}
@@ -95,20 +95,19 @@ export function BatchControls({
 
         {running ? (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums min-w-12 text-right">
-              {progress?.done}<span className="opacity-40">/</span>{progress?.total}
+            <span className="text-[10px] text-primary font-mono font-bold tabular-nums min-w-12 text-right">
+              {progress?.done}<span className="text-muted-foreground">/</span>{progress?.total}
             </span>
-            <Button variant="ghost" size="sm" onClick={onCancel}
-              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive">
+            <Button variant="ghost" size="icon-xs" onClick={onCancel}
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
               <X className="w-3 h-3" />
             </Button>
           </div>
         ) : (
           <Button
-            size="sm"
+            size="xs"
             onClick={onStart}
             disabled={!model}
-            className="h-6 gap-1 text-xs font-medium px-2.5"
           >
             <Sparkles className="w-3 h-3" />
             {selectedCount > 0 ? `Translate ${selectedCount}` : 'Translate'}
@@ -117,13 +116,13 @@ export function BatchControls({
       </div>
 
       {/* ── REFINE SECTION ── */}
-      <div className="flex items-center gap-1 border border-amber-500/20 rounded-md px-1.5 py-0.5">
-        <span className="text-[9px] font-medium uppercase tracking-widest text-amber-500/40 mr-0.5 select-none">
+      <div className="flex items-center gap-1.5 border border-amber-500/30 rounded-sm px-2 py-1 bg-card/30">
+        <span className="text-[9px] font-bold font-mono uppercase tracking-widest text-amber-400 mr-0.5 select-none">
           RF
         </span>
 
         <Select value={refineModel} onValueChange={(v) => onRefineModelChange(v ?? '')} disabled={refining}>
-          <SelectTrigger className="h-6 w-52 text-xs font-mono border-0 bg-transparent px-1 focus:ring-0">
+          <SelectTrigger className="h-6 w-52 text-[11px] font-mono border-0 bg-transparent px-1 focus:ring-0 focus-visible:ring-0">
             <SelectValue placeholder="No model" />
           </SelectTrigger>
           <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
@@ -131,7 +130,7 @@ export function BatchControls({
               <SelectItem key={m} value={m} className="text-xs font-mono">
                 <span>hoshi-translator</span>
                 {HOSHI_MODEL_INFO[m] && (
-                  <span className="ml-1.5 text-[9px] text-muted-foreground/50 font-normal">{HOSHI_MODEL_INFO[m]}</span>
+                  <span className="ml-1.5 text-[9px] text-amber-400 font-bold uppercase">{HOSHI_MODEL_INFO[m]}</span>
                 )}
               </SelectItem>
             ))}
@@ -140,21 +139,21 @@ export function BatchControls({
 
         {refining ? (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums min-w-12 text-right">
-              {refineProgress?.done}<span className="opacity-40">/</span>{refineProgress?.total}
+            <span className="text-[10px] text-amber-400 font-mono font-bold tabular-nums min-w-12 text-right">
+              {refineProgress?.done}<span className="text-muted-foreground">/</span>{refineProgress?.total}
             </span>
-            <Button variant="ghost" size="sm" onClick={onCancelRefine}
-              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive">
+            <Button variant="ghost" size="icon-xs" onClick={onCancelRefine}
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
               <X className="w-3 h-3" />
             </Button>
           </div>
         ) : (
           <Button
-            size="sm"
+            size="xs"
             variant="outline"
             onClick={onRefine}
             disabled={running || !refineModel}
-            className="h-6 gap-1 text-xs font-medium px-2.5 border-amber-500/30 text-amber-400/80 hover:bg-amber-500/10"
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/15 hover:border-amber-500/60 hover:text-amber-300"
           >
             <Wand2 className="w-3 h-3" />
             {selectedCount > 0 ? `Refine ${selectedCount}` : 'Refine'}
