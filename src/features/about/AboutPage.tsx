@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { ExternalLink, Github, ChevronDown, ChevronRight, Cpu, Copy, Check, Coins } from 'lucide-react'
+import pkg from '../../../package.json'
+
+const APP_VERSION = pkg.version
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-widest mb-2">
+    <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-2">
       {children}
     </p>
   )
@@ -11,7 +14,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded border border-border/50 bg-card/40 p-4 flex flex-col gap-1">
+    <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col gap-1">
       {children}
     </div>
   )
@@ -19,16 +22,16 @@ function Card({ children }: { children: React.ReactNode }) {
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
-      <span className="text-xs text-muted-foreground/60 shrink-0">{label}</span>
-      <span className="text-xs font-mono text-foreground/80 text-right truncate">{value}</span>
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border/40 last:border-0">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">{label}</span>
+      <span className="text-xs font-mono text-foreground text-right truncate">{value}</span>
     </div>
   )
 }
 
 function StepLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1.5">{children}</p>
+    <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5">{children}</p>
   )
 }
 
@@ -36,20 +39,19 @@ function CodeBlock({ children }: { children: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <div className="relative group">
-      <pre className="text-[10.5px] font-mono bg-background/60 border border-border/50 rounded-md px-3 py-2.5 text-foreground/75 leading-relaxed whitespace-pre-wrap overflow-x-auto">
+      <pre className="text-[10.5px] font-mono bg-background border border-border rounded-sm px-3 py-2.5 text-foreground/85 leading-relaxed whitespace-pre-wrap overflow-x-auto">
         {children}
       </pre>
       <button
         onClick={() => { navigator.clipboard.writeText(children); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
-        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 rounded bg-background/80 border border-border/50 text-[9.5px] text-muted-foreground/60 hover:text-foreground"
+        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-0.5 rounded-sm bg-primary text-primary-foreground border border-primary text-[9.5px] font-bold uppercase tracking-wider"
       >
-        {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+        {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
         {copied ? 'Copied' : 'Copy'}
       </button>
     </div>
   )
 }
-
 
 function CryptoRow({ symbol, name, address }: { symbol: string; name: string; address: string }) {
   const [copied, setCopied] = useState(false)
@@ -59,17 +61,17 @@ function CryptoRow({ symbol, name, address }: { symbol: string; name: string; ad
     setTimeout(() => setCopied(false), 1500)
   }
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded border border-border/50 bg-background/40">
-      <Coins className="w-4 h-4 text-amber-400/70 shrink-0" />
+    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-sm border border-border bg-background">
+      <Coins className="w-4 h-4 text-primary shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-foreground/80">{symbol} <span className="text-[10px] text-muted-foreground/40 font-normal">— {name}</span></p>
-        <p className="text-[10px] font-mono text-muted-foreground/40 truncate mt-0.5">{address}</p>
+        <p className="text-xs font-bold text-foreground uppercase tracking-wider">{symbol} <span className="text-[10px] text-muted-foreground font-normal normal-case tracking-normal">— {name}</span></p>
+        <p className="text-[10px] font-mono text-muted-foreground truncate mt-0.5">{address}</p>
       </div>
       <button
         onClick={copy}
-        className="flex items-center gap-1 px-2 py-1 rounded border border-border/40 text-[9.5px] text-muted-foreground/50 hover:text-foreground/70 hover:border-border/70 transition-colors shrink-0"
+        className="flex items-center gap-1 px-2 py-1 rounded-sm border border-border text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors shrink-0"
       >
-        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
         {copied ? 'Copied' : 'Copy'}
       </button>
     </div>
@@ -82,35 +84,34 @@ function SetupGuides() {
   return (
     <div className="flex flex-col gap-2">
 
-      {/* Local Setup */}
-      <div className="rounded border border-border/40 bg-card/30 overflow-hidden">
+      <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
         <button
           onClick={() => setLocalOpen(o => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-card/70 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <Cpu className="w-3.5 h-3.5 text-primary/50" />
-            <span className="text-[12px] font-medium text-foreground/80">Local Setup</span>
-            <span className="text-[10px] text-muted-foreground/40 font-mono">— Linux / Windows</span>
+            <Cpu className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[12px] font-bold text-foreground uppercase tracking-wider">Local Setup</span>
+            <span className="text-[10px] text-muted-foreground font-mono">// Linux / Windows</span>
           </div>
-          {localOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground/50" /> : <ChevronRight className="w-4 h-4 text-muted-foreground/50" />}
+          {localOpen ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
         </button>
 
         {localOpen && (
-          <div className="px-4 pb-5 border-t border-border/40 bg-background/20 flex flex-col gap-4 pt-4">
+          <div className="px-4 pb-5 border-t border-border bg-background flex flex-col gap-4 pt-4">
 
             <div className="flex flex-col gap-1.5">
               <StepLabel>1. Install Ollama</StepLabel>
               <CodeBlock>curl -fsSL https://ollama.com/install.sh | sh</CodeBlock>
-              <p className="text-[10px] text-muted-foreground/45 leading-relaxed mt-0.5">
-                Or download the Windows installer at <span className="font-mono text-foreground/60">ollama.com</span>.
+              <p className="text-[10px] text-muted-foreground/70 leading-relaxed mt-0.5">
+                Or download the Windows installer at <span className="font-mono text-primary">ollama.com</span>.
               </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <StepLabel>2. Install a hoshi-translator model</StepLabel>
-              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
-                Go to the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Install Models</span> → click the model you want. hoshi-trans runs <span className="font-mono text-foreground/60">ollama create</span> for you — it pulls the base model automatically if needed.
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Go to the <span className="font-mono font-bold text-foreground">Ollama</span> page → <span className="font-mono font-bold text-primary">Install Models</span> → click the model you want. hoshi-trans runs <span className="font-mono text-foreground">ollama create</span> for you — it pulls the base model automatically if needed.
               </p>
               <div className="flex flex-col gap-1 mt-1">
                 {([
@@ -118,10 +119,10 @@ function SetupGuides() {
                   { name: 'hoshi-translator-abliterated-4b', vram: '~8 GB VRAM', note: 'higher quality' },
                   { name: 'hoshi-translator-30b', vram: 'min 24 GB VRAM', note: 'best quality' },
                 ]).map(({ name, vram, note }) => (
-                  <div key={name} className="flex items-center gap-2 px-2 py-1 rounded bg-background/30 border border-border/20">
-                    <span className="text-[10px] font-mono text-foreground/70 flex-1">{name}</span>
-                    <span className="text-[9px] text-muted-foreground/35">{vram}</span>
-                    <span className="text-[9px] text-primary/40 italic">{note}</span>
+                  <div key={name} className="flex items-center gap-2 px-2 py-1 rounded-sm bg-background border border-border">
+                    <span className="text-[10px] font-mono font-bold text-foreground flex-1">{name}</span>
+                    <span className="text-[9px] font-mono text-muted-foreground">{vram}</span>
+                    <span className="text-[9px] font-bold text-primary uppercase tracking-wider">{note}</span>
                   </div>
                 ))}
               </div>
@@ -129,8 +130,8 @@ function SetupGuides() {
 
             <div className="flex flex-col gap-1.5">
               <StepLabel>3. Select the model</StepLabel>
-              <p className="text-[10.5px] text-muted-foreground/55 leading-relaxed">
-                In the <span className="font-mono text-foreground/70">Ollama</span> page → <span className="font-mono text-foreground/70">Connection &amp; Model</span>, select the installed model as your translation model.
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                In the <span className="font-mono font-bold text-foreground">Ollama</span> page → <span className="font-mono font-bold text-primary">Connection &amp; Model</span>, select the installed model as your translation model.
               </p>
             </div>
 
@@ -148,13 +149,13 @@ export function AboutPage() {
       <div className="max-w-2xl p-6 flex flex-col gap-6">
 
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/15 shrink-0">
-            <span className="text-primary text-lg font-bold leading-none select-none">星</span>
+        <div className="flex items-center gap-3 pb-3 border-b-2 border-primary">
+          <div className="flex items-center justify-center w-10 h-10 rounded-sm bg-primary shrink-0">
+            <span className="text-primary-foreground text-lg font-bold leading-none select-none">星</span>
           </div>
           <div>
-            <h2 className="text-sm font-semibold">hoshi-trans</h2>
-            <p className="text-xs text-muted-foreground/50">v0.1.0 — Japanese game translator</p>
+            <h2 className="text-sm font-extrabold uppercase tracking-tight">hoshi-trans</h2>
+            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">v{APP_VERSION} // Japanese game translator</p>
           </div>
         </div>
 
@@ -162,9 +163,9 @@ export function AboutPage() {
         <div>
           <SectionLabel>About</SectionLabel>
           <Card>
-            <p className="text-xs text-muted-foreground/60 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               hoshi-trans is a free, offline-first desktop app for translating Japanese RPG games
-              (RPG Maker MV/MZ, Wolf RPG, Bakin) using local AI models via Ollama.
+              (RPG Maker MV/MZ, Wolf RPG) using local AI models via Ollama.
               No data leaves your machine.
             </p>
           </Card>
@@ -180,7 +181,7 @@ export function AboutPage() {
         <div>
           <SectionLabel>Support the project</SectionLabel>
           <Card>
-            <p className="text-xs text-muted-foreground/60 mb-3 leading-relaxed">
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
               hoshi-trans is free and open source — no subscription, no limits.
               If it saved you hours on a translation project, a crypto donation
               helps keep development going and new engines supported.
@@ -193,13 +194,13 @@ export function AboutPage() {
                 <CryptoRow key={symbol} symbol={symbol} name={name} address={address} />
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-border/20 flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground/35">Free to support:</span>
+            <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Free to support:</span>
               <a
                 href="https://github.com/KATBlackCoder/hoshi-trans"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[10px] text-muted-foreground/45 hover:text-foreground/70 transition-colors"
+                className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
               >
                 <Github className="w-3 h-3" />
                 Star on GitHub
@@ -217,7 +218,7 @@ export function AboutPage() {
                 href="https://github.com/KATBlackCoder/hoshi-trans"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary/70 hover:text-primary transition-colors flex items-center gap-1"
+                className="text-primary hover:opacity-80 transition-opacity flex items-center gap-1"
               >
                 <Github className="w-3 h-3" />
                 KATBlackCoder/hoshi-trans <ExternalLink className="w-3 h-3" />
@@ -228,7 +229,7 @@ export function AboutPage() {
                 href="https://github.com/KATBlackCoder/hoshi-trans/issues"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary/70 hover:text-primary transition-colors flex items-center gap-1"
+                className="text-primary hover:opacity-80 transition-opacity flex items-center gap-1"
               >
                 Report a bug <ExternalLink className="w-3 h-3" />
               </a>
