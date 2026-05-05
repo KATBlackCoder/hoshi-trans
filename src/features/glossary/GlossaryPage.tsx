@@ -135,11 +135,11 @@ export function GlossaryPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border/60 shrink-0 flex items-center justify-between gap-4">
+      <div className="px-6 py-4 border-b-2 border-primary shrink-0 flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-semibold text-sm">Glossary</h2>
-          <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-            Global terms apply to all projects. Project terms override global ones for the same source + language.
+          <h2 className="font-extrabold text-sm uppercase tracking-tight">Glossary</h2>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mt-1">
+            Global // applies everywhere · Project // overrides global for that project
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -149,7 +149,7 @@ export function GlossaryPage() {
               size="sm"
               onClick={() => deleteSelected.mutate(Array.from(selectedIds))}
               disabled={deleteSelected.isPending}
-              className="h-7 px-2.5 text-xs gap-1.5 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:text-destructive hover:bg-destructive/15"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Delete {selectedIds.size}
@@ -160,7 +160,6 @@ export function GlossaryPage() {
             size="sm"
             onClick={() => importGlossary.mutate()}
             disabled={importGlossary.isPending}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground/60 hover:text-foreground"
           >
             <Upload className="w-3.5 h-3.5" />
             Import
@@ -170,7 +169,6 @@ export function GlossaryPage() {
             size="sm"
             onClick={() => exportGlossary.mutate()}
             disabled={exportGlossary.isPending || terms.length === 0}
-            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground/60 hover:text-foreground"
           >
             <Download className="w-3.5 h-3.5" />
             Export
@@ -179,10 +177,10 @@ export function GlossaryPage() {
       </div>
 
       {/* Add form */}
-      <div className="px-6 py-3 border-b border-border/40 shrink-0">
+      <div className="px-6 py-3 border-b border-border shrink-0">
         <div className="flex items-end gap-2 flex-wrap">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">JP Term</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">JP Term</label>
             <Input
               value={source}
               onChange={e => setSource(e.target.value)}
@@ -191,7 +189,7 @@ export function GlossaryPage() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Translation</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Translation</label>
             <Input
               value={target}
               onChange={e => setTarget(e.target.value)}
@@ -201,7 +199,7 @@ export function GlossaryPage() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Lang</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Lang</label>
             <Select value={targetLang} onValueChange={(v: string | null) => v && setTargetLang(v)}>
               <SelectTrigger className="h-7 w-24 text-xs">
                 <SelectValue />
@@ -214,7 +212,7 @@ export function GlossaryPage() {
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Scope</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Scope</label>
             <Select
               value={scopeProjectId ?? '__global__'}
               onValueChange={v => setScopeProjectId(v === '__global__' ? null : v)}
@@ -247,7 +245,7 @@ export function GlossaryPage() {
             size="sm"
             onClick={handleAdd}
             disabled={!source.trim() || !target.trim() || upsert.isPending}
-            className="h-7 gap-1.5 text-xs mb-0"
+            className="mb-0"
           >
             <Plus className="w-3 h-3" />
             Add
@@ -256,14 +254,14 @@ export function GlossaryPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="px-6 py-2 border-b border-border/40 shrink-0 flex items-center gap-3 flex-wrap">
+      <div className="px-6 py-2 border-b border-border shrink-0 flex items-center gap-3 flex-wrap">
         <div className="relative w-44">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40 pointer-events-none" />
           <Input
             value={filterSearch}
             onChange={e => setFilterSearch(e.target.value)}
-            placeholder="Search terms…"
-            className="h-7 pl-6 text-xs bg-transparent"
+            placeholder="SEARCH TERMS…"
+            className="h-7 pl-6 text-[11px] uppercase placeholder:uppercase"
           />
           {filterSearch && (
             <button onClick={() => setFilterSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground">
@@ -275,10 +273,10 @@ export function GlossaryPage() {
         <div className="flex items-center gap-0.5">
           {(['all', 'global'] as const).map(s => (
             <button key={s} onClick={() => setFilterScope(s)}
-              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors capitalize ${
+              className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-colors ${
                 filterScope === s
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
               }`}
             >{s}</button>
           ))}
@@ -286,7 +284,7 @@ export function GlossaryPage() {
             value={typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global' ? filterScope : '__none__'}
             onValueChange={v => { if (v && v !== '__none__') setFilterScope(v) }}
           >
-            <SelectTrigger className={`h-7 w-32 text-xs font-mono border-border/40 ${typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global' ? 'bg-secondary' : ''}`}>
+            <SelectTrigger className={`h-7 w-32 text-xs font-mono ${typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global' ? 'bg-primary/10 border-primary/40' : ''}`}>
               <span className="flex items-center gap-1 truncate">
                 {typeof filterScope === 'string' && filterScope !== 'all' && filterScope !== 'global'
                   ? <><FolderOpen className="w-3 h-3 shrink-0" /><span className="truncate">{projects.find(p => p.id === filterScope)?.game_title ?? filterScope}</span></>
@@ -308,17 +306,17 @@ export function GlossaryPage() {
         <div className="flex items-center gap-0.5">
           {(['all', 'en', 'fr'] as const).map(l => (
             <button key={l} onClick={() => setFilterLang(l)}
-              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors uppercase ${
+              className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-colors ${
                 filterLang === l
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
               }`}
             >{l === 'all' ? 'All' : l}</button>
           ))}
         </div>
 
         {(filterSearch || filterScope !== 'all' || filterLang !== 'all') && (
-          <span className="text-[10px] text-muted-foreground/50 font-mono ml-auto tabular-nums">
+          <span className="text-[10px] font-mono font-bold text-primary ml-auto tabular-nums uppercase tracking-wider">
             {filteredTerms.length} / {terms.length}
           </span>
         )}
@@ -327,18 +325,18 @@ export function GlossaryPage() {
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         {terms.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-xs text-muted-foreground/40">
+          <div className="flex items-center justify-center h-32 text-xs font-mono uppercase tracking-wider text-muted-foreground">
             No glossary terms yet.
           </div>
         ) : filteredTerms.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-xs text-muted-foreground/40">
+          <div className="flex items-center justify-center h-32 text-xs font-mono uppercase tracking-wider text-muted-foreground">
             No terms match the current filters.
           </div>
         ) : (
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-muted/50 backdrop-blur-sm border-b border-border/40">
+            <thead className="sticky top-0 bg-card/80 backdrop-blur-sm border-b-2 border-primary">
               <tr>
-                <th className="w-10 px-3 py-2">
+                <th className="w-10 px-3 py-2.5">
                   <input
                     type="checkbox"
                     checked={filteredTerms.length > 0 && filteredTerms.every(t => selectedIds.has(t.id))}
@@ -346,10 +344,10 @@ export function GlossaryPage() {
                     className="w-3.5 h-3.5 accent-primary cursor-pointer"
                   />
                 </th>
-                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[28%]">JP Term</th>
-                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[28%]">Translation</th>
-                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[12%]">Lang</th>
-                <th className="text-left px-4 py-2 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider w-[22%]">Scope</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest w-[28%]">JP Term</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest w-[28%]">Translation</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest w-[12%]">Lang</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest w-[22%]">Scope</th>
                 <th className="w-16" />
               </tr>
             </thead>
@@ -357,7 +355,7 @@ export function GlossaryPage() {
               {filteredTerms.map(term => {
                 const isEditing = editState?.id === term.id
                 return (
-                  <tr key={term.id} className={`group border-b border-border/20 hover:bg-muted/30 transition-colors ${selectedIds.has(term.id) ? 'bg-primary/5' : ''}`}>
+                  <tr key={term.id} className={`group border-b border-border/60 hover:bg-card/40 transition-colors ${selectedIds.has(term.id) ? 'bg-primary/8' : ''}`}>
                     <td className="w-10 px-3 py-1.5">
                       <input
                         type="checkbox"
@@ -370,7 +368,7 @@ export function GlossaryPage() {
                         className="w-3.5 h-3.5 accent-primary cursor-pointer"
                       />
                     </td>
-                    <td className="px-4 py-1.5 font-mono text-foreground/80">
+                    <td className="px-4 py-1.5 font-mono text-foreground/85">
                       {isEditing ? (
                         <Input
                           value={editState.source_term}
@@ -380,7 +378,7 @@ export function GlossaryPage() {
                         />
                       ) : term.source_term}
                     </td>
-                    <td className="px-4 py-1.5 font-mono text-foreground/80">
+                    <td className="px-4 py-1.5 font-mono text-foreground/85">
                       {isEditing ? (
                         <Input
                           value={editState.target_term}
@@ -406,7 +404,7 @@ export function GlossaryPage() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-secondary/60 text-secondary-foreground">
+                        <span className="px-2 py-0.5 rounded-sm text-[9px] font-mono font-bold uppercase tracking-widest bg-primary/15 text-primary border border-primary/30">
                           {term.target_lang.toUpperCase()}
                         </span>
                       )}
@@ -438,11 +436,11 @@ export function GlossaryPage() {
                           </SelectContent>
                         </Select>
                       ) : term.project_id === null ? (
-                        <span className="flex items-center gap-1 text-primary/70 text-[11px]">
+                        <span className="flex items-center gap-1 text-primary text-[11px] font-bold uppercase tracking-wider">
                           <Globe className="w-3 h-3" />Global
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-muted-foreground/60 text-[11px] truncate">
+                        <span className="flex items-center gap-1 text-muted-foreground text-[11px] truncate">
                           <FolderOpen className="w-3 h-3 shrink-0" />
                           {projectName(term.project_id)}
                         </span>
@@ -454,13 +452,13 @@ export function GlossaryPage() {
                           <button
                             onClick={() => updateTerm.mutate(editState)}
                             disabled={updateTerm.isPending}
-                            className="text-primary/60 hover:text-primary transition-colors"
+                            className="text-primary hover:opacity-80 transition-opacity"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setEditState(null)}
-                            className="text-muted-foreground/40 hover:text-foreground transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -475,13 +473,13 @@ export function GlossaryPage() {
                               target_lang: term.target_lang,
                               project_id: term.project_id,
                             })}
-                            className="text-muted-foreground/30 hover:text-foreground transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => deleteTerm.mutate(term.id)}
-                            className="text-muted-foreground/30 hover:text-destructive transition-colors"
+                            className="text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
