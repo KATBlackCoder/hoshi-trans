@@ -6,7 +6,7 @@ import { HOSHI_MODEL_INFO } from '@/lib/models'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Thermometer, Globe, Cpu, Wifi, WifiOff, Check, Trash2, X, AlertTriangle, HardDrive, Layers } from 'lucide-react'
+import { Globe, Cpu, Wifi, WifiOff, Check, Trash2, X, AlertTriangle, HardDrive, Layers } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -17,7 +17,7 @@ import {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2">
+    <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">
       {children}
     </p>
   )
@@ -125,15 +125,6 @@ export function OllamaPage() {
   const installedIds = new Set(availableModels.map(m => MODEL_KEY[m]).filter(Boolean))
 
   const langLabel = settings.targetLang === 'en' ? 'English' : 'French'
-  const tempLabel = settings.temperature <= 0.2
-    ? 'Very consistent'
-    : settings.temperature <= 0.4
-    ? 'Consistent'
-    : settings.temperature <= 0.6
-    ? 'Balanced'
-    : settings.temperature <= 0.8
-    ? 'Creative'
-    : 'Very creative'
 
   function saveHost() {
     const trimmed = hostDraft.trim() || DEFAULT_OLLAMA_HOST
@@ -148,16 +139,16 @@ export function OllamaPage() {
       <div className="p-6 pb-0 flex flex-col gap-5 flex-1 min-h-0">
 
         {/* ── Header ────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between shrink-0">
+        <div className="flex items-start justify-between shrink-0 pb-3 border-b-2 border-primary">
           <div>
-            <h2 className="text-sm font-semibold tracking-tight">Ollama</h2>
-            <p className="text-[11px] text-muted-foreground/40 mt-0.5">Connection, model, and generation settings.</p>
+            <h2 className="text-sm font-extrabold uppercase tracking-tight">Ollama</h2>
+            <p className="text-[11px] font-mono text-muted-foreground mt-1 uppercase tracking-wider">Connection // Model // Settings</p>
           </div>
 
-          <div className={`flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-full border text-[10.5px] font-mono transition-colors ${
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
             ollamaOnline
-              ? 'border-green-500/20 bg-green-500/5 text-green-400/80'
-              : 'border-amber-500/20 bg-amber-500/5 text-amber-400/80'
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+              : 'border-amber-500/40 bg-amber-500/10 text-amber-400'
           }`}>
             {ollamaOnline
               ? <Wifi className="w-3 h-3" />
@@ -165,10 +156,10 @@ export function OllamaPage() {
             }
             <span>{ollamaOnline ? 'Online' : 'Offline'}</span>
             {availableModels.length > 0 && (
-              <span className="opacity-40">· {availableModels.length} hoshi</span>
+              <span className="opacity-60">// {availableModels.length} hoshi</span>
             )}
-            <span className="opacity-30">·</span>
-            <span className="opacity-50">Local</span>
+            <span className="text-primary">//</span>
+            <span className="opacity-70">Local</span>
           </div>
         </div>
 
@@ -179,7 +170,7 @@ export function OllamaPage() {
           <div className="flex flex-col gap-5 w-105 shrink-0 overflow-y-auto pr-1 pb-6">
 
             {/* Connection & Model */}
-            <div className="rounded-lg border border-border/30 bg-card/20 overflow-hidden">
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
               <div className="px-4 pt-3.5 pb-0.5">
                 <SectionLabel>Connection &amp; Model</SectionLabel>
               </div>
@@ -252,7 +243,7 @@ export function OllamaPage() {
           <div className="flex-1 flex flex-col gap-4 min-w-0 overflow-y-auto pb-6">
 
             {/* Active config */}
-            <div className="rounded-lg border border-border/30 bg-card/20 overflow-hidden">
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
               <div className="px-4 pt-3.5 pb-1">
                 <SectionLabel>Active configuration</SectionLabel>
               </div>
@@ -271,26 +262,20 @@ export function OllamaPage() {
                     sub: `JP → ${langLabel}`,
                   },
                   {
-                    icon: <Thermometer className="w-3.5 h-3.5" />,
-                    label: 'Temperature',
-                    value: settings.temperature.toFixed(1),
-                    sub: tempLabel,
-                  },
-                  {
                     icon: ollamaOnline
-                      ? <Wifi className="w-3.5 h-3.5 text-green-500/60" />
-                      : <WifiOff className="w-3.5 h-3.5 text-amber-500/60" />,
+                      ? <Wifi className="w-3.5 h-3.5 text-emerald-500" />
+                      : <WifiOff className="w-3.5 h-3.5 text-amber-500" />,
                     label: 'Endpoint',
                     value: settings.ollamaHost.replace('http://', '').replace('https://', ''),
                     sub: ollamaOnline ? 'Reachable' : 'Not reachable',
                   },
                 ].map(({ icon, label, value, sub }) => (
-                  <div key={label} className="flex items-start gap-2.5 p-3 rounded-md border border-border/20 bg-background/20">
-                    <div className="mt-0.5 text-muted-foreground/25 shrink-0">{icon}</div>
+                  <div key={label} className="flex items-start gap-2.5 p-3 rounded-sm border border-border bg-background">
+                    <div className="mt-0.5 text-primary shrink-0">{icon}</div>
                     <div className="min-w-0">
-                      <p className="text-[9.5px] text-muted-foreground/50 uppercase tracking-wider">{label}</p>
-                      <p className="text-[11.5px] font-mono text-foreground/85 mt-0.5 truncate">{value}</p>
-                      {sub && <p className="text-[9.5px] text-muted-foreground/45 mt-0.5">{sub}</p>}
+                      <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">{label}</p>
+                      <p className="text-[11px] font-mono font-bold text-foreground mt-0.5 truncate">{value}</p>
+                      {sub && <p className="text-[9px] text-muted-foreground/70 mt-0.5 font-mono uppercase tracking-wider">{sub}</p>}
                     </div>
                   </div>
                 ))}
@@ -298,7 +283,7 @@ export function OllamaPage() {
             </div>
 
             {/* Available models */}
-            <div className="rounded-lg border border-border/30 bg-card/20 overflow-hidden">
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
               <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
                 <SectionLabel>Available models</SectionLabel>
                 {availableModels.length > 0 && (
@@ -340,7 +325,7 @@ export function OllamaPage() {
             </div>
 
             {/* Install Models */}
-            <div className="rounded-lg border border-border/30 bg-card/20 overflow-hidden">
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
               <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
                 <SectionLabel>Install models</SectionLabel>
                 <span className="text-[9px] text-muted-foreground/25 font-mono mb-2">local</span>
@@ -529,18 +514,18 @@ export function OllamaPage() {
             </div>
 
             {/* Tips */}
-            <div className="rounded-lg border border-border/20 bg-card/10 px-4 py-3.5 flex flex-col gap-2.5">
+            <div className="rounded-sm border border-border/60 bg-card/30 px-4 py-3.5 flex flex-col gap-2.5">
               <SectionLabel>Tips</SectionLabel>
               <ul className="flex flex-col gap-2">
                 {[
-                  'Lower temperature (0.1–0.3) gives more consistent translations for game text.',
-                  'Use {lang} in your prompt — it\'s replaced with "English" or "French" at runtime.',
-                  'Models with 7B–14B parameters work well for Japanese RPG dialogue.',
-                  'Set concurrency to 4× or 8× in the translation view to speed up batch jobs.',
+                  'For batch jobs, the 4B model is fast (~50 lines/min on a 4 GB GPU). The 30B variant is slower but better at long context.',
+                  'After translation, run a Refine pass with the same or a stronger model to catch awkward phrasing.',
+                  'Click any cell to edit a translation manually — your edits are saved as glossary candidates.',
+                  'Game files stay on disk. No data is sent outside your machine, ever.',
                 ].map((tip, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="text-primary/25 mt-0.5 shrink-0">▸</span>
-                    <span className="text-[10.5px] text-muted-foreground/55 leading-relaxed">{tip}</span>
+                    <span className="text-primary mt-0.5 shrink-0 font-bold">▸</span>
+                    <span className="text-[11px] text-muted-foreground leading-relaxed">{tip}</span>
                   </li>
                 ))}
               </ul>
