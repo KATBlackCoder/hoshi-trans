@@ -37,9 +37,9 @@ const ENGINE_LABEL: Record<string, string> = {
 }
 
 const ENGINE_COLOR: Record<string, string> = {
-  rpgmaker_mv_mz: 'text-violet-400/70',
-  wolf_rpg: 'text-sky-400/70',
-  bakin: 'text-amber-400/70',
+  rpgmaker_mv_mz: 'text-violet-400',
+  wolf_rpg: 'text-sky-400',
+  bakin: 'text-amber-400',
 }
 
 function ProgressBar({ translated, total }: { translated: number; total: number }) {
@@ -47,17 +47,17 @@ function ProgressBar({ translated, total }: { translated: number; total: number 
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[9px] font-mono text-muted-foreground/30 uppercase tracking-wider">Progress</span>
-        <span className="text-[10px] font-mono text-muted-foreground/50 tabular-nums">{pct}%</span>
+        <span className="text-[9px] font-bold font-mono text-muted-foreground uppercase tracking-widest">Progress</span>
+        <span className="text-[10px] font-mono font-bold text-primary tabular-nums">{pct}%</span>
       </div>
-      <div className="h-0.75 bg-border/30 rounded-full overflow-hidden">
+      <div className="h-1 bg-background border border-border rounded-sm overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full transition-all duration-500"
           style={{
             width: `${pct}%`,
             background: pct === 100
-              ? 'oklch(0.72 0.17 145)'
-              : 'linear-gradient(90deg, oklch(0.72 0.17 145 / 80%), oklch(0.80 0.15 145))',
+              ? 'oklch(0.72 0.19 145)'
+              : 'oklch(0.86 0.17 95)',
           }}
         />
       </div>
@@ -90,11 +90,11 @@ export function ProjectLibrary({ onOpen }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-8 pt-7 pb-5 shrink-0 flex items-center justify-between gap-4 border-b border-border/40">
+      <div className="px-8 pt-7 pb-5 shrink-0 flex items-center justify-between gap-4 border-b-2 border-primary">
         <div className="flex items-center gap-3">
-          <h1 className="text-sm font-semibold tracking-tight">Projects</h1>
+          <h1 className="text-sm font-extrabold uppercase tracking-tight">Projects</h1>
           {projects.length > 0 && (
-            <span className="text-[10px] font-mono text-muted-foreground/40 bg-muted/40 px-1.5 py-0.5 rounded-md tabular-nums">
+            <span className="text-[10px] font-mono font-bold text-primary-foreground bg-primary px-1.5 py-0.5 rounded-sm tabular-nums uppercase tracking-wider">
               {projects.length}
             </span>
           )}
@@ -123,16 +123,15 @@ export function ProjectLibrary({ onOpen }: Props) {
               <div
                 key={p.id}
                 onClick={() => handleOpen(p)}
-                className="group relative rounded-xl border border-border/50 bg-card/40 p-4 cursor-pointer hover:border-primary/30 hover:bg-card/80 transition-all duration-200 overflow-hidden"
+                className="group relative rounded-sm border border-border bg-card/40 p-4 cursor-pointer hover:border-primary/55 hover:bg-card/70 transition-all duration-150 overflow-hidden"
               >
-                {/* Subtle top gradient accent */}
-                <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border/60 to-transparent group-hover:via-primary/30 transition-all" />
+                {/* Top yellow accent on hover */}
+                <div className="absolute inset-x-0 top-0 h-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                {/* Delete button */}
                 <AlertDialog>
                   <AlertDialogTrigger
                     onClick={e => e.stopPropagation()}
-                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10"
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/15"
                     title="Delete project"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -160,34 +159,30 @@ export function ProjectLibrary({ onOpen }: Props) {
                   </AlertDialogContent>
                 </AlertDialog>
 
-                {/* Engine badge */}
-                <span className={`text-[9px] font-mono uppercase tracking-widest font-medium ${ENGINE_COLOR[p.engine] ?? 'text-muted-foreground/40'}`}>
+                <span className={`text-[9px] font-mono font-bold uppercase tracking-widest ${ENGINE_COLOR[p.engine] ?? 'text-muted-foreground'}`}>
                   {ENGINE_LABEL[p.engine] ?? p.engine}
                 </span>
 
-                {/* Title */}
-                <p className="text-sm font-semibold mt-1.5 pr-6 leading-snug line-clamp-2 text-foreground/90">
+                <p className="text-sm font-bold uppercase tracking-tight mt-1.5 pr-6 leading-snug line-clamp-2 text-foreground">
                   {p.game_title}
                 </p>
 
-                {/* Stats row */}
                 <div className="flex items-center gap-2 mt-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 shrink-0" />
-                    <span className="text-[10px] font-mono text-emerald-500/70 tabular-nums">{p.translated}</span>
+                    <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 shrink-0" />
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 tabular-nums">{p.translated}</span>
                   </div>
-                  <span className="text-muted-foreground/25 text-[10px]">/</span>
-                  <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{p.total} total</span>
+                  <span className="text-primary text-[10px] font-bold">/</span>
+                  <span className="text-[10px] font-mono font-bold text-muted-foreground tabular-nums">{p.total} total</span>
                 </div>
 
                 <ProgressBar translated={p.translated} total={p.total} />
 
-                {/* Open indicator */}
-                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/30">
-                  <span className="text-[9px] font-mono text-muted-foreground/25 uppercase tracking-wider">
+                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
+                  <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest">
                     {p.target_lang === 'fr' ? '🇫🇷 French' : '🇬🇧 English'}
                   </span>
-                  <span className="text-[10px] text-muted-foreground/25 group-hover:text-primary/50 transition-colors flex items-center gap-0.5 font-medium">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-0.5">
                     Open <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                   </span>
                 </div>

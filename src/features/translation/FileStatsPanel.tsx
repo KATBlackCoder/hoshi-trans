@@ -32,33 +32,33 @@ export function FileStatsPanel({ projectId, onFileClick }: Props) {
           <button
             key={f.file_path}
             onClick={() => onFileClick(f.file_path)}
-            className="w-full text-left px-3 py-2.5 rounded-md hover:bg-white/4 transition-colors group"
+            className="w-full text-left px-3 py-2.5 rounded-sm border border-border bg-card/40 hover:border-primary/40 hover:bg-card/70 transition-colors group"
           >
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-mono text-foreground/80 group-hover:text-foreground truncate max-w-[60%]" title={f.file_path}>
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-foreground/85 group-hover:text-foreground truncate max-w-[60%]" title={f.file_path}>
                 {short}
               </span>
-              <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono">
+              <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono font-bold">
                 {f.warning > 0 && (
-                  <span className="text-amber-400/70">{f.warning}⚠</span>
+                  <span className="text-amber-400">{f.warning}⚠</span>
                 )}
                 {f.pending > 0 && (
-                  <span className="text-muted-foreground/50">{f.pending} pending</span>
+                  <span className="text-muted-foreground">{f.pending} pending</span>
                 )}
-                <span className="text-muted-foreground/40">{f.translated}/{f.total}</span>
-                <span className={`font-semibold tabular-nums ${donePct === 100 ? 'text-emerald-400' : 'text-foreground/60'}`}>
+                <span className="text-muted-foreground/60">{f.translated}/{f.total}</span>
+                <span className={`tabular-nums ${donePct === 100 ? 'text-emerald-400' : 'text-primary'}`}>
                   {donePct}%
                 </span>
               </div>
             </div>
-            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden flex">
+            <div className="h-1 w-full bg-background border border-border rounded-sm overflow-hidden flex">
               <div
-                className="h-full bg-emerald-500/60 transition-all"
+                className="h-full bg-emerald-500/70 transition-all"
                 style={{ width: `${donePct}%` }}
               />
               {f.warning > 0 && (
                 <div
-                  className="h-full bg-amber-400/50 transition-all"
+                  className="h-full bg-amber-400/60 transition-all"
                   style={{ width: `${warningPct}%` }}
                 />
               )}
