@@ -12,13 +12,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col gap-1">
-      {children}
-    </div>
-  )
-}
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -145,96 +138,114 @@ function SetupGuides() {
 
 export function AboutPage() {
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl p-6 flex flex-col gap-6">
+    <div className="h-full flex flex-col overflow-hidden">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 pb-3 border-b-2 border-primary">
-          <div className="flex items-center justify-center w-10 h-10 rounded-sm bg-primary shrink-0">
-            <span className="text-primary-foreground text-lg font-bold leading-none select-none">星</span>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="px-6 py-4 border-b-2 border-primary flex items-center gap-4 shrink-0">
+        <div className="w-10 h-10 rounded-sm bg-primary flex items-center justify-center shrink-0">
+          <span className="text-primary-foreground text-lg font-bold leading-none select-none">星</span>
+        </div>
+        <div>
+          <h2 className="text-sm font-extrabold uppercase tracking-tight">hoshi-trans</h2>
+          <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary mt-0.5">
+            v{APP_VERSION} // Japanese game translator
+          </p>
+        </div>
+      </div>
+
+      {/* ── Body: two columns ──────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* LEFT ── About + Setup Guide */}
+        <div className="w-105 shrink-0 border-r border-border overflow-y-auto">
+          <div className="p-5 flex flex-col gap-5">
+
+            {/* About */}
+            <section className="flex flex-col gap-2">
+              <SectionLabel>About</SectionLabel>
+              <div className="rounded-sm border border-border bg-card/40 p-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  hoshi-trans is a free, offline-first desktop app for translating Japanese RPG games
+                  (RPG Maker MV/MZ, Wolf RPG) using local AI models via Ollama.
+                  No data leaves your machine.
+                </p>
+              </div>
+            </section>
+
+            {/* Setup Guide */}
+            <section className="flex flex-col gap-2">
+              <SectionLabel>Setup Guide</SectionLabel>
+              <SetupGuides />
+            </section>
+
           </div>
-          <div>
-            <h2 className="text-sm font-extrabold uppercase tracking-tight">hoshi-trans</h2>
-            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">v{APP_VERSION} // Japanese game translator</p>
+        </div>
+
+        {/* RIGHT ── Support + Links */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5 flex flex-col gap-5">
+
+            {/* Support */}
+            <section className="flex flex-col gap-2">
+              <SectionLabel>Support the project</SectionLabel>
+              <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col gap-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  hoshi-trans is free and open source — no subscription, no limits.
+                  If it saved you hours on a translation project, a crypto donation
+                  helps keep development going and new engines supported.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {([
+                    { symbol: 'BTC', name: 'Bitcoin',  address: 'bc1qmr578evx5fzwyr754a00j9hkekd2gzpvs8zxzz' },
+                    { symbol: 'ETH', name: 'Ethereum', address: '0x29652Fd86095913d472fF08BFEE5a15c5E7C9D51' },
+                  ]).map(({ symbol, name, address }) => (
+                    <CryptoRow key={symbol} symbol={symbol} name={name} address={address} />
+                  ))}
+                </div>
+                <div className="pt-3 border-t border-border flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Free to support:</span>
+                  <a
+                    href="https://github.com/KATBlackCoder/hoshi-trans"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Github className="w-3 h-3" />
+                    Star on GitHub
+                  </a>
+                </div>
+              </div>
+            </section>
+
+            {/* Links */}
+            <section className="flex flex-col gap-2">
+              <SectionLabel>Links</SectionLabel>
+              <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col">
+                <InfoRow label="GitHub" value={
+                  <a
+                    href="https://github.com/KATBlackCoder/hoshi-trans"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:opacity-80 transition-opacity flex items-center gap-1"
+                  >
+                    <Github className="w-3 h-3" />
+                    KATBlackCoder/hoshi-trans <ExternalLink className="w-3 h-3" />
+                  </a>
+                } />
+                <InfoRow label="Issues" value={
+                  <a
+                    href="https://github.com/KATBlackCoder/hoshi-trans/issues"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:opacity-80 transition-opacity flex items-center gap-1"
+                  >
+                    Report a bug <ExternalLink className="w-3 h-3" />
+                  </a>
+                } />
+              </div>
+            </section>
+
           </div>
-        </div>
-
-        {/* About */}
-        <div>
-          <SectionLabel>About</SectionLabel>
-          <Card>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              hoshi-trans is a free, offline-first desktop app for translating Japanese RPG games
-              (RPG Maker MV/MZ, Wolf RPG) using local AI models via Ollama.
-              No data leaves your machine.
-            </p>
-          </Card>
-        </div>
-
-        {/* Setup Guides */}
-        <div>
-          <SectionLabel>Setup Guides</SectionLabel>
-          <SetupGuides />
-        </div>
-
-        {/* Support */}
-        <div>
-          <SectionLabel>Support the project</SectionLabel>
-          <Card>
-            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              hoshi-trans is free and open source — no subscription, no limits.
-              If it saved you hours on a translation project, a crypto donation
-              helps keep development going and new engines supported.
-            </p>
-            <div className="flex flex-col gap-2">
-              {([
-                { symbol: 'BTC', name: 'Bitcoin', address: 'bc1qmr578evx5fzwyr754a00j9hkekd2gzpvs8zxzz' },
-                { symbol: 'ETH', name: 'Ethereum', address: '0x29652Fd86095913d472fF08BFEE5a15c5E7C9D51' },
-              ]).map(({ symbol, name, address }) => (
-                <CryptoRow key={symbol} symbol={symbol} name={name} address={address} />
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Free to support:</span>
-              <a
-                href="https://github.com/KATBlackCoder/hoshi-trans"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
-              >
-                <Github className="w-3 h-3" />
-                Star on GitHub
-              </a>
-            </div>
-          </Card>
-        </div>
-
-        {/* Links */}
-        <div>
-          <SectionLabel>Links</SectionLabel>
-          <Card>
-            <InfoRow label="GitHub" value={
-              <a
-                href="https://github.com/KATBlackCoder/hoshi-trans"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:opacity-80 transition-opacity flex items-center gap-1"
-              >
-                <Github className="w-3 h-3" />
-                KATBlackCoder/hoshi-trans <ExternalLink className="w-3 h-3" />
-              </a>
-            } />
-            <InfoRow label="Issues" value={
-              <a
-                href="https://github.com/KATBlackCoder/hoshi-trans/issues"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:opacity-80 transition-opacity flex items-center gap-1"
-              >
-                Report a bug <ExternalLink className="w-3 h-3" />
-              </a>
-            } />
-          </Card>
         </div>
 
       </div>

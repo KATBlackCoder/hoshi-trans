@@ -135,119 +135,150 @@ export function OllamaPage() {
   }
 
   return (
-    <div className="h-full overflow-hidden flex flex-col">
-      <div className="p-6 pb-0 flex flex-col gap-5 flex-1 min-h-0">
+    <div className="h-full flex flex-col overflow-hidden">
 
-        {/* ── Header ────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between shrink-0 pb-3 border-b-2 border-primary">
-          <div>
-            <h2 className="text-sm font-extrabold uppercase tracking-tight">Ollama</h2>
-            <p className="text-[11px] font-mono text-muted-foreground mt-1 uppercase tracking-wider">Connection // Model // Settings</p>
-          </div>
-
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
-            ollamaOnline
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-              : 'border-amber-500/40 bg-amber-500/10 text-amber-400'
-          }`}>
-            {ollamaOnline
-              ? <Wifi className="w-3 h-3" />
-              : <WifiOff className="w-3 h-3" />
-            }
-            <span>{ollamaOnline ? 'Online' : 'Offline'}</span>
-            {availableModels.length > 0 && (
-              <span className="opacity-60">// {availableModels.length} hoshi</span>
-            )}
-            <span className="text-primary">//</span>
-            <span className="opacity-70">Local</span>
-          </div>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="px-6 py-4 border-b-2 border-primary flex items-center justify-between shrink-0">
+        <div>
+          <h2 className="text-sm font-extrabold uppercase tracking-tight">Ollama</h2>
+          <p className="text-[11px] font-mono text-muted-foreground mt-0.5 uppercase tracking-wider">Connection // Model // Settings</p>
         </div>
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
+          ollamaOnline
+            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+            : 'border-amber-500/40 bg-amber-500/10 text-amber-400'
+        }`}>
+          {ollamaOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+          <span>{ollamaOnline ? 'Online' : 'Offline'}</span>
+          {availableModels.length > 0 && <span className="opacity-60">// {availableModels.length} hoshi</span>}
+          <span className="text-primary">//</span>
+          <span className="opacity-70">Local</span>
+        </div>
+      </div>
 
-        {/* ── Two-column layout ─────────────────────────────────── */}
-        <div className="flex gap-5 flex-1 min-h-0">
+      {/* ── Body: two columns ──────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          {/* LEFT ─ Settings */}
-          <div className="flex flex-col gap-5 w-105 shrink-0 overflow-y-auto pr-1 pb-6">
+        {/* LEFT ── Connection settings (fixed width, independently scrollable) */}
+        <div className="w-96 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+          <div className="p-5 flex flex-col gap-5">
 
             {/* Connection & Model */}
-            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
-              <div className="px-4 pt-3.5 pb-0.5">
-                <SectionLabel>Connection &amp; Model</SectionLabel>
-              </div>
-              <div className="px-4 pb-4 flex flex-col gap-3.5">
+            <section className="flex flex-col gap-2">
+              <SectionLabel>Connection &amp; Model</SectionLabel>
+              <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col gap-4">
 
+                {/* Host URL */}
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-[10.5px] text-muted-foreground/70">Host URL</Label>
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Host URL</Label>
                   <div className="flex gap-1.5">
                     <Input
                       value={hostDraft}
                       onChange={(e) => setHostDraft(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && saveHost()}
-                      className="font-mono text-xs h-8 flex-1 bg-background/60"
+                      className="font-mono text-xs flex-1"
                       placeholder="http://localhost:11434"
                     />
-                    <Button size="sm" variant="outline" className="text-[10.5px] h-8 px-3 shrink-0 text-muted-foreground/60" onClick={() => setHostDraft(DEFAULT_OLLAMA_HOST)}>
+                    <Button size="sm" variant="outline" onClick={() => setHostDraft(DEFAULT_OLLAMA_HOST)}>
                       Local
                     </Button>
-                    <Button size="sm" className="text-[10.5px] h-8 px-3 shrink-0" onClick={saveHost}>
-                      {saved ? <Check className="w-3.5 h-3.5 text-green-400" /> : 'Save'}
+                    <Button size="sm" onClick={saveHost}>
+                      {saved ? <Check className="w-3.5 h-3.5" /> : 'Save'}
                     </Button>
                   </div>
                 </div>
 
-                <div className="flex gap-3.5">
-                  <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                    <Label className="text-[10.5px] text-muted-foreground/70">Model</Label>
-                    <Select
-                      value={settings.ollamaModel}
-                      onValueChange={(v) => updateSettings({ ollamaModel: v ?? '' })}
-                    >
-                      <SelectTrigger className="font-mono text-xs h-8 bg-background/60">
-                        <SelectValue placeholder="Select a model…" />
-                      </SelectTrigger>
-                      <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
-                        {availableModels.map((m) => (
-                          <SelectItem key={m} value={m} className="font-mono text-xs">
-                            <span>hoshi-translator</span>
-                            {HOSHI_MODEL_INFO[m] && (
-                              <span className="ml-1.5 text-[9px] text-muted-foreground/50 font-normal">{HOSHI_MODEL_INFO[m]}</span>
-                            )}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5 w-36 shrink-0">
-                    <Label className="text-[10.5px] text-muted-foreground/70">Language</Label>
-                    <Select
-                      value={settings.targetLang}
-                      onValueChange={(v) => updateSettings({ targetLang: v as 'en' | 'fr' })}
-                    >
-                      <SelectTrigger className="text-xs h-8 bg-background/60">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* Model */}
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Model</Label>
+                  <Select value={settings.ollamaModel} onValueChange={(v) => updateSettings({ ollamaModel: v ?? '' })}>
+                    <SelectTrigger className="font-mono text-xs">
+                      <SelectValue placeholder="Select a model…" />
+                    </SelectTrigger>
+                    <SelectContent className="max-w-none w-auto min-w-(--radix-select-trigger-width)">
+                      {availableModels.map((m) => (
+                        <SelectItem key={m} value={m} className="font-mono text-xs">
+                          <span>hoshi-translator</span>
+                          {HOSHI_MODEL_INFO[m] && (
+                            <span className="ml-1.5 text-[9px] text-primary font-bold">{HOSHI_MODEL_INFO[m]}</span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* Language */}
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Language</Label>
+                  <Select value={settings.targetLang} onValueChange={(v) => updateSettings({ targetLang: v as 'en' | 'fr' })}>
+                    <SelectTrigger className="text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
               </div>
-            </div>
+            </section>
+
+            {/* Available models — quick switch */}
+            <section className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <SectionLabel>Available models</SectionLabel>
+                {availableModels.length > 0 && (
+                  <span className="text-[10px] font-mono font-bold text-primary mb-2">{availableModels.length}</span>
+                )}
+              </div>
+              {availableModels.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {availableModels.map((m) => {
+                    const base = HOSHI_MODEL_INFO[m]
+                    const active = settings.ollamaModel === m
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => updateSettings({ ollamaModel: m })}
+                        className={`flex items-center justify-between px-3 py-2 rounded-sm border text-left transition-all ${
+                          active
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : 'border-border bg-card/40 text-muted-foreground hover:border-primary/50 hover:bg-card/70 hover:text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {active && <span className="w-1.5 h-1.5 rounded-sm bg-primary shrink-0" />}
+                          <span className="text-[10.5px] font-mono font-bold truncate">hoshi-translator</span>
+                        </div>
+                        {base && (
+                          <span className={`text-[9px] font-mono font-bold uppercase tracking-wider shrink-0 ml-2 px-1.5 py-0.5 rounded-sm border ${
+                            active ? 'border-primary/40 text-primary bg-primary/15' : 'border-border text-muted-foreground'
+                          }`}>{base}</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-[10.5px] text-muted-foreground leading-relaxed rounded-sm border border-border bg-card/40 px-3 py-2.5">
+                  No hoshi-translator models found. Install one using the panel on the right.
+                </p>
+              )}
+            </section>
 
           </div>
+        </div>
 
-          {/* RIGHT ─ Summary */}
-          <div className="flex-1 flex flex-col gap-4 min-w-0 overflow-y-auto pb-6">
+        {/* RIGHT ── Status + Install + Tips (scrollable) */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5 flex flex-col gap-5">
 
-            {/* Active config */}
-            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
-              <div className="px-4 pt-3.5 pb-1">
-                <SectionLabel>Active configuration</SectionLabel>
-              </div>
-              <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+            {/* Active configuration — 3 equal columns */}
+            <section className="flex flex-col gap-2">
+              <SectionLabel>Active configuration</SectionLabel>
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   {
                     icon: <Cpu className="w-3.5 h-3.5" />,
@@ -257,80 +288,38 @@ export function OllamaPage() {
                   },
                   {
                     icon: <Globe className="w-3.5 h-3.5" />,
-                    label: 'Target language',
+                    label: 'Language',
                     value: langLabel,
                     sub: `JP → ${langLabel}`,
                   },
                   {
                     icon: ollamaOnline
-                      ? <Wifi className="w-3.5 h-3.5 text-emerald-500" />
-                      : <WifiOff className="w-3.5 h-3.5 text-amber-500" />,
+                      ? <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                      : <WifiOff className="w-3.5 h-3.5 text-amber-400" />,
                     label: 'Endpoint',
-                    value: settings.ollamaHost.replace('http://', '').replace('https://', ''),
+                    value: settings.ollamaHost.replace(/https?:\/\//, ''),
                     sub: ollamaOnline ? 'Reachable' : 'Not reachable',
                   },
                 ].map(({ icon, label, value, sub }) => (
-                  <div key={label} className="flex items-start gap-2.5 p-3 rounded-sm border border-border bg-background">
+                  <div key={label} className="flex items-start gap-2.5 p-3 rounded-sm border border-border bg-card/40">
                     <div className="mt-0.5 text-primary shrink-0">{icon}</div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">{label}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
                       <p className="text-[11px] font-mono font-bold text-foreground mt-0.5 truncate">{value}</p>
-                      {sub && <p className="text-[9px] text-muted-foreground/70 mt-0.5 font-mono uppercase tracking-wider">{sub}</p>}
+                      {sub && <p className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70 mt-0.5">{sub}</p>}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Available models */}
-            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
-              <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
-                <SectionLabel>Available models</SectionLabel>
-                {availableModels.length > 0 && (
-                  <span className="text-[9px] text-muted-foreground/25 font-mono mb-2">{availableModels.length}</span>
-                )}
-              </div>
-              {availableModels.length > 0 ? (
-                <div className="px-3 pb-3 flex flex-wrap gap-1.5">
-                  {availableModels.map((m) => {
-                    const base = HOSHI_MODEL_INFO[m]
-                    return (
-                      <button
-                        key={m}
-                        onClick={() => updateSettings({ ollamaModel: m })}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono transition-all ${
-                          settings.ollamaModel === m
-                            ? 'border-primary/40 bg-primary/10 text-foreground/90'
-                            : 'border-border/25 bg-background/20 text-muted-foreground/45 hover:border-border/50 hover:text-muted-foreground/70'
-                        }`}
-                      >
-                        {settings.ollamaModel === m && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                        )}
-                        <span>hoshi-translator</span>
-                        {base && (
-                          <span className="text-[9px] text-muted-foreground/50 font-normal border border-border/30 rounded px-1 py-0.5 ml-0.5">
-                            {base}
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="px-4 pb-4 text-[10.5px] text-muted-foreground/45 leading-relaxed">
-                  No hoshi-translator models found. Use the Install Models section below to create them.
-                </p>
-              )}
-            </div>
+            </section>
 
             {/* Install Models */}
-            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
-              <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
+            <section className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
                 <SectionLabel>Install models</SectionLabel>
-                <span className="text-[9px] text-muted-foreground/25 font-mono mb-2">local</span>
+                <span className="text-[9px] font-mono font-bold text-muted-foreground mb-2 uppercase tracking-wider">local</span>
               </div>
-              <div className="px-3 pb-3 flex flex-col gap-2">
+              <div className="rounded-sm border border-border bg-card/40 p-3 flex flex-col gap-2">
 
                 {/* Model rows */}
                 <div className="flex flex-col gap-1.5">
@@ -348,49 +337,48 @@ export function OllamaPage() {
                     return (
                       <div key={id} className="flex flex-col gap-1">
                         {/* Main row */}
-                        <div className={`flex items-center justify-between px-3 py-2 rounded border transition-all ${
-                          isInstalling
-                            ? 'border-primary/40 bg-primary/5'
-                            : isInstalled
-                            ? 'border-green-500/20 bg-green-500/5'
-                            : isConfirming
-                            ? 'border-primary/30 bg-primary/5'
-                            : 'border-border/25 bg-background/20'
+                        <div className={`flex items-center justify-between px-3 py-2.5 rounded-sm border transition-all ${
+                          isInstalling ? 'border-primary/50 bg-primary/8'
+                          : isInstalled ? 'border-emerald-500/30 bg-emerald-500/8'
+                          : isConfirming ? 'border-primary/30 bg-primary/5'
+                          : 'border-border bg-background'
                         }`}>
                           <div className="flex items-center gap-2 min-w-0">
-                            {isInstalled && <Check className="w-3 h-3 text-green-400 shrink-0" />}
-                            <span className={`text-[10px] font-mono font-medium truncate ${isInstalled ? 'text-foreground/80' : 'text-muted-foreground/60'}`}>{label}</span>
+                            {isInstalled && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
+                            <span className={`text-[10.5px] font-mono font-bold truncate ${
+                              isInstalled ? 'text-foreground' : 'text-muted-foreground'
+                            }`}>{label}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <div className="flex items-center gap-2 shrink-0 ml-3">
                             {isInstalling ? (
                               <>
-                                <span className="text-[9px] text-primary/70 animate-pulse font-mono">Installing…</span>
+                                <span className="text-[9px] text-primary font-mono font-bold uppercase tracking-wider animate-pulse">Installing…</span>
                                 <button
                                   onClick={cancelInstall}
-                                  className="flex items-center gap-1 px-2 py-0.5 rounded border border-red-500/30 bg-red-500/10 text-[9px] text-red-400/80 hover:bg-red-500/20 transition-colors"
+                                  className="flex items-center gap-1 px-2 py-1 rounded-sm border border-destructive/40 bg-destructive/10 text-[9px] font-bold uppercase tracking-wider text-destructive hover:bg-destructive/20 transition-colors"
                                 >
                                   <X className="w-2.5 h-2.5" /> Stop
                                 </button>
                               </>
                             ) : isDeleting ? (
-                              <span className="text-[9px] text-red-400/60 animate-pulse font-mono">Deleting…</span>
+                              <span className="text-[9px] text-destructive font-mono font-bold uppercase tracking-wider animate-pulse">Deleting…</span>
                             ) : isInstalled ? (
                               <button
                                 onClick={() => deleteModel(id)}
                                 disabled={busy}
-                                className="flex items-center gap-1 px-2 py-0.5 rounded border border-red-500/20 bg-transparent text-[9px] text-red-400/50 hover:bg-red-500/10 hover:text-red-400/80 transition-colors disabled:opacity-30"
+                                className="flex items-center gap-1 px-2 py-1 rounded-sm border border-destructive/30 text-[9px] font-bold uppercase tracking-wider text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-30"
                               >
                                 <Trash2 className="w-2.5 h-2.5" /> Remove
                               </button>
                             ) : isConfirming ? (
-                              <span className="text-[9px] text-muted-foreground/40 font-mono">{vram} VRAM · {disk} disk</span>
+                              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{vram} · {disk}</span>
                             ) : (
                               <>
-                                <span className="text-[9px] text-muted-foreground/35 font-mono">{vram}</span>
+                                <span className="text-[9px] font-mono text-muted-foreground">{vram}</span>
                                 <button
                                   onClick={() => requestInstall(id)}
                                   disabled={busy}
-                                  className="px-2 py-0.5 rounded border border-border/40 bg-background/40 text-[9px] text-muted-foreground/60 hover:border-primary/40 hover:text-foreground/80 transition-colors disabled:opacity-30"
+                                  className="px-2.5 py-1 rounded-sm border border-primary/40 bg-primary/8 text-[9px] font-bold uppercase tracking-wider text-primary hover:bg-primary/20 transition-colors disabled:opacity-30"
                                 >
                                   Install
                                 </button>
@@ -401,50 +389,44 @@ export function OllamaPage() {
 
                         {/* Confirmation panel */}
                         {isConfirming && (
-                          <div className="mx-1 px-3 py-2.5 rounded border border-primary/20 bg-primary/5 flex flex-col gap-2.5">
+                          <div className="ml-3 px-3 py-3 rounded-sm border border-primary/25 bg-primary/5 flex flex-col gap-3">
                             {checkingResources ? (
-                              <p className="text-[9.5px] text-muted-foreground/40 animate-pulse">Checking disk and VRAM…</p>
+                              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground animate-pulse">Checking disk and VRAM…</p>
                             ) : resourceCheck ? (
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-1.5">
-                                  <HardDrive className="w-3 h-3 text-muted-foreground/30 shrink-0" />
-                                  <span className="text-[9.5px] text-muted-foreground/50">Disk free:</span>
-                                  <span className={`text-[9.5px] font-mono ${resourceCheck.disk_ok ? 'text-green-400/80' : 'text-red-400/80'}`}>
-                                    {resourceCheck.disk_free_gb.toFixed(1)} GB
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center gap-2">
+                                  <HardDrive className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Disk</span>
+                                  <span className={`text-[10px] font-mono font-bold ${resourceCheck.disk_ok ? 'text-emerald-400' : 'text-destructive'}`}>
+                                    {resourceCheck.disk_free_gb.toFixed(1)} GB free
                                   </span>
-                                  <span className="text-[9px] text-muted-foreground/30">/ {resourceCheck.required_disk_gb} GB needed</span>
-                                  {!resourceCheck.disk_ok && <AlertTriangle className="w-3 h-3 text-red-400/70 shrink-0" />}
+                                  <span className="text-[9px] text-muted-foreground">/ {resourceCheck.required_disk_gb} GB needed</span>
+                                  {!resourceCheck.disk_ok && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
                                 </div>
-                                {resourceCheck.vram_free_gb !== null && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Layers className="w-3 h-3 text-muted-foreground/30 shrink-0" />
-                                    <span className="text-[9.5px] text-muted-foreground/50">VRAM free:</span>
-                                    <span className={`text-[9.5px] font-mono ${resourceCheck.vram_ok === false ? 'text-amber-400/80' : 'text-green-400/80'}`}>
-                                      {resourceCheck.vram_free_gb.toFixed(1)} GB
+                                {resourceCheck.vram_free_gb !== null ? (
+                                  <div className="flex items-center gap-2">
+                                    <Layers className="w-3 h-3 text-muted-foreground shrink-0" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">VRAM</span>
+                                    <span className={`text-[10px] font-mono font-bold ${resourceCheck.vram_ok === false ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                      {resourceCheck.vram_free_gb.toFixed(1)} GB free
                                     </span>
-                                    <span className="text-[9px] text-muted-foreground/30">/ {resourceCheck.required_vram_gb} GB needed</span>
-                                    {resourceCheck.vram_ok === false && <AlertTriangle className="w-3 h-3 text-amber-400/70 shrink-0" />}
+                                    <span className="text-[9px] text-muted-foreground">/ {resourceCheck.required_vram_gb} GB needed</span>
+                                    {resourceCheck.vram_ok === false && <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />}
                                   </div>
-                                )}
-                                {resourceCheck.vram_free_gb === null && (
-                                  <p className="text-[9px] text-muted-foreground/30 italic">VRAM not detectable — ensure sufficient GPU memory before installing.</p>
+                                ) : (
+                                  <p className="text-[9px] text-muted-foreground italic">VRAM not detectable — ensure sufficient GPU memory before installing.</p>
                                 )}
                               </div>
                             ) : null}
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setConfirmingModel(null)}
-                                className="px-2.5 py-1 rounded border border-border/40 text-[9.5px] text-muted-foreground/50 hover:text-foreground/70 transition-colors"
-                              >
-                                Cancel
-                              </button>
-                              <button
+                            <div className="flex items-center gap-2 pt-1 border-t border-border">
+                              <Button size="xs" variant="outline" onClick={() => setConfirmingModel(null)}>Cancel</Button>
+                              <Button
+                                size="xs"
                                 onClick={() => confirmInstall(id)}
                                 disabled={resourceCheck !== null && !resourceCheck.disk_ok}
-                                className="px-2.5 py-1 rounded border border-primary/40 bg-primary/10 text-[9.5px] text-foreground/80 hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 {resourceCheck?.disk_ok === false ? 'Not enough disk space' : 'Confirm install'}
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         )}
@@ -455,17 +437,14 @@ export function OllamaPage() {
 
                 {/* Terminal progress log */}
                 {(installLog.length > 0 || installingModel !== null) && (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[9px] text-muted-foreground/30 uppercase tracking-widest">Output</span>
+                  <div className="flex flex-col gap-1.5 pt-1 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Output</span>
                       {installingModel === null && (
-                        <button onClick={() => setInstallLog([])} className="text-[9px] text-muted-foreground/25 hover:text-muted-foreground/50 transition-colors">clear</button>
+                        <button onClick={() => setInstallLog([])} className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">clear</button>
                       )}
                     </div>
-                    <div
-                      ref={scrollRef}
-                      className="max-h-32 overflow-y-auto rounded border border-zinc-700/60 bg-zinc-950 px-2.5 py-2"
-                    >
+                    <div ref={scrollRef} className="max-h-36 overflow-y-auto rounded-sm border border-zinc-700/60 bg-zinc-950 px-3 py-2">
                       {installLog.map((line, i) => (
                         <p key={i} className="text-[9.5px] font-mono text-emerald-400/80 leading-relaxed whitespace-pre-wrap">{line}</p>
                       ))}
@@ -478,31 +457,31 @@ export function OllamaPage() {
 
                 {/* Status banners */}
                 {installStatus === 'done' && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-green-500/25 bg-green-500/8">
-                    <Check className="w-3 h-3 text-green-400 shrink-0" />
-                    <span className="text-[10px] text-green-300/80 font-mono">Model created — list updates in a few seconds</span>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-sm border border-emerald-500/30 bg-emerald-500/8">
+                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">Model created — list updates in a few seconds</span>
                   </div>
                 )}
                 {installStatus === 'cancelled' && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-amber-500/20 bg-amber-500/5">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-sm border border-amber-500/30 bg-amber-500/8">
                     <X className="w-3 h-3 text-amber-400 shrink-0" />
-                    <span className="text-[10px] text-amber-300/70 font-mono">Install cancelled</span>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400">Install cancelled</span>
                   </div>
                 )}
 
                 {/* Fallback copy command */}
                 {installFallback && (
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-[9.5px] text-amber-400/70 px-1">
-                      `ollama` not found in PATH. Run this command manually:
+                  <div className="flex flex-col gap-2 pt-1 border-t border-border">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                      ollama not found in PATH — run manually:
                     </p>
                     <div className="relative group">
-                      <pre className="text-[9.5px] font-mono bg-zinc-950 border border-zinc-700/60 rounded px-2.5 py-2 text-emerald-400/80 whitespace-pre-wrap break-all">
+                      <pre className="text-[9.5px] font-mono bg-zinc-950 border border-zinc-700/60 rounded-sm px-3 py-2 text-emerald-400/80 whitespace-pre-wrap break-all">
                         {installFallback}
                       </pre>
                       <button
                         onClick={() => navigator.clipboard.writeText(installFallback)}
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-[9px] text-zinc-400 hover:text-white"
+                        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-0.5 rounded-sm bg-primary text-primary-foreground text-[9px] font-bold uppercase tracking-wider"
                       >
                         Copy
                       </button>
@@ -511,28 +490,31 @@ export function OllamaPage() {
                 )}
 
               </div>
-            </div>
+            </section>
 
             {/* Tips */}
-            <div className="rounded-sm border border-border/60 bg-card/30 px-4 py-3.5 flex flex-col gap-2.5">
+            <section className="flex flex-col gap-2">
               <SectionLabel>Tips</SectionLabel>
-              <ul className="flex flex-col gap-2">
-                {[
-                  'For batch jobs, the 4B model is fast (~50 lines/min on a 4 GB GPU). The 30B variant is slower but better at long context.',
-                  'After translation, run a Refine pass with the same or a stronger model to catch awkward phrasing.',
-                  'Click any cell to edit a translation manually — your edits are saved as glossary candidates.',
-                  'Game files stay on disk. No data is sent outside your machine, ever.',
-                ].map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-primary mt-0.5 shrink-0 font-bold">▸</span>
-                    <span className="text-[11px] text-muted-foreground leading-relaxed">{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <div className="rounded-sm border border-border bg-card/40 px-4 py-3.5">
+                <ul className="flex flex-col gap-2.5">
+                  {[
+                    'For batch jobs, the 4B model is fast (~50 lines/min on a 4 GB GPU). The 30B variant is slower but better at long context.',
+                    'After translation, run a Refine pass with the same or a stronger model to catch awkward phrasing.',
+                    'Click any cell to edit a translation manually — your edits are saved as glossary candidates.',
+                    'Game files stay on disk. No data is sent outside your machine, ever.',
+                  ].map((tip, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className="text-primary mt-0.5 shrink-0 font-bold text-xs">▸</span>
+                      <span className="text-[11px] text-muted-foreground leading-relaxed">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
 
           </div>
         </div>
+
       </div>
     </div>
   )

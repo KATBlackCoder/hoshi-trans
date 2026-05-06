@@ -19,129 +19,136 @@ const TEMP_PRESETS = [
   { value: 0.9, label: 'Very creative' },
 ]
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
-      <div className="px-3.5 py-2 border-b-2 border-primary">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{title}</span>
-      </div>
-      <div className="px-3.5 py-3.5 flex flex-col gap-4">{children}</div>
-    </div>
-  )
-}
-
-function PanelRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-4">
-      <div className="w-28 shrink-0 pt-0.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
-        {hint && <p className="text-[9.5px] text-muted-foreground/55 mt-0.5 leading-tight">{hint}</p>}
-      </div>
-      <div className="flex-1 min-w-0">{children}</div>
-    </div>
-  )
-}
 
 export function SettingsPage() {
   const { settings, updateSettings } = useAppStore()
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-xl p-6 flex flex-col gap-4">
+    <div className="h-full flex flex-col overflow-hidden">
 
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="px-6 py-4 border-b-2 border-primary flex items-center justify-between shrink-0">
         <div>
           <h2 className="text-sm font-extrabold uppercase tracking-tight">Settings</h2>
-          <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mt-1">Application // Preferences</p>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mt-0.5">Application // Preferences</p>
         </div>
+      </div>
 
-        <Panel title="Appearance">
+      {/* ── Body: two columns ──────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          <PanelRow label="Theme" hint="Light or dark interface">
-            <div className="flex gap-2">
-              <button
-                onClick={() => updateSettings({ theme: 'dark' })}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-sm border text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                  settings.theme === 'dark'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background text-muted-foreground hover:bg-card/70 hover:text-foreground'
-                }`}
-              >
-                <Moon className="w-3.5 h-3.5" />
-                Dark
-              </button>
-              <button
-                onClick={() => updateSettings({ theme: 'light' })}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-sm border text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                  settings.theme === 'light'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background text-muted-foreground hover:bg-card/70 hover:text-foreground'
-                }`}
-              >
-                <Sun className="w-3.5 h-3.5" />
-                Light
-              </button>
-            </div>
-          </PanelRow>
+        {/* LEFT ── Appearance */}
+        <div className="w-105 shrink-0 border-r border-border overflow-y-auto">
+          <div className="p-5 flex flex-col gap-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Appearance</p>
 
-          <PanelRow label="Accent" hint="Primary UI color">
-            <div className="flex flex-wrap gap-2">
-              {ACCENT_PRESETS.map((preset) => (
-                <button
-                  key={preset.name}
-                  onClick={() => updateSettings({ accentColor: preset.value })}
-                  title={preset.name}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                    settings.accentColor === preset.value
-                      ? 'border-primary bg-card text-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-card/70 hover:text-foreground'
-                  }`}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-sm shrink-0"
-                    style={{ backgroundColor: preset.dot, boxShadow: settings.accentColor === preset.value ? `0 0 8px 1px ${preset.dot}80` : 'none' }}
-                  />
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-          </PanelRow>
-
-        </Panel>
-
-        <Panel title="Translation">
-
-          <PanelRow label="Temperature" hint="Lower = strict & consistent, higher = creative">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <Thermometer className="w-4 h-4 text-primary shrink-0" />
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={settings.temperature}
-                  onChange={e => updateSettings({ temperature: parseFloat(e.target.value) })}
-                  className="flex-1 accent-primary"
-                />
-                <span className="font-mono font-bold text-sm text-primary tabular-nums w-10 text-right">{settings.temperature.toFixed(1)}</span>
+            {/* Theme */}
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Theme</span>
+                <p className="text-[9.5px] text-muted-foreground/60 mt-0.5">Light or dark interface</p>
               </div>
-              <div className="flex gap-1 flex-wrap">
-                {TEMP_PRESETS.map(p => (
+              <div className="p-3 flex gap-2">
+                {([
+                  { value: 'dark',  label: 'Dark',  icon: <Moon className="w-3.5 h-3.5" /> },
+                  { value: 'light', label: 'Light', icon: <Sun  className="w-3.5 h-3.5" /> },
+                ] as const).map(opt => (
                   <button
-                    key={p.value}
-                    onClick={() => updateSettings({ temperature: p.value })}
-                    className={`px-2 py-1 rounded-sm text-[9.5px] font-bold uppercase tracking-wider transition-colors ${
-                      Math.abs(settings.temperature - p.value) < 0.05
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-card hover:text-foreground border border-border'
+                    key={opt.value}
+                    onClick={() => updateSettings({ theme: opt.value })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-sm border text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                      settings.theme === opt.value
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background text-muted-foreground hover:bg-card/70 hover:text-foreground'
                     }`}
-                  >{p.label}</button>
+                  >
+                    {opt.icon}{opt.label}
+                  </button>
                 ))}
               </div>
             </div>
-          </PanelRow>
 
-        </Panel>
+            {/* Accent color */}
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Accent color</span>
+                <p className="text-[9.5px] text-muted-foreground/60 mt-0.5">Primary UI color</p>
+              </div>
+              <div className="p-3 grid grid-cols-4 gap-1.5">
+                {ACCENT_PRESETS.map((preset) => {
+                  const active = settings.accentColor === preset.value
+                  return (
+                    <button
+                      key={preset.name}
+                      onClick={() => updateSettings({ accentColor: preset.value })}
+                      title={preset.name}
+                      className={`flex flex-col items-center gap-2 px-2 py-3 rounded-sm border text-[9.5px] font-bold uppercase tracking-wider transition-colors ${
+                        active
+                          ? 'border-primary bg-card text-foreground'
+                          : 'border-border bg-background text-muted-foreground hover:bg-card/70 hover:text-foreground'
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-sm shrink-0"
+                        style={{ backgroundColor: preset.dot, boxShadow: active ? `0 0 10px 2px ${preset.dot}60` : 'none' }}
+                      />
+                      {preset.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT ── Translation */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5 flex flex-col gap-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Translation</p>
+
+            {/* Temperature */}
+            <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Temperature</span>
+                <p className="text-[9.5px] text-muted-foreground/60 mt-0.5">Lower = strict &amp; consistent · Higher = creative</p>
+              </div>
+              <div className="p-4 flex flex-col gap-4">
+                {/* Slider row */}
+                <div className="flex items-center gap-3">
+                  <Thermometer className="w-4 h-4 text-primary shrink-0" />
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    value={settings.temperature}
+                    onChange={e => updateSettings({ temperature: parseFloat(e.target.value) })}
+                    className="flex-1 accent-primary"
+                  />
+                  <span className="font-mono font-bold text-lg text-primary tabular-nums w-12 text-right">
+                    {settings.temperature.toFixed(1)}
+                  </span>
+                </div>
+                {/* Presets */}
+                <div className="flex gap-1.5">
+                  {TEMP_PRESETS.map(p => (
+                    <button
+                      key={p.value}
+                      onClick={() => updateSettings({ temperature: p.value })}
+                      className={`flex-1 py-2 rounded-sm text-[9.5px] font-bold uppercase tracking-wider transition-colors ${
+                        Math.abs(settings.temperature - p.value) < 0.05
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-border text-muted-foreground hover:bg-card hover:text-foreground'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>
